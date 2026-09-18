@@ -41,6 +41,13 @@ Object.values(INTERESTS).forEach(c => c.words.forEach(w => add(w[0])));
 FESTIVALS.forEach(f => f.words.forEach(w => add(w[0])));
 HQ.forEach(ch => { ch.words.forEach(w => add(w[0])); add(ch.sent[0]); ch.comp.forEach(add); });
 
+/* The interface is written in Chinese too — 加練, 每週一詞, 錯字本, every drill
+   label — and those characters are hoverable like any other. Scanning the source
+   rather than listing them by hand means a heading added later is covered
+   without anybody remembering to come back here. */
+['../js/app.js', '../js/sprint.js', '../index.html'].forEach(f =>
+  add(readFileSync(fileURLToPath(new URL(f, import.meta.url)), 'utf8')));
+
 /* A dictionary entry is not a tooltip. Both sources write for lexicographers:
    CC-Canto numbers its senses and CC-CEDICT appends measure words and Mandarin
    cross-references, so 雞 arrives as "fowl; chicken M: 隻zhī [隻]" and 錢 leads

@@ -334,6 +334,23 @@ A second pass took it the rest of the way:
 - **The four-week tracker moved behind the streak chip.** It was a full-width
   sticky bar that opened with 🔥 N, sitting directly under a chip that also said
   🔥 N — two rows of chrome for one fact. Hover the chip, focus it, or tap it.
+- **Go deeper reads across in three**: a narrow label, the three modes in the
+  middle with the room they need, and the reps on the right in line with the
+  heading rather than stacked beneath it.
+
+### One heading convention, and every character in it hoverable
+
+The interface had two conventions at once. `sprint.js` put Chinese first —
+錯字本 Mistake notebook — while Today put it last or left it out entirely:
+"Go deeper 加練", and a bare "Flashcards". The nav, the drill labels and the
+settings sheet were all Chinese-first already, so that is the one that stayed,
+and every section now carries both halves in that order.
+
+Those characters are hoverable like any other on screen, which they weren't:
+加練 and 錯字本 are exactly the kind of thing a learner wants to look up, and
+they were the only Chinese in the app you couldn't. `tools/fetch-glosses.mjs`
+scans `js/app.js`, `js/sprint.js` and `index.html` as well as the data now, so a
+heading added later is covered without anybody remembering to come back to it.
 
 **672px**, down from 1451. That fits a 1280×720 laptop with room to spare.
 

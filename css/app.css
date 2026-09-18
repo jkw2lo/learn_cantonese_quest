@@ -171,7 +171,7 @@ button { font: inherit; color: inherit; cursor: pointer; background: none; }
 .tracker {
   position: absolute; top: calc(100% + .5rem); right: 0; z-index: 60;
   display: flex; flex-direction: column; align-items: stretch; gap: .45rem;
-  width: max-content; max-width: min(24rem, calc(100vw - 1.6rem));
+  width: max-content; max-width: calc(100vw - 1.6rem);
   padding: .6rem .7rem;
   border: 1px solid var(--rule); border-radius: 9px;
   background: var(--sheet); box-shadow: var(--shadow-lift);
@@ -2262,12 +2262,19 @@ button.tier-head:hover { border-color: var(--ink-3); }
   .dash { align-items: stretch; }
   .dash-col > :last-child { flex: 1 1 auto; }
 
-  /* Go deeper, compact: the counts sit in the corner and the footer is gone,
-     folded into the corner and the subtitle. */
-  .dash-wide .deeper { padding: .6rem .9rem; }
-  .dash-wide .deeper-head { align-items: flex-start; }
-  .dash-wide .deeper-sub { font-size: .72rem; line-height: 1.4; max-width: 34rem; }
-  .dash-wide .pr-grid-3 { gap: .5rem; }
+  /* Go deeper reads across in three: a narrow label, the three modes in the
+     middle with the room they need, and the reps on the right in line with the
+     heading rather than stacked under it. */
+  .dash-wide .deeper {
+    padding: .6rem .9rem;
+    display: grid; grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr) auto;
+    align-items: center; gap: 1rem;
+  }
+  .dash-wide .deeper-head { display: contents; }
+  .dash-wide .deeper-title { display: flex; flex-direction: column; gap: .15rem; }
+  .dash-wide .deeper-sub { font-size: .7rem; line-height: 1.35; margin: 0; }
+  .dash-wide .deeper-count { order: 3; }
+  .dash-wide .pr-grid-3 { order: 2; gap: .5rem; }
   .dash-wide .pr-deep { padding: .5rem .6rem; }
 
   /* the flashcards and the word of the week read as one column, not two blocks

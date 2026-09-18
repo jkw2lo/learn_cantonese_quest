@@ -802,7 +802,7 @@ console.log('\nsprint: the record behind the sheets');
   ok('the clock formats as minutes and seconds', fresh.fmtClock(95000) === '1:35');
 
   /* the cross-file contract, both ways */
-  const needsFromApp = ['startRepair', 'REPAIR_SIZE', 'esc', 'bare', 'searchable', 'optionSet',
+  const needsFromApp = ['startRepair', 'REPAIR_SIZE', 'esc', 'bare', 'searchable', 'optionSet', 'hanLabel',
                         'say', 'stopPhrase', 'toneMark', 'clipFor', 'clipCount', 'openChar',
                         'renderAll', 'celebrate', 'one', 'pick'];
   const missingInApp = needsFromApp.filter(n =>
