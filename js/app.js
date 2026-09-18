@@ -3803,6 +3803,149 @@ function renderRadicals() {
   $$("#viewRadicals [data-c]").forEach(b => b.onclick = () => openChar(b.dataset.c));
 }
 
+/* ---------- 聲調 — the six tones ----------
+
+   The app had six tone contours drawn next to every reading from the start
+   and never once said what they were. Everything else assumed you would
+   imitate your way there, which works for people who already speak a tonal
+   language and is a wall for everyone else.
+
+   The demonstration uses characters from the curriculum rather than the
+   textbook 詩史試時市是 set, for two reasons: the learner already knows them
+   or will, and every one has a recorded clip, so the six tones can actually
+   be heard rather than described. 哥 嗰 個 give 1-2-3 and 埋 買 賣 give 4-5-6,
+   and 買/賣 — buy and sell, one tone apart — is the example that makes the
+   point better than any explanation. */
+
+const TONES = [
+  { n: 1, zh: "陰平", pitch: "55", name: "high, level",
+     how: "Start high and stay there. Like holding a note.",
+     feel: "the pitch of a small surprise — “oh!”" },
+  { n: 2, zh: "陰上", pitch: "25", name: "rising",
+     how: "Start low-ish and climb.",
+     feel: "the way English turns a word into a question — “me?”" },
+  { n: 3, zh: "陰去", pitch: "33", name: "mid, level",
+     how: "Flat, in the middle of your range.",
+     feel: "an ordinary speaking pitch, held steady" },
+  { n: 4, zh: "陽平", pitch: "21", name: "low, falling",
+     how: "Start at the bottom and sag further.",
+     feel: "a resigned sigh" },
+  { n: 5, zh: "陽上", pitch: "23", name: "low rising",
+     how: "Start low and climb a little — not as far as tone 2.",
+     feel: "a doubtful “hmm?”" },
+  { n: 6, zh: "陽去", pitch: "22", name: "low, level",
+     how: "Flat, near the bottom of your range.",
+     feel: "the pitch you end a tired sentence on" }
+];
+
+/* one character per tone, all six taught by this app and all six recorded */
+const TONE_DEMO = ["哥", "嗰", "個", "埋", "買", "賣"];
+
+function toneCurve(n, size = 46) {
+  return `<svg class="tn-curve" viewBox="0 0 20 18" width="${size}" height="${Math.round(size * .9)}" aria-hidden="true">
+    <line class="tn-base" x1="2" y1="16.4" x2="18" y2="16.4"/>
+    <line class="tn-top" x1="2" y1="3.6" x2="18" y2="3.6"/>
+    <path d="${TONE_PATHS[n]}"/>
+  </svg>`;
+}
+
+function renderTones() {
+  const demo = TONE_DEMO.map(c => CHAR_INDEX[c]).filter(Boolean);
+  const pair = (a, b) => {
+    const A = CHAR_INDEX[a], B = CHAR_INDEX[b];
+    if (!A || !B) return "";
+    return `<div class="tn-pair">
+      ${[A, B].map(x => `<button class="tn-pair-one" data-speak="${esc(x.c)}">
+          <span class="z han">${esc(x.c)}</span>
+          <span class="p">${esc(x.p)}</span>
+          <span class="m">${esc(x.m)}</span>
+        </button>`).join(`<span class="tn-vs">vs</span>`)}
+    </div>`;
+  };
+
+  $("#viewTones").innerHTML = `<div class="wrap">
+    <div class="today-head">
+      <h1>Six tones, and why they are not decoration</h1>
+      <p class="note">Every reading in this app carries a little line beside it. That line is the pitch of the
+        syllable, and in Cantonese the pitch is part of the word — not emphasis, not mood. Change it and you
+        have said something else.</p>
+    </div>
+
+    <div class="sheet tn-hero">
+      <span class="eyebrow">The whole problem, in two characters ${hanLabel("買賣")}</span>
+      ${pair("買", "賣")}
+      <p class="tn-hero-note">Same sounds, same mouth shape. <b>maai5</b> is to buy and <b>maai6</b> is to
+        sell, and the only difference between them is that the second is flat where the first rises. Tap each
+        one. This is why the line beside the reading matters.</p>
+    </div>
+
+    <div class="sec-head" style="margin:1.5rem 0 .7rem">
+      <h2>The six ${hanLabel("六聲")}</h2>
+      <span class="dim" style="font-size:.78rem">tap any character to hear its tone</span>
+    </div>
+    <div class="tn-grid">
+      ${TONES.map(t => {
+        const ch = demo.find(c => toneOf(c.p) === t.n);
+        return `<div class="sheet tn">
+          <div class="tn-top-row">
+            <span class="tn-n">${t.n}</span>
+            ${toneCurve(t.n)}
+            <span class="tn-name"><b>${esc(t.name)}</b><small>${esc(t.zh)} · ${t.pitch}</small></span>
+          </div>
+          <p class="tn-how">${esc(t.how)}</p>
+          <p class="tn-feel">Roughly ${esc(t.feel)}.</p>
+          ${ch ? `<button class="tn-eg" data-speak="${esc(ch.c)}">
+            <span class="z han">${esc(ch.c)}</span>
+            <span class="s"><b>${esc(ch.p)}</b><small>${esc(ch.m)}</small></span>
+            <span class="go">🔊</span>
+          </button>` : ""}
+        </div>`;
+      }).join("")}
+    </div>
+
+    <div class="sheet tn-ladder">
+      <span class="eyebrow">All six in a row ${hanLabel("由高到低")}</span>
+      <p class="note">Played top to bottom this is the shape of the whole system: three that start high,
+        three that start low, and within each three one level, one rising, one falling.</p>
+      <div class="tn-ladder-row">
+        ${TONES.map(t => {
+          const ch = demo.find(c => toneOf(c.p) === t.n);
+          return `<button class="tn-rung" ${ch ? `data-speak="${esc(ch.c)}"` : ""}>
+            ${toneCurve(t.n, 40)}
+            <span class="n">${t.n}</span>
+            ${ch ? `<span class="z han">${esc(ch.c)}</span><span class="p">${esc(ch.p)}</span>` : ""}
+          </button>`;
+        }).join("")}
+      </div>
+      <button class="btn btn-ghost btn-sm" id="tnAll">▶ Play all six</button>
+    </div>
+
+    <div class="sheet tn-more">
+      <span class="eyebrow">Two things that trip people up ${hanLabel("注意")}</span>
+      <div class="tn-more-grid">
+        <div>
+          <b>2 and 5 are the hard pair.</b>
+          <p class="note">Both rise. Tone 2 starts higher and climbs further; tone 5 starts at the bottom and
+            only lifts a little. If you are going to confuse two tones, it will be these.</p>
+          ${pair("嗰", "買")}
+        </div>
+        <div>
+          <b>Tones change in company.</b>
+          <p class="note">A syllable can shift tone inside a compound — 變調. You do not need to learn the
+            rules; you need to know it happens, so that hearing 女 as neoi5 alone and higher inside a word is
+            not you mishearing it.</p>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  /* the ladder, played as one thing: the shape is easier to hear than to read */
+  $("#tnAll").onclick = () => {
+    const seq = TONES.map(t => demo.find(c => toneOf(c.p) === t.n)).filter(Boolean);
+    seq.forEach((c, i) => setTimeout(() => say(c.c, true), i * 900));
+  };
+}
+
 /* ---------- record ---------- */
 
 function renderRecord() {
@@ -4524,7 +4667,7 @@ function openProfile(firstRun) {
     b.classList.toggle("on", chosen.has(k));
     b.setAttribute("aria-pressed", chosen.has(k));
   });
-  $("#pfSkip").onclick = () => { state.profiled = true; save(); closeSheet(); };
+  $("#pfSkip").onclick = () => { state.profiled = true; save(); closeSheet(); maybeOfferPrimer(); };
   $("#pfSave").onclick = () => {
     state.name = $("#pfName").value.trim().slice(0, 40);
     const next = [...chosen];
@@ -4534,6 +4677,7 @@ function openProfile(firstRun) {
     state.profiled = true;
     save();
     closeSheet();
+    maybeOfferPrimer();
   };
 }
 
@@ -4769,20 +4913,92 @@ const TOUR = [
 ];
 
 let tourStep = 0;
+/* Which walkthrough is on screen. There are two — one about the app, one about
+   the language — and they are the same dialog with different cards. */
+let walk = { cards: TOUR, done: null, label: "Start learning" };
 
 function startTour(force) {
   if (!force && state.tour) return;
+  walk = { cards: TOUR, done: finishTour, label: "Start learning" };
   tourStep = 0;
   $("#tour").classList.add("on");
   document.body.style.overflow = "hidden";
   renderTour();
 }
 
-function endTour() {
-  state.tour = true; save();
+function closeWalk() {
   $("#tour").classList.remove("on");
   document.body.style.overflow = "";
+}
+
+function endTour() { (walk.done || finishTour)(); }
+
+function finishTour() {
+  state.tour = true; save();
+  closeWalk();
   maybeOfferPlacement();
+}
+
+/* ---------- 入門 — the language, not the app ----------
+
+   The app tour explains the tabs. Nothing explained the writing system, so a
+   first-time learner met 你好 on day one with no idea what a character is, why
+   there are two next to each other, or what the little number after the
+   romanisation was for. Seven cards, once, after the questionnaire — because
+   by then the app knows your name and can address you. */
+const PRIMER = [
+  { k: "粵語", title: "Cantonese, not Chinese",
+    body: `“Chinese” is a family. <b>Cantonese</b> is what is spoken in Hong Kong, Macau and Guangdong —
+           about 85 million people — and it is not a dialect of Mandarin any more than Portuguese is a
+           dialect of Spanish. Same writing system, different language: different sounds, different
+           grammar words, its own characters. This app teaches Cantonese.` },
+  { k: "字", title: "A character is a syllable",
+    body: `Every character is exactly one syllable and usually one lump of meaning. They are not letters
+           and they are not words — they are the pieces words are made of. 好 is <i>good</i>, 多 is
+           <i>many</i>, and 好多 is <i>a lot</i>. Learn the pieces and the words start assembling
+           themselves.` },
+  { k: "部首", title: "Characters are built, not drawn",
+    body: `Nearly every character is two parts: one hinting at the <b>meaning</b>, one at the <b>sound</b>.
+           媽 (mother) is 女 <i>woman</i> beside 馬 <i>maa</i> — what it is, and what it sounds like. That
+           is why they stop looking like a thousand unrelated squiggles, and it is what the 部首 tab is a
+           list of.` },
+  { k: "粵拼", title: "Jyutping is the sound, written down",
+    body: `<b>jyut6 ping3</b> spells a Cantonese syllable in the Latin alphabet, and the number on the end
+           is the tone. It is a tool, not the language — you will stop needing it. Do not read it as
+           English: <i>j</i> is the <i>y</i> of <i>yes</i>, and <i>eo</i> is a vowel English has not got.` },
+  { k: "聲調", title: "Six tones, and they are the word",
+    body: `The number is the pitch of the syllable, and in Cantonese the pitch is part of the word — not
+           emphasis, not mood. <b>maai5</b> is <i>to buy</i>; <b>maai6</b> is <i>to sell</i>. Same mouth,
+           different note, opposite meaning. The 聲調 tab has all six with sound.` },
+  { k: "繁體", title: "The full forms",
+    body: `Hong Kong writes <b>traditional</b> characters, so that is what you will learn here. The
+           mainland simplified many of them in the 1950s — 學 became 学 — and where a character has a
+           simplified twin this app shows it, so you can read both.` },
+  { k: "口語", title: "Written the way it is spoken",
+    body: `Formal Chinese writing is Mandarin on paper even in Hong Kong. But Cantonese has its own written
+           form for texting, comics and speech bubbles, with characters that exist nowhere else: 嘅 咩 呢
+           啦 佢 哋. That is the Cantonese you will actually be spoken to in, and it is the one this app
+           teaches.` }
+];
+
+function startPrimer() {
+  walk = { cards: PRIMER, done: finishPrimer, label: "Got it" };
+  tourStep = 0;
+  $("#tour").classList.add("on");
+  document.body.style.overflow = "hidden";
+  renderTour();
+}
+
+function finishPrimer() {
+  state.primer = true; save();
+  closeWalk();
+}
+
+/* Offered after the questionnaire, once, and never to someone who has already
+   learned a hundred characters — they have worked all this out. */
+function maybeOfferPrimer() {
+  if (state.primer || Object.keys(state.chars).length > 20) return;
+  setTimeout(startPrimer, 350);
 }
 
 /* Offered once, at the end of the tour, and only to a genuinely empty record —
@@ -4808,15 +5024,16 @@ function maybeOfferProfile() {
 }
 
 function renderTour() {
-  const t = TOUR[tourStep], last = tourStep === TOUR.length - 1;
+  const cards = walk.cards || TOUR;
+  const t = cards[tourStep], last = tourStep === cards.length - 1;
   $("#tourBody").innerHTML = `
     <span class="tour-k han">${esc(t.k)}</span>
     <h2>${esc(t.title)}</h2>
     <p>${t.body}</p>
-    <div class="tour-dots">${TOUR.map((_, i) =>
+    <div class="tour-dots">${cards.map((_, i) =>
       `<span class="${i === tourStep ? "on" : ""}"></span>`).join("")}</div>`;
   $("#tourBack").hidden = tourStep === 0;
-  $("#tourNext").textContent = last ? "Start learning" : "Next";
+  $("#tourNext").textContent = last ? (walk.label || "Start learning") : "Next";
 }
 
 /* ============================================================
@@ -4825,7 +5042,7 @@ function renderTour() {
 
 let view = "today";
 const RENDER = { today: renderToday, sprint: renderSprint, menu: renderQuest, library: renderLibrary,
-                 write: renderWrite, radicals: renderRadicals, record: renderRecord };
+                 write: renderWrite, radicals: renderRadicals, tones: renderTones, record: renderRecord };
 
 function go(v) {
   view = v;
@@ -4985,7 +5202,10 @@ function boot() {
   });
   $$(".settings-btn").forEach(b => b.onclick = openSettings);
   $$(".save-btn").forEach(b => b.onclick = openBackup);
-  $("#tourNext").onclick = () => { if (tourStep === TOUR.length - 1) endTour(); else { tourStep++; renderTour(); } };
+  $("#tourNext").onclick = () => {
+    const n = (walk.cards || TOUR).length;
+    if (tourStep === n - 1) endTour(); else { tourStep++; renderTour(); }
+  };
   $("#tourBack").onclick = () => { if (tourStep > 0) { tourStep--; renderTour(); } };
   $("#tourSkip").onclick = endTour;
   go("today");

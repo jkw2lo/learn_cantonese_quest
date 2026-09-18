@@ -61,6 +61,7 @@ const blank = () => ({
   voice: null,
   timer: true,
   tour: false,
+  primer: false,
   writeDrills: true,
   padAuto: false,
   demo: false,

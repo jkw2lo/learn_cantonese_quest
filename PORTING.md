@@ -715,6 +715,77 @@ the first version of these tests passed against the wrong record. Read what
 
 ---
 
+### 15 · An audit of the stroke data
+
+`check-strokes.mjs` compares the bundle byte-for-byte with Make Me a Hanzi,
+which settles stroke **order** — the order is the array order and the array is
+upstream's. `tools/audit-strokes.mjs` covers what that cannot see:
+
+| pass | what it catches |
+|---|---|
+| coverage | a character offered for writing with no data — and whether upstream has it, so a bundling miss reads differently from a real gap |
+| traditional forms | a traditional character carrying the simplified glyph's strokes, which would teach the wrong hand silently; and the `SIMPLIFIED` map against Unihan |
+| stated counts | `RADICALS[].strokes` against the form the card prints |
+| structure | one median per stroke, points inside the 1024-unit box, no truncated paths |
+| components | 部件 claims against upstream's own decomposition |
+
+**It found a real inconsistency.** `strokes` is meant to count the form the
+card prints — the card shows 忄, so "3 strokes" has to be 忄's three, not 心's
+four. Four entries did that; 食, 心 and 手 counted the dictionary key instead.
+Now 8, 3, 3.
+
+**Two lessons from writing it, both worth having before porting it.** It first
+reported 水 and 艸 as wrong because it compared the key rather than the printed
+form — a correct entry flagged as a bug, which is how a checker loses its
+authority. And expanding the decomposition by *substitution* turned 8 honest
+component notes into 104 useless ones: Make Me a Hanzi bottoms out in `？`, so
+replacing 言 with its own decomposition deletes the 言 the claim is about.
+Expansion has to append.
+
+Hanzi Quest teaches simplified from a much larger set, so the
+traditional-forms pass needs inverting there; everything else ports as is.
+
+---
+
+### 16 · 聲調 — a page that teaches the tones
+
+The contour line has sat beside every reading since the first commit,
+unexplained. Everything assumed you would imitate your way there, which works
+if you already speak a tonal language and is a wall otherwise.
+
+The demonstration is built from **the curriculum's own characters**, not the
+textbook 詩史試時市是 set: 哥 嗰 個 give tones 1-2-3 and 埋 買 賣 give 4-5-6,
+every one of them taught by the app and every one with a recorded clip — so
+the tones can be *heard*, not just described. 買 maai5 (buy) against 賣 maai6
+(sell) opens the page, because one tone apart and opposite in meaning makes
+the argument better than any paragraph.
+
+Mandarin has four tones, not six, so this ports as a structure rather than as
+content: find the minimal sets inside the curriculum (`bare(p)` grouped, ≥3
+distinct tones) rather than reaching for a textbook example with no audio.
+
+---
+
+### 17 · 入門 — a primer on the language, not the app
+
+The tour explains the tabs. Nothing explained the writing system, so a first
+day looked like 你好 with no account of what a character is, why there are two
+of them, or what the number after the romanisation is for.
+
+Seven cards after the questionnaire, once: Cantonese is not a dialect of
+Mandarin; a character is a syllable; characters are built from a meaning part
+and a sound part; jyutping is a tool and not the language; six tones and they
+*are* the word; traditional forms; and written Cantonese as distinct from
+formal Chinese.
+
+**The shell is the existing tour.** `walk = { cards, done, label }` replaces
+the hard-coded `TOUR` in `renderTour` and the two handlers, so a second
+walkthrough costs an array and two functions. Check the first one still works
+after the refactor — it is the kind of change that quietly breaks the thing it
+generalised.
+
+---
+
 ## Do not port these
 
 Cantonese-specific, and wrong for Hanzi Quest:

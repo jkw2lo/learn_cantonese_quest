@@ -2875,3 +2875,82 @@ button.tier-head:hover { border-color: var(--ink-3); }
 
 /* the square-size control sits with the nib */
 .wp-field select { min-width: 0; }
+
+/* ============================================================
+   聲調 — the six tones
+
+   The contour line has been sitting beside every reading in this app from the
+   first commit, unexplained. This page is what it means.
+   ============================================================ */
+
+.tn-curve { flex: none; }
+.tn-curve path { fill: none; stroke: var(--seal); stroke-width: 2.1; stroke-linecap: round; }
+.tn-curve .tn-base, .tn-curve .tn-top { stroke: var(--rule); stroke-width: .8; stroke-dasharray: 2 2; }
+
+/* the two-character opening */
+.tn-hero { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .7rem; }
+.tn-pair { display: flex; align-items: center; justify-content: center; gap: .8rem; flex-wrap: wrap; }
+.tn-pair-one {
+  display: flex; flex-direction: column; align-items: center; gap: .1rem;
+  padding: .7rem 1.1rem; border-radius: 10px;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink);
+}
+.tn-pair-one:hover { border-color: var(--seal); background: var(--seal-wash); }
+.tn-pair-one.said { border-color: var(--seal); background: var(--seal-wash); }
+.tn-pair-one .z { font-family: var(--f-han); font-size: 2.6rem; line-height: 1.05; }
+.tn-pair-one .p { font-family: var(--f-pin); font-size: .88rem; color: var(--jade); }
+.tn-pair-one .m { font-size: .76rem; color: var(--ink-2); }
+.tn-vs { font-size: .72rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .12em; }
+.tn-hero-note { margin: 0; font-size: .84rem; line-height: 1.6; color: var(--ink-2); text-align: center; max-width: 42rem; align-self: center; }
+
+/* the six, one card each */
+.tn-grid { display: grid; grid-template-columns: 1fr; gap: .7rem; }
+@media (min-width: 720px) { .tn-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .tn-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.tn { padding: .85rem .95rem .9rem; display: flex; flex-direction: column; gap: .4rem; }
+.tn-top-row { display: flex; align-items: center; gap: .6rem; }
+.tn-n {
+  flex: none; width: 1.7rem; height: 1.7rem; border-radius: 50%;
+  display: grid; place-items: center; font-size: .82rem; font-weight: 600;
+  background: var(--seal-wash); color: var(--seal);
+}
+.tn-name { display: flex; flex-direction: column; gap: .05rem; min-width: 0; }
+.tn-name b { font-size: .92rem; }
+.tn-name small { font-size: .7rem; color: var(--ink-3); font-family: var(--f-pin); }
+.tn-how { margin: 0; font-size: .82rem; line-height: 1.5; }
+.tn-feel { margin: 0; font-size: .76rem; line-height: 1.5; color: var(--ink-3); }
+.tn-eg {
+  margin-top: .15rem; display: flex; align-items: center; gap: .6rem;
+  padding: .45rem .6rem; border-radius: 8px; text-align: left;
+  border: 1px solid var(--rule-2); background: var(--sunken); color: var(--ink);
+}
+.tn-eg:hover { border-color: var(--seal); }
+.tn-eg.said { background: var(--seal-wash); border-color: var(--seal); }
+.tn-eg .z { font-family: var(--f-han); font-size: 1.7rem; line-height: 1; }
+.tn-eg .s { display: flex; flex-direction: column; min-width: 0; }
+.tn-eg .s b { font-family: var(--f-pin); font-size: .8rem; color: var(--jade); font-weight: 600; }
+.tn-eg .s small { font-size: .72rem; color: var(--ink-2); }
+.tn-eg .go { margin-left: auto; font-size: .9rem; opacity: .55; }
+
+/* the ladder */
+.tn-ladder { margin-top: 1rem; padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .6rem; align-items: flex-start; }
+.tn-ladder .note { margin: 0; max-width: 46rem; }
+.tn-ladder-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .4rem; width: 100%; }
+@media (max-width: 560px) { .tn-ladder-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.tn-rung {
+  display: flex; flex-direction: column; align-items: center; gap: .1rem;
+  padding: .5rem .3rem .55rem; border-radius: 9px;
+  border: 1px solid var(--rule-2); background: var(--sheet); color: var(--ink);
+}
+.tn-rung:hover { border-color: var(--seal); }
+.tn-rung.said { background: var(--seal-wash); border-color: var(--seal); }
+.tn-rung .n { font-size: .72rem; color: var(--ink-3); }
+.tn-rung .z { font-family: var(--f-han); font-size: 1.5rem; line-height: 1.1; }
+.tn-rung .p { font-family: var(--f-pin); font-size: .68rem; color: var(--jade); }
+
+/* the two traps */
+.tn-more { margin-top: 1rem; padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .6rem; }
+.tn-more-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 860px) { .tn-more-grid { grid-template-columns: 1fr 1fr; } }
+.tn-more-grid b { font-size: .88rem; }
+.tn-more-grid .note { margin: .25rem 0 .5rem; }
