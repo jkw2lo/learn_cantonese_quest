@@ -23,7 +23,7 @@
   --shadow:   0 1px 2px rgba(23, 33, 30, .06), 0 6px 18px rgba(23, 33, 30, .05);
   --shadow-lift: 0 2px 4px rgba(23, 33, 30, .08), 0 14px 34px rgba(23, 33, 30, .10);
 
-  --f-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --f-display: "Newsreader", Georgia, "Times New Roman", serif;
   --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-pin: "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   /* Traditional first, and Hong Kong before Taiwan: the two regions differ on
@@ -2752,3 +2752,50 @@ button.tier-head:hover { border-color: var(--ink-3); }
   /* the big families earn the full width — 口 alone has twenty */
   .rad-grid > .rad.wide { grid-column: 1 / -1; }
 }
+
+/* ============================================================
+   Backgrounds: what sits on the paper, and what the paper is
+
+   Four blocks were transparent on the squared ground because the rule that
+   stripped fills inside the enclosures caught them too. Three of them hold
+   text you read, and one is a button.
+   ============================================================ */
+
+@media (min-width: 1180px) {
+  /* The greeting and the date are a block, not type floating on graph paper.
+     --sheet alone stops the grid but is the same colour as the ground it sits
+     on, so it needs an edge to read as a block at all. */
+  .dash-today .hero-top {
+    background: var(--sheet); border: 1px solid var(--rule-2); border-radius: 9px;
+    padding: .55rem .7rem; margin: -.1rem -.15rem .15rem;
+  }
+  /* and the one button on the page gets a ground of its own */
+  .dash-today .hero-cta .btn-ghost {
+    background: var(--sunken); border-color: var(--rule);
+  }
+  .dash-today .hero-cta .btn-ghost:hover { background: var(--sheet); border-color: var(--ink-3); }
+
+  /* Word of the week and the flashcards read as one surface with Go deeper —
+     the three things that are not today's work. */
+  .dash-side .wotw, .dash-side .decks {
+    background: var(--sunken); border: 1px solid var(--rule-2); border-radius: 10px;
+  }
+  .dash-side .wotw .wotw-word { background: var(--sheet); }
+}
+
+/* 生字 on a card face: two characters where the face was drawn for one. The
+   deck's front is 34px wide on the dashboard, and .82rem put them edge to
+   edge with no card showing round them. */
+.deck-cards .dc1.dc-word { font-size: .66rem; letter-spacing: -.04em; line-height: 1.05; }
+.decks .deck-cards .dc1.dc-word { font-size: .6rem; }
+
+/* what "solid" means, said where the number is */
+.solid-def { display: block; margin-top: .1rem; color: var(--ink-3); cursor: help; }
+.solid-def b { color: var(--ink-2); font-weight: 600; }
+
+/* the phrases, back on the menu tab where the characters they teach live */
+.menu-say { margin-top: .8rem; }
+.menu-say-head { display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; margin-bottom: .4rem; }
+
+/* the honest scope of the radicals page, said where the count is */
+.rad-scope { margin: 0 0 .2rem; font-size: .78rem; line-height: 1.55; max-width: 52rem; }

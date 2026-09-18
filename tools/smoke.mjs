@@ -101,6 +101,31 @@ const printedTaught = [...onMenu].filter(c => CHAR_INDEX[c]);
 const spokenTaught = [...spoken].filter(c => CHAR_INDEX[c]);
 ok('the quest targets only characters it teaches', MENU_CHARS.every(c => CHAR_INDEX[c]),
    MENU_CHARS.filter(c => !CHAR_INDEX[c]).join(' '));
+
+/* Every character the menu quest teaches has to be somewhere a learner can
+   actually look at it. Eight of the forty-three — 我 該 個 呀 幾 碗 呢 埋 —
+   are only in the phrases, never on the dish list, and the day the phrases
+   stopped being shown on the Menu tab there was nowhere to find 呢 at all
+   while the card still said "find it on the menu below". */
+{
+  const seen = new Set();
+  const eat = t => { for (const c of String(t)) if (/[\u4e00-\u9fff]/.test(c)) seen.add(c); };
+  const section = x => { eat(x.head); x.items.forEach(i => { eat(i[0]); if (i[4]) eat(i[4][0]); }); };
+  eat(MENU.title); eat(MENU.name);
+  MENU.sections.forEach(section);
+  if (MENU.specials) { section(MENU.specials); if (MENU.specials.note) eat(MENU.specials.note[0]); }
+  const printed = new Set(seen);
+  MENU.phrases.forEach(p => eat(p[0]));
+
+  const nowhere = MENU_CHARS.filter(c => !seen.has(c));
+  ok('every menu character is somewhere on the menu page', !nowhere.length, nowhere.join(' '));
+
+  const phraseOnly = MENU_CHARS.filter(c => !printed.has(c));
+  ok('and the ones only in the phrases are known to be', phraseOnly.length === 8, phraseOnly.join(' '));
+
+  const app = read('js/app.js');
+  ok('so the Menu tab still renders the phrases', /MENU\.phrases\.map/.test(app.split('renderQuest')[1] || ''));
+}
 ok('and covers every taught character on the menu',
    [...printedTaught, ...spokenTaught].every(c => MENU_CHARS.includes(c)),
    [...printedTaught, ...spokenTaught].filter(c => !MENU_CHARS.includes(c)).join(' '));

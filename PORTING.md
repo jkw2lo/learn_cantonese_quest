@@ -18,24 +18,25 @@ the "new characters a day" setting every time someone clicks the button.
 
 ## Port these
 
-### 1 · Fraunces renders a wonky `J`
+### 1 · The wonky `J` was not WONK — it is Fraunces
 
-Fraunces ships a **`WONK` axis** — the name is literal — which splays a handful
-of glyphs. `J` is the one it treats worst, and the axis defaults to **on**. Both
-apps request the family without mentioning it, so both get the wonky forms. It
-shows up wherever a display-font heading contains one of the affected letters;
-here it was the greeting, which addresses you by name.
+**This entry previously said the fix was pinning the `WONK` axis to 0. That was
+wrong, and Hanzi Quest should not copy it.**
 
-**Where:** `index.html`, the Google Fonts `<link>`.
+Rendered side by side at 54px, `WONK 0` and `WONK 1` are identical for "Jen",
+and so are `ss01`–`ss04`, `salt`, `cv01` and `cv02`. Fraunces simply draws a J
+that drops below the baseline and curls left, and the one heading that
+addresses the learner by name is exactly where it shows. No axis, feature or
+stylistic set reaches it.
 
-```
-- family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700
-+ family=Fraunces:opsz,wght,WONK@9..144,500,0;9..144,600,0;9..144,700,0
-```
+The only fix is a different display family. Cantonese Quest moved to
+**Newsreader**: same editorial warmth, an optical-size axis like Fraunces had,
+pairs with IBM Plex Sans, ordinary J.
 
-Hanzi Quest's link is character-for-character the same, so this is a
-copy-paste. Verified the axis-pinned URL returns 200 and serves real `woff2`
-files before relying on it.
+    --f-display: "Newsreader", Georgia, "Times New Roman", serif;
+    …css2?family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700…
+
+Pinning `WONK` costs nothing and does nothing; drop it with the family.
 
 ---
 
@@ -514,6 +515,43 @@ tail folds into a `<details>`.
 `.menu-head`, which already existed — the printed masthead of the standalone
 menu sheet — so the page's introduction came out centred under a 2px vermilion
 rule. Grep before naming.
+
+---
+
+### 9i · Eight menu characters were taught but nowhere to be found
+
+`MENU_CHARS` teaches 43 characters. Eight of them — 我 該 個 呀 幾 碗 呢 埋 —
+appear only in the phrases you say to a waiter, never on the printed dish
+list. The card said "One character a day. **Find it on the menu below**"
+regardless, which was already misleading; the day the Menu tab stopped
+rendering the phrases, 呢 had nowhere to be found at all.
+
+Two fixes, both needed. The phrases come back onto the Menu tab (speakable
+now, and with the day's character highlighted in them). And the copy tells the
+truth about where to look:
+
+    onPrintedMenu(c) ? "on the menu below" : "in the phrases under the menu"
+
+`PRINTED` is derived from `MENU` at load rather than listed by hand, so
+editing the menu data cannot put it out of date.
+
+**Smoke gains three checks**: every `MENU_CHARS` character appears somewhere on
+the page; exactly eight are phrase-only (so adding a ninth is a deliberate
+decision, not a silent one); and `renderQuest` still renders the phrase list.
+
+---
+
+### 9j · Smaller things in the same pass
+
+| what | why | where |
+|---|---|---|
+| The greeting block and the study-ahead button get a ground | The rule that strips fills inside the paper enclosures caught them too, so the grid ran through the date, the headline and the one button on the page. `--sheet` alone stops the grid but matches the ground it sits on, so the block also needs a hairline to read as a block | `.dash-today .hero-top`, `.hero-cta .btn-ghost` |
+| Word of the week and the flashcards join Go deeper | They are the three things that are *not* today's work, so they share one surface | `.dash-side .wotw`, `.dash-side .decks` |
+| 生字 shrinks on the deck face | The dashboard's card front is 34px wide; `.82rem` put the two characters edge to edge with no card showing round them. Now `.6rem` | `.decks .dc1.dc-word` |
+| "Solid" is defined where it is counted | Three modes each count separately and the word appeared five times on the band without ever being explained | `.deeper-sub`, `.solid-def` |
+| Six nibs, and `T` in the exercise book | Finest was 5px. Now 1.5–13. `T` already toggled the trackpad in the notebook and nothing said it worked here — note `wpControls` must use `innerHTML`, since `textContent` wiped the key hint on the first repaint | `#wpPen`, `onKey`, `wpControls` |
+| Flashcard faces stop repeating the footer | The three space-bar behaviours are listed under the card; the face only needs to say which way it turns | `renderFlash` |
+| The radicals page says what it is not | "Is this all of them?" is the right question: 27 of the traditional 214, and the answer belongs on the page rather than in a commit message | `.rad-scope` |
 
 ---
 

@@ -3,14 +3,22 @@
      A browser that has cached js/app.js will keep serving it until something
      about the URL changes, which is why a push can be live and invisible at
      the same time. Bump with: node tools/version.mjs <next>  -->
-<script>const APP_VERSION = "0.8.0", APP_DATE = "2026-09-18";</script>
-<!-- WONK 0 on Fraunces. The family ships a "wonky" axis on by default, which
-     splays a handful of glyphs — the J above all, so a name like Jen came out
-     with a great curling descender in the one heading that addresses you by it. -->
+<script>const APP_VERSION = "0.9.1", APP_DATE = "2026-09-18";</script>
+<!-- Newsreader, not Fraunces, for one reason: the J.
+
+     Fraunces draws a J that drops below the baseline and curls left, and the
+     one heading that addresses you by name is the place it shows. It was
+     blamed on the family's WONK axis and pinned to 0 — which was wrong.
+     Rendered side by side at 54px, WONK 0 and WONK 1 are identical for "Jen",
+     and so are ss01-ss04, salt, cv01 and cv02. That J is simply the font's J,
+     and the only way past it is a different font.
+
+     Newsreader keeps the editorial warmth and the optical-size axis, pairs
+     with IBM Plex Sans as Fraunces did, and has an ordinary J. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,WONK@9..144,500,0;9..144,600,0;9..144,700,0&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="css/app.css?v=0.8.0">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/app.css?v=0.9.1">
 
 <div class="app">
 
@@ -124,7 +132,7 @@
       <button class="btn" id="flashNext">Next</button>
     </div>
     <p class="flash-keys"><kbd>space</kbd> hear it &nbsp;·&nbsp;
-      <kbd>space</kbd><kbd>space</kbd> next &nbsp;·&nbsp;
+      <kbd>space</kbd> <kbd>space</kbd> next card &nbsp;·&nbsp;
       <kbd>hold space</kbd> peek at the back</p>
   </div>
 </div>
@@ -188,12 +196,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.1/dist/hanzi-writer.min.js"></script>
-<script src="js/data.js?v=0.8.0"></script>
-<script src="js/strokes.js?v=0.8.0"></script>
+<script src="js/data.js?v=0.9.1"></script>
+<script src="js/strokes.js?v=0.9.1"></script>
 <!-- js/audio.js is deliberately not here. It is 859 KB gzipped of base64 speech
      that nothing needs in the first second, and as a blocking script it held up
      every view behind it. app.js fetches it after the first render. -->
-<script src="js/srs.js?v=0.8.0"></script>
+<script src="js/srs.js?v=0.9.1"></script>
 <!-- before app.js: app.js builds its RENDER map at load and names renderSprint in it -->
-<script src="js/sprint.js?v=0.8.0"></script>
-<script src="js/app.js?v=0.8.0"></script>
+<script src="js/sprint.js?v=0.9.1"></script>
+<script src="js/app.js?v=0.9.1"></script>

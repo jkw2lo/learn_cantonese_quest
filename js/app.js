@@ -1775,6 +1775,23 @@ function menuNext() {
   return { tier: t, needMenu, needAll, more: Math.max(needMenu, needAll) };
 }
 
+/* Is this character actually printed on the dish list?
+
+   Eight of the forty-three menu characters — 我 該 個 呀 幾 碗 呢 埋 — appear
+   only in the phrases you say to a waiter, never on the menu itself. The card
+   told you to "find it on the menu below" regardless, and once the phrases
+   stopped being shown on this tab there was nowhere to find 呢 at all. */
+const PRINTED = (() => {
+  const out = new Set();
+  const eat = t => { for (const c of String(t)) if (/[\u4e00-\u9fff]/.test(c)) out.add(c); };
+  eat(MENU.title); eat(MENU.name);
+  const section = s => { eat(s.head); s.items.forEach(i => { eat(i[0]); if (i[4]) eat(i[4][0]); }); };
+  MENU.sections.forEach(section);
+  if (MENU.specials) { section(MENU.specials); if (MENU.specials.note) eat(MENU.specials.note[0]); }
+  return out;
+})();
+const onPrintedMenu = c => PRINTED.has(c);
+
 function renderMenuCard(target, tall) {
   const m = MENU, tier = menuTier().n;
   /* A menu row is a thing to hear, not only a thing to look at — ordering is
@@ -1949,14 +1966,14 @@ function renderFlash() {
       <div class="card3d-inner">
         <div class="card-face">
           <span class="big ${f.wide ? "big-wide" : ""}">${esc(f.front)}</span>
-          <span class="hint">Tap to flip · hold <b>space</b> to peek</span>
+          <span class="hint">Tap to flip</span>
         </div>
         <div class="card-face card-back">
           <span class="sm">${esc(f.front)}</span>
           <span class="pin">${esc(f.pin)}${f.tone ? " " + toneMark(f.pin) : ""}</span>
           <span class="mean">${esc(f.mean)}</span>
           <span class="word">${esc(f.foot)}</span>
-          <span class="hint">Tap to flip back</span>
+          <span class="hint">Tap to turn over</span>
         </div>
       </div>
     </button>`;
@@ -2317,8 +2334,8 @@ function renderNotebookPadState() {
    trace like a 字帖 copybook.
    ============================================================ */
 
-const wp = { built: false, rows: 6, guide: null, pen: 8, cell: 84, strokes: [], cur: null,
-             sort: "day", find: "", brush: true, w: 8, n: 0 };
+const wp = { built: false, rows: 6, guide: null, pen: 6, cell: 84, strokes: [], cur: null,
+             sort: "day", find: "", brush: true, w: 6, n: 0 };
 
 /* ---------- the practice diary ----------
    Pages are stored as stroke vectors, not pictures: a densely filled page is
@@ -2366,7 +2383,12 @@ function buildWritePage() {
           <div class="wp-tools">
             <label class="wp-field">Nib
               <select id="wpPen">
-                <option value="5">fine</option><option value="8" selected>medium</option><option value="13">broad</option>
+                <option value="1.5">hairline</option>
+                <option value="2.5">extra fine</option>
+                <option value="4">fine</option>
+                <option value="6" selected>medium</option>
+                <option value="9">broad</option>
+                <option value="13">very broad</option>
               </select>
             </label>
             <label class="wp-field wp-brush">
@@ -2375,7 +2397,7 @@ function buildWritePage() {
                 <option value="pen">原子筆 even</option>
               </select>
             </label>
-            <button class="btn btn-ghost btn-sm" id="wpPad">觸控 Trackpad</button>
+            <button class="btn btn-ghost btn-sm" id="wpPad">觸控 Trackpad <kbd class="opt-n">T</kbd></button>
             <button class="btn btn-ghost btn-sm" id="wpSave">Save page</button>
             <button class="btn btn-ghost btn-sm" id="wpClear">Clear page</button>
           </div>
@@ -2413,7 +2435,12 @@ function buildWritePage() {
 
 function wpControls() {
   const b = $("#wpPad");
-  if (b) { b.textContent = pad.active ? "觸控 Trackpad on" : "觸控 Trackpad"; b.classList.toggle("on", pad.active); }
+  /* innerHTML, not textContent: the key hint is part of the label and
+     textContent was wiping it on the first repaint after the page was built */
+  if (b) {
+    b.innerHTML = `觸控 Trackpad${pad.active ? " on" : ""} <kbd class="opt-n">T</kbd>`;
+    b.classList.toggle("on", pad.active);
+  }
   renderPicker();
 }
 
@@ -3174,7 +3201,9 @@ function renderToday() {
     <div class="deeper-head">
       <span class="deeper-title">
         <span class="eyebrow">Go deeper ${hanLabel("加練")}</span>
-        <p class="deeper-sub">Reps past today's list — never required, never finished.</p>
+        <p class="deeper-sub">Reps past today's list — never required, never finished.
+          <span class="solid-def" title="A character counts as solid in a mode once you have answered it correctly ${PASSES_FOR_SOLID} times in that mode. The three modes are counted separately: solid at reading says nothing about writing.">
+            <b>Solid</b> = ${PASSES_FOR_SOLID} correct in that mode.</span></p>
       </span>
       <span class="deeper-count" title="${exToday} rep${exToday === 1 ? "" : "s"} today — one stroke of 正 each, five to a mark${
         exAll ? ` · ${exAll.toLocaleString()} all told${exBest > 4 ? `, best day ${exBest}` : ""}` : ""}">
@@ -3337,7 +3366,8 @@ function renderQuest() {
       <span class="sq-glyph">${esc(pch.c)}</span>
       <span class="sq-info">
         <span class="t">${learnedIt ? "Today's menu character — learned" : "Today's menu character"}</span>
-        <span class="m">${learnedIt ? `${esc(pch.p)} · ${esc(pch.m)}` : "One character a day. Find it on the menu below."}</span>
+        <span class="m">${learnedIt ? `${esc(pch.p)} · ${esc(pch.m)}`
+          : `One character a day. Find it ${onPrintedMenu(pch.c) ? "on the menu below" : "in the phrases under the menu"}.`}</span>
         ${learnedIt ? `<span class="p">Next one tomorrow.</span>` : `<span class="p">${esc(pch.words[0][0])} · ${esc(pch.words[0][2])}</span>`}
       </span>
       ${!learnedIt ? `<button class="btn btn-seal sq-learn" id="learnMenu">Learn ${esc(pch.c)}</button>` : ""}
@@ -3348,6 +3378,20 @@ function renderQuest() {
     </div>`}
 
     <div class="menu-wrap full">${renderMenuCard(learnedIt ? null : pick2.c, true)}</div>
+
+    <div class="menu-say">
+      <div class="menu-say-head">
+        <span class="eyebrow">Say it out loud ${hanLabel("講嘢")}</span>
+        <span class="dim" style="font-size:.72rem">tap to hear</span>
+      </div>
+      <div class="phrase-list">
+        ${MENU.phrases.map(ph => `<button class="phrase" data-speak="${esc(ph[0])}">
+          <span class="z">${glyphs(ph[0], learnedIt ? null : pick2.c)}</span>
+          <span class="p">${esc(ph[1])}</span>
+          <span class="e">${esc(ph[2])}</span>
+        </button>`).join("")}
+      </div>
+    </div>
 
     <div class="menu-legend">
       <span><b style="color:var(--ink)">黑</b> you can read</span>
@@ -3603,10 +3647,14 @@ function renderRadicals() {
   const map = `<div class="sheet rad-map">
     <div class="rad-map-head">
       <span class="eyebrow">All of them ${hanLabel("部首表")}</span>
-      <span class="dim" style="font-size:.74rem">${documented.length} radicals ·
+      <span class="dim" style="font-size:.74rem">${documented.length} of 214 ·
         ${documented.reduce((a, k) => a + tally(k).known, 0)} of
         ${documented.reduce((a, k) => a + tally(k).kids.length, 0)} characters</span>
     </div>
+    <p class="note rad-scope">No, this isn't all of them — the full traditional set is <b>214</b>, and a big
+      dictionary indexes every character under one of them. These ${documented.length} are the ones that
+      actually earn their keep in this library: each has at least one character you are being taught. The
+      other 187 are real, but you would be learning them for characters that aren't here yet.</p>
     <div class="rad-map-grid">
       ${themes.map(t => t.keys.map(k => {
         const r = RADICALS[k], { kids, known } = tally(k);
@@ -4173,6 +4221,13 @@ function onKey(e) {
   if ($("#notebook").classList.contains("on")) {
     if (e.key.toLowerCase() === "t") { e.preventDefault(); nbPad(); }
     return;
+  }
+
+  /* the exercise book: the same key, because it is the same gesture. The
+     button said 觸控 Trackpad and nothing else on the page hinted that the
+     keyboard could reach it — in the notebook it always could. */
+  if (wp.built && $("#viewWrite")?.classList.contains("on") && !session.active) {
+    if (e.key.toLowerCase() === "t") { e.preventDefault(); wpPad(); return; }
   }
 
   /* Flashcards: the space bar does three things, told apart by how it is
