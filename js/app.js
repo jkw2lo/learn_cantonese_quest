@@ -4394,18 +4394,33 @@ function boot() {
   /* #nbPad lives inside the notebook stage now, and is bound when it renders */
   $("#flashPrev").onclick = () => flashStep(-1);
   $("#flashNext").onclick = () => flashStep(1);
-  /* Hover and focus are handled in CSS; a tap needs a class, and a tap
-     anywhere else needs to put it away again. */
-  $$(".streak-chip").forEach(chip => chip.addEventListener("click", e => {
-    e.stopPropagation();
-    const pop = chip.closest(".streak-pop");
-    const on = pop.classList.toggle("on");
-    chip.setAttribute("aria-expanded", on ? "true" : "false");
-  }));
-  document.addEventListener("click", () => $$(".streak-pop.on").forEach(p => {
+  /* Hover and focus open it in CSS; a tap needs a class, and a tap anywhere
+     else needs to put it away again.
+
+     `shut` is the awkward one. Clicking the chip a second time removed `on` and
+     nothing happened, because the pointer was still on the chip and
+     `.streak-pop:hover` was holding it open on its own — so the control looked
+     broken precisely when you used it the obvious way. `shut` overrides hover
+     until the pointer leaves, at which point hover is welcome to work again. */
+  const closePop = p => {
     p.classList.remove("on");
     $(".streak-chip", p)?.setAttribute("aria-expanded", "false");
-  }));
+  };
+  $$(".streak-chip").forEach(chip => {
+    const pop = chip.closest(".streak-pop");
+    chip.addEventListener("click", e => {
+      e.stopPropagation();
+      const opening = !pop.classList.contains("on");
+      pop.classList.toggle("on", opening);
+      pop.classList.toggle("shut", !opening);
+      chip.setAttribute("aria-expanded", opening ? "true" : "false");
+    });
+    pop.addEventListener("mouseleave", () => pop.classList.remove("shut"));
+  });
+  document.addEventListener("click", () => $$(".streak-pop.on").forEach(closePop));
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") $$(".streak-pop.on").forEach(closePop);
+  });
   $$(".settings-btn").forEach(b => b.onclick = openSettings);
   $$(".save-btn").forEach(b => b.onclick = openBackup);
   $("#tourNext").onclick = () => { if (tourStep === TOUR.length - 1) endTour(); else { tourStep++; renderTour(); } };

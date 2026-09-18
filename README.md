@@ -9,6 +9,10 @@ simplified characters. The app — the scheduler, the session, the sprints, the
 notebook, the design system — is the same code. The curriculum, the tone
 system, the quest and the fonts are not, and this file is mostly about why.
 
+Interface and tooling work here that Hanzi Quest should also have is listed in
+**[PORTING.md](PORTING.md)** — what changed, why, where it lives, and what to
+leave behind because it is about Cantonese rather than about the app.
+
 ## Running it
 
 No build step, no dependencies.

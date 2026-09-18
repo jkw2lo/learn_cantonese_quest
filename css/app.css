@@ -183,6 +183,8 @@ button { font: inherit; color: inherit; cursor: pointer; background: none; }
 .streak-pop.on .tracker { opacity: 1; visibility: visible; transform: none; }
 @media (hover: none) { .streak-pop:hover .tracker { opacity: 0; visibility: hidden; } }
 .streak-pop.on .tracker { opacity: 1 !important; visibility: visible !important; }
+/* Explicitly closed by a click, and the pointer has not left yet — see boot(). */
+.streak-pop.shut .tracker { opacity: 0; visibility: hidden; transform: translateY(-3px); }
 .tracker-lbl {
   font-size: .62rem; letter-spacing: .1em; text-transform: uppercase;
   color: var(--ink-3); font-weight: 600; white-space: nowrap;
