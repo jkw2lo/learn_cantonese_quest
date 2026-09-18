@@ -418,9 +418,29 @@ function makeWriter(mount, char, opts = {}) {
     charDataLoader: (ch, onComplete) => onComplete(window.STROKE_DATA[ch])
   }, opts));
 }
+/* Whether this character can be animated, traced or quizzed stroke by stroke.
+
+   Ten characters in this curriculum have no stroke data anywhere upstream,
+   because hanzi-writer's corpus comes from fonts that predate written
+   Cantonese being typeset seriously — and they include 佢 and 哋, the third
+   and fourth characters anybody ever meets here. */
+const drawable = c => !!(window.STROKE_DATA && window.STROKE_DATA[c]);
+
+/* The 田字格, with the character in it.
+
+   hanzi-writer fills an empty mount, so a character it has no data for used to
+   leave the box simply blank — and the first session a new learner ever ran
+   taught them 佢 and 哋 by showing them an empty square, a sound and a meaning.
+   The font can draw these perfectly well; it is only the stroke-by-stroke
+   animation that needs the data. So when there is none, the character is set
+   in type instead of being built, and the box says what it is rather than
+   showing nothing at all. */
 function writerBox(char, id) {
-  return `<div class="writer-box"><div class="tian">${TIAN_SVG}
-    <div class="tian-slot"><div id="${id}"></div></div></div></div>`;
+  const inner = drawable(char)
+    ? `<div class="tian-slot"><div id="${id}"></div></div>`
+    : `<div class="tian-slot"><div id="${id}" class="tian-plain han"
+         title="No stroke-order data exists for this character">${esc(char)}</div></div>`;
+  return `<div class="writer-box"><div class="tian">${TIAN_SVG}${inner}</div></div>`;
 }
 
 /* ============================================================
@@ -719,9 +739,13 @@ function charCard(ch, { writerId }) {
     </div>
     <div class="tools">
       <button class="tool" data-act="say" data-text="${esc(ch.c)}"><span class="han">發音</span> Hear it</button>
+      ${drawable(ch.c) ? `
       <button class="tool" data-act="animate"><span class="han">筆順</span> Stroke order</button>
-      <button class="tool" data-act="practise"><span class="han">默寫</span> Try writing</button>
+      <button class="tool" data-act="practise"><span class="han">默寫</span> Try writing</button>` : ""}
     </div>
+    ${drawable(ch.c) ? "" : `<p class="note no-strokes">Nobody has published stroke-order data for
+      <b class="han">${esc(ch.c)}</b> — it was invented for Cantonese, and the fonts the data comes from
+      predate anyone typesetting that. You can read it and say it; the app just can't animate it.</p>`}
   </div>
 
   <div class="block sheet">
@@ -2989,7 +3013,7 @@ function renderLibrary() {
   $("#viewLibrary").innerHTML = `<div class="wrap">
     <div class="today-head">
       <h1>The library</h1>
-      <p class="note">${HQ.length} characters in three tiers, taught in the order that makes each one easier
+      <p class="note">${HQ.length} characters in ${TIERS.length} tiers, taught in the order that makes each one easier
         than the last. ${ceiling < HQ.length
           ? `You've opened the first ${ceiling} — the rest stay shut until the tier before them is ${Math.round(TIER_UNLOCK * 100)}% learned, so there's no way to get ahead of yourself by accident.`
           : "Every tier is open to you."}</p>
@@ -3246,6 +3270,13 @@ function openSettings() {
             : "This browser has no pointer lock, so trackpad writing isn't available here."}</small></label>
           <button class="btn btn-ghost btn-sm" id="padTgl" ${padSupported() ? "" : "disabled"}>${state.padAuto ? "On" : "Off"}</button>
         </div>
+        ${DEMO_BUILD ? `<div class="settings-row">
+          <label><span class="han">示範</span> Demo mode<small>Opens every tier at once so the Library shows all
+            ${HQ.length} characters and any card can be read. It changes nothing else — nothing is marked known,
+            nothing is graded, and your review queue and streak are untouched. Turn it off and the gate is
+            exactly where you left it.</small></label>
+          <button class="btn btn-ghost btn-sm ${demoOn() ? "btn-seal" : ""}" id="demoTgl">${demoOn() ? "On" : "Off"}</button>
+        </div>` : ""}
       </div>
     </div>
 
@@ -3324,6 +3355,9 @@ function openSettings() {
   $("#timerTgl").onclick = () => { state.timer = !state.timer; save(); openSettings(); };
   $("#writeTgl").onclick = () => { state.writeDrills = !state.writeDrills; save(); openSettings(); };
   $("#padTgl").onclick = () => { state.padAuto = !state.padAuto; save(); openSettings(); };
+  $("#demoTgl")?.addEventListener("click", () => {
+    state.demo = !state.demo; save(); openSettings(); renderDemoBar();
+  });
   $("#audioTgl").onclick = () => { state.audio = !state.audio; save(); openSettings(); };
   $("#backupBtn").onclick = openBackup;
   $("#profileBtn").onclick = () => openProfile(false);
@@ -3991,7 +4025,8 @@ const asking = () => !!askDone;
 const TOUR = [
   { k: "粵", title: "Welcome",
     body: `${HQ.length} characters, taught in an order where each one makes the next easier —
-           you'll meet 有 just before 冇, and 係 just before 喺, so each new one is a small step.
+           the first week gets you 你好, 唔該, 多謝, 早晨, 晚安, 對唔住 and 再見 — enough to greet
+           someone and thank them before you have learnt thirty characters.
            Nothing here needs to be finished in a sitting.` },
   { k: "今日", title: "Today is a short list",
     body: `Learn the day's characters, then tick off practising them: recognising,
@@ -4093,6 +4128,22 @@ function renderAll() {
   RENDER[view]();
   renderStreakChip();
   renderTracker();
+  renderDemoBar();
+}
+
+/* A banner you cannot miss, for the whole time the gate is off. Demo mode is
+   the kind of setting that gets left on by accident and then quietly makes the
+   app look like it has no curriculum order at all. */
+function renderDemoBar() {
+  const el = $("#demoBar");
+  if (!el) return;
+  el.hidden = !demoOn();
+  if (!demoOn()) return;
+  el.innerHTML = `<span class="demo-k han">示範</span>
+    <span class="demo-text">Demo mode — every tier is open and all ${HQ.length} characters are listed.
+      Nothing here is being recorded.</span>
+    <button class="demo-off" id="demoOff">Turn off</button>`;
+  $("#demoOff").onclick = () => { state.demo = false; save(); renderDemoBar(); renderAll(); };
 }
 
 function renderStreakChip() {
@@ -4193,6 +4244,7 @@ function boot() {
      the first render triggered by something else. */
   renderStreakChip();
   renderTracker();
+  renderDemoBar();
   startTour();
   connectRemote().then(changed => { if (changed) renderAll(); });
 }

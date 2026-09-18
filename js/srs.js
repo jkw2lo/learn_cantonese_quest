@@ -63,6 +63,7 @@ const blank = () => ({
   tour: false,
   writeDrills: true,
   padAuto: false,
+  demo: false,
   sprint: { marks: {}, runs: [], best: {}, pick: {} },
   name: "",
   interests: [],
@@ -102,6 +103,25 @@ function resetProgress() {
   save();                                /* writes the blank record, and syncs it */
   return state;
 }
+
+/* ---------- 示範 demo mode ----------
+
+   For showing somebody the whole app without spending six weeks earning the
+   right to. It opens every tier at once, so the Library lists all 146
+   characters and any card can be opened — and it does nothing else. It never
+   marks a character known, never grades anything, never touches the review
+   queue or the streak. Turning it off puts the gate straight back where it
+   was, because the gate was only ever computed from your record and the
+   record has not moved.
+
+   DEMO_BUILD is the kill switch. Set it to false and the toggle disappears
+   from Settings, the banner can never appear, and unlockedCeiling stops
+   consulting the flag at all — the feature is gone rather than merely off,
+   which is what "fully disable for normal usage" has to mean if it is going
+   to mean anything. A record that had it switched on is unaffected: the flag
+   sits there ignored. */
+const DEMO_BUILD = true;
+const demoOn = () => DEMO_BUILD && !!state.demo;
 
 /* ---------- optional cross-device sync ---------- */
 
@@ -716,6 +736,7 @@ function tierNeeds(t) {
 /* The curriculum position past which nothing may be studied yet. Everything
    the daily session and the Library hand out is checked against this. */
 function unlockedCeiling() {
+  if (DEMO_BUILD && state.demo) return HQ.length;    /* 示範 — see below */
   let ceiling = 0;
   for (const t of TIERS) {
     if (!tierUnlocked(t)) break;

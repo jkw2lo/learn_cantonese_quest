@@ -1,6 +1,6 @@
 # Cantonese Quest
 
-A practice notebook for learning to speak and read Cantonese. 145 characters
+A practice notebook for learning to speak and read Cantonese. 146 characters
 across ten stages, taught in the order that gets you through a day in Hong Kong
 rather than the order a frequency list would give you.
 
@@ -54,7 +54,7 @@ Cantonese needs most — 佢, 哋, 咗, 喺, 冇, 嘅, 唔, 嘢 — only exist i
 traditional, so a simplified curriculum would have been half traditional
 anyway.
 
-Thirty-seven of the 145 look different on the mainland, and the card shows that
+Thirty-seven of the 146 look different on the mainland, and the card shows that
 form as a quiet footnote under the meaning. It is a cross-reference and nothing
 more: the simplified form is never drilled, never counted, and never what the
 app asks you for.
@@ -125,11 +125,20 @@ predate written Cantonese being taken seriously as something to typeset. It has
 nothing for 佢, 哋, 冇, 喺, 嚟, 嗰, 攰, 咗, 喎 or 啱 — which are, between them,
 among the most frequent characters in written Cantonese.
 
-The app already degrades correctly: no stroke data means no stroke-order
-animation and no writing drills for that character, and `practiceChars("write")`
-excludes them so the 筆順 bar isn't permanently short of full. `check-strokes.mjs`
-carries them in a `KNOWN_GAP` list and reports them rather than failing — so a
-*new* character with no data still fails the check.
+They also broke the first session anybody ran. hanzi-writer fills an empty
+mount, so a character it has no data for left the 田字格 simply **blank** — and
+because 佢 and 哋 were the third and fourth characters taught, a new learner's
+first day showed them two empty squares with a sound and a meaning attached. The
+font draws these perfectly well; only the animation needs the data. So
+`writerBox` now sets the character in type when there is no data, the
+stroke-order and try-writing buttons are hidden rather than left to fail
+silently, and the card says plainly why.
+
+Beyond that the app already degraded correctly: no writing drills for those
+characters, and `practiceChars("write")` excludes them so the 筆順 bar isn't
+permanently short of full. `check-strokes.mjs` carries them in a `KNOWN_GAP`
+list and reports them rather than failing — so a *new* character with no data
+still fails the check.
 
 ### 茶餐廳 instead of a restaurant menu
 
@@ -166,16 +175,42 @@ able to order a coffee.
 
 | | stage | ends | what it covers |
 |---|---|---|---|
-| 👋 | 你我佢 Who | 16 | Pronouns, to-be, negation, and the particles that make a sentence sound human |
-| 🔢 | 一二三 Numbers | 30 | Counting, and the 二 / 兩 distinction that catches everyone |
-| 🙏 | 唔該 Getting by | 43 | Please, thank you, sorry, and 有 / 冇 |
-| 🍜 | 飲食 Eating | 60 | Ordering: hot or iced, more or less sugar |
-| 🗺️ | 去邊度 Places | 76 | Here, there, where — and getting on and off things |
-| 🕐 | 幾點 Time | 89 | Clock and calendar, including the words Mandarin doesn't have |
-| 👨‍👩‍👧 | 屋企人 Family | 100 | The people around you, and the prefix 老 that isn't about age |
-| 🏃 | 做乜嘢 Doing | 116 | The verbs a day is made of |
-| 📏 | 點形容 Describing | 131 | Big, small, cheap, tired — and the tone pairs that mean opposite things |
-| 💬 | 語氣 Particles | 145 | The little words that carry everything English puts in the voice |
+| 👋 | 打招呼 Saying hello | 16 | Hello, good morning, good night, thank you, sorry, goodbye |
+| 🧍 | 我哋 Who | 29 | People, and the particles that hold a sentence together |
+| 🔢 | 一二三 Numbers | 42 | Counting, and the 二 / 兩 distinction that catches everyone |
+| 🍜 | 飲食 Eating | 59 | Ordering: hot or iced, more or less sugar |
+| 🗺️ | 去邊度 Places | 77 | Asking where something is, and getting there |
+| 🕐 | 幾點 Time | 90 | Clock and calendar, including the words Mandarin doesn't have |
+| 👨‍👩‍👧 | 屋企人 Family | 101 | The people around you, and the prefix 老 that isn't about age |
+| 🏃 | 做乜嘢 Doing | 117 | The verbs a day is made of |
+| 📏 | 點形容 Describing | 132 | Big, small, cheap, tired — and the tone pairs that mean opposite things |
+| 💬 | 語氣 Particles | 146 | The little words that carry everything English puts in the voice |
+
+### The first week was reordered, because it wasn't worth showing up for
+
+The first draft opened with the highest-frequency characters, which is what a
+corpus would tell you to do and is the wrong answer. Measured against what a
+learner could actually **say**, day one gave you 我哋, 你哋 and 佢哋 — three
+plural pronouns, and not one thing you would address to a person. 唔該 and 多謝,
+the two most useful phrases in the language, needed characters at positions 30
+and 31: six weeks at five a day before you could thank anybody.
+
+The gate at 77 was reordered around usable phrases instead. The same characters,
+one added, in a different order:
+
+| after day | new characters | what that unlocks |
+|---|---|---|
+| 1 | 你 好 我 係 唔 | 你好 · 唔係 · 唔好 |
+| 2 | 該 多 謝 早 晨 | 唔該 · 多謝 · 早晨 |
+| 3 | 晚 安 對 住 再 | 晚安 · 對唔住 |
+| 4 | 見 人 個 佢 哋 | 再見 · 我哋 · 佢哋 |
+
+Nine usable phrases inside the first four sessions, against zero before.
+
+晨 is the one character added, taking the library from 145 to 146. It exists
+solely so 早晨 works — the greeting Hong Kong actually uses, far more than 你好,
+and the only word 晨 appears in. Without it the second day has 早 meaning
+"early" and nothing to do with it.
 
 The last stage is where Cantonese stops looking like Mandarin with different
 sounds. English carries attitude in intonation; Cantonese can't, because pitch
@@ -202,6 +237,28 @@ Every one of these was caught by tooling rather than by reading it back:
   糖 as `tong2`, which is a sweet you can hold rather than sugar.
 - **Seven of forty hand-written simplified forms were wrong**, which is what
   moved that block to being generated.
+- **Two of the first four characters rendered as an empty box**, because
+  hanzi-writer has no data for 佢 or 哋 and nothing fell back to simply drawing
+  them. Found by using the app, not by a checker — which is its own lesson.
+
+## 示範 Demo mode
+
+A toggle in **Settings** that opens every tier at once, so the Library lists all
+146 characters and any card can be read. For showing somebody the whole app
+without spending six weeks earning the right to.
+
+It does that and nothing else. No character is marked known, nothing is graded,
+and the review queue, the streak and the day's record are untouched — turning it
+off puts the gate exactly back where it was, because the gate was only ever
+computed from your record and the record never moved. While it is on there is an
+unmissable red banner across the top, because a gate that is off for a demo and
+then forgotten is worse than no gate: the app silently stops behaving the way it
+documents.
+
+**To remove it entirely**, set `DEMO_BUILD = false` in `js/srs.js`. The toggle
+disappears from Settings, the banner can never render, and `unlockedCeiling`
+stops consulting the flag at all — the feature is gone rather than merely off. A
+record that had it switched on is unaffected; the flag just sits there ignored.
 
 ## Files
 
@@ -243,8 +300,8 @@ and 嘢.
   beyond what fits in a mnemonic, and no dialogue practice.
 - **The sentences are Cantonese, but they are one sentence long.** Nothing here
   builds toward a paragraph.
-- **145 characters is a beginning.** The structure — stages, tiers, the gate at
-  76 — is built to extend, and `check-jyutping.mjs` will hold new entries to the
+- **146 characters is a beginning.** The structure — stages, tiers, the gate at
+  77 — is built to extend, and `check-jyutping.mjs` will hold new entries to the
   same standard as the existing ones.
 
 ## Licensing

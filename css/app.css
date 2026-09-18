@@ -2090,3 +2090,34 @@ button.tier-head:hover { border-color: var(--ink-3); }
   background: var(--paper); color: var(--ink-3);
 }
 .simp-c { font-family: var(--f-han); font-size: 1rem; line-height: 1.2; color: var(--ink-2); }
+
+/* A character with no stroke data, set in type rather than built stroke by
+   stroke. Sized to sit in the 田字格 the way the animated one does. */
+.tian-plain {
+  width: 100%; height: 100%; display: grid; place-items: center;
+  font-size: 7.2rem; line-height: 1; color: var(--ink);
+  user-select: none;
+}
+.no-strokes { text-align: center; max-width: 26rem; margin: 0 auto; }
+.no-strokes .han { font-family: var(--f-han-ui); color: var(--ink-2); }
+
+/* ---------- 示範 demo mode ----------
+   Deliberately loud. A gate that is off for a demo and then forgotten is worse
+   than no gate, because the app silently stops behaving the way it documents. */
+.demo-bar {
+  position: sticky; top: 0; z-index: 38;
+  display: flex; align-items: center; gap: .6rem;
+  padding: .4rem .85rem;
+  background: var(--seal-wash);
+  border-bottom: 1px solid color-mix(in srgb, var(--seal) 34%, transparent);
+  color: var(--seal); font-size: .74rem;
+}
+.demo-bar[hidden] { display: none; }
+.demo-k { font-family: var(--f-han-ui); font-size: .92rem; letter-spacing: .06em; }
+.demo-text { flex: 1; min-width: 0; }
+.demo-off {
+  flex: none; padding: .18rem .5rem; border-radius: 6px; font-size: .7rem;
+  border: 1px solid currentColor; background: transparent; color: inherit;
+}
+.demo-off:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+@media (min-width: 860px) { .demo-bar { padding: .45rem 1.5rem; } }

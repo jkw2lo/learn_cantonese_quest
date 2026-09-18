@@ -15,28 +15,23 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.
 
 const HQ = [];
 
-/* ---------- Stage 1 · 你我佢 — who you are talking to ---------- */
+/* ---------- Stage 1 · 打招呼 — nine phrases you can use on the way out of the first week: hello, good morning, good night, thank you, sorry, goodbye ---------- */
 HQ.push(
-{c:"我",p:"ngo5",m:"I; me",comp:["手"],pos:["pron"],
- story:"Starts with the ng- sound that trips up every learner: let the sound come down your nose before the vowel. 我 ngo5, not o5.",
- o:"A hand (手) gripping a serrated blade — 'the one holding the weapon' became 'me'. The same character in every Chinese language; only the sound changed.",
- words:[["我哋","ngo5 dei6","we; us"],["我嘅","ngo5 ge3","my; mine"]],
- sent:["我係學生。","ngo5 hai6 hok6 saang1","I'm a student."]},
 {c:"你",p:"nei5",m:"you",comp:["人"],pos:["pron"],
  story:"nei5, where Mandarin says nǐ. Cantonese keeps the older -ei ending that Mandarin flattened.",
  o:"A person (亻) standing opposite. Some Hong Kong writing uses 妳 for a female 'you', but 你 covers everyone.",
  words:[["你哋","nei5 dei6","you (plural)"],["你好","nei5 hou2","hello"]],
  sent:["你好嗎？","nei5 hou2 maa3","How are you?"]},
-{c:"佢",p:"keoi5",m:"he; she; it",comp:["人","巨"],pos:["pron"],
- story:"One word for he, she and it — Cantonese never makes you guess someone's gender to refer to them. keoi5.",
- o:"A person (亻) beside 巨 for the sound. This character does not exist in Mandarin, which uses 他 and 她; 佢 is one of the first signs you are reading Cantonese and not Standard Chinese.",
- words:[["佢哋","keoi5 dei6","they; them"],["佢嘅","keoi5 ge3","his; hers; its"]],
- sent:["佢係我朋友。","keoi5 hai6 ngo5 pang4 jau5","He's my friend."]},
-{c:"哋",p:"dei6",m:"(plural marker for people)",comp:["口","地"],pos:["part-pl"],
- story:"Stick it on a person-word and you have a crowd: 我哋, 你哋, 佢哋. It never attaches to anything that isn't a person.",
- o:"A mouth (口) marking a spoken word, beside 地 for the sound. Written Cantonese builds nearly all its particles this way, which is why so many of them have a 口 on the left.",
- words:[["我哋","ngo5 dei6","we; us"],["你哋","nei5 dei6","you (plural)"],["佢哋","keoi5 dei6","they; them"]],
- sent:["我哋去食飯。","ngo5 dei6 heoi3 sik6 faan6","We're going to eat."]},
+{c:"好",p:"hou2",m:"good; well; very",comp:["女","子"],pos:["adj","adv"],
+ story:"Does double duty: 好 on its own is 'good', and in front of an adjective it means 'very' — 好大 is 'very big'.",
+ o:"A woman (女) with her child (子). The oldest surviving sense of 'things going well', and unchanged in every Chinese language since.",
+ words:[["你好","nei5 hou2","hello"],["好食","hou2 sik6","tasty"],["好多","hou2 do1","a lot"]],
+ sent:["呢個好好食。","ni1 go3 hou2 hou2 sik6","This is delicious."]},
+{c:"我",p:"ngo5",m:"I; me",comp:["手"],pos:["pron"],
+ story:"Starts with the ng- sound that trips up every learner: let the sound come down your nose before the vowel. 我 ngo5, not o5.",
+ o:"A hand (手) gripping a serrated blade — 'the one holding the weapon' became 'me'. The same character in every Chinese language; only the sound changed.",
+ words:[["我哋","ngo5 dei6","we; us"],["我嘅","ngo5 ge3","my; mine"]],
+ sent:["我係學生。","ngo5 hai6 hok6 saang1","I'm a student."]},
 {c:"係",p:"hai6",m:"to be; yes",comp:["人","系"],pos:["v"],
  story:"The Cantonese 'is'. Where Mandarin says 是 shì, Cantonese says 係 hai6 — and 係 on its own is how you say yes.",
  o:"A person (亻) with 系, to connect. Mandarin uses 係 too, but only for 關係 (relationship); as the verb 'to be' it is Cantonese.",
@@ -47,11 +42,85 @@ HQ.push(
  o:"A mouth (口) with 吾 for the sound. Cantonese negates with 唔 where Mandarin uses 不; the two are not related and do not look alike.",
  words:[["唔係","m4 hai6","is not; no"],["唔好","m4 hou2","don't"],["唔要","m4 jiu3","don't want; no thanks"]],
  sent:["我唔係老師。","ngo5 m4 hai6 lou5 si1","I'm not a teacher."]},
-{c:"好",p:"hou2",m:"good; well; very",comp:["女","子"],pos:["adj","adv"],
- story:"Does double duty: 好 on its own is 'good', and in front of an adjective it means 'very' — 好大 is 'very big'.",
- o:"A woman (女) with her child (子). The oldest surviving sense of 'things going well', and unchanged in every Chinese language since.",
- words:[["你好","nei5 hou2","hello"],["好食","hou2 sik6","tasty"],["好多","hou2 do1","a lot"]],
- sent:["呢個好好食。","ni1 go3 hou2 hou2 sik6","This is delicious."]},
+{c:"該",p:"goi1",m:"ought to; should",comp:["言"],pos:["aux"],
+ story:"On its own it means ought to. In practice it lives inside one phrase — 唔該 — which is the most useful thing in the language: 'please', 'thank you' and 'excuse me' at once.",
+ o:"Speech (言) with 亥 for the sound. 唔該 literally reads 'not owed' — you have done me a kindness I have not repaid.",
+ words:[["唔該","m4 goi1","please; thank you; excuse me"],["唔該晒","m4 goi1 saai3","thanks very much"]],
+ sent:["唔該，一杯水。","m4 goi1 jat1 bui1 seoi2","Excuse me — a glass of water."]},
+{c:"多",p:"do1",m:"many; much",comp:["夕"],pos:["adj"],
+ story:"do1. Pair it with 幾 and you have the single most useful question in any shop: 幾多錢呀？",
+ o:"Two evenings (夕) stacked — one night after another after another. Quantity drawn as repetition.",
+ words:[["多謝","do1 ze6","thank you (for a gift)"],["好多","hou2 do1","a lot"],["多少","do1 siu2","amount"]],
+ sent:["人好多呀。","jan4 hou2 do1 aa3","There are a lot of people."]},
+{c:"謝",p:"ze6",m:"to thank",comp:["言","身"],pos:["v"],
+ story:"Cantonese has two thank-yous and they are not interchangeable. 多謝 is for a gift or a compliment; 唔該 is for a service.",
+ o:"Speech (言) with 射, to shoot, for the sound — words sent across to someone.",
+ words:[["多謝","do1 ze6","thank you (for a gift)"],["多謝晒","do1 ze6 saai3","thank you very much"]],
+ sent:["多謝你嘅禮物。","do1 ze6 nei5 ge3 lai5 mat6","Thank you for the present."]},
+{c:"早",p:"zou2",m:"early; morning",comp:["日","十"],pos:["adj","n"],
+ story:"早晨 zou2 san4 is 'good morning' — and in Hong Kong a bare 早晨 shouted across an office is the whole greeting.",
+ o:"The sun (日) above a line: the sun just clear of the horizon. Early.",
+ words:[["早晨","zou2 san4","good morning"],["好早","hou2 zou2","very early"],["早啲","zou2 di1","earlier"]],
+ sent:["早晨！","zou2 san4","Good morning!"]},
+{c:"晨",p:"san4",m:"morning",comp:["日"],pos:["n"],
+ story:"You will hear it before you can read it. 早晨 zou2 san4 is shouted across offices, shops and lift lobbies all morning — it is the greeting, far more than 你好 is.",
+ o:"The sun (日) over 辰, a time period. Dawn, as a fixed hour of the day rather than as a picture of light.",
+ words:[["早晨","zou2 san4","good morning"]],
+ sent:["早晨！","zou2 san4","Good morning!"]},
+{c:"晚",p:"maan5",m:"evening; late",comp:["日","免"],pos:["n","adj"],
+ story:"晚安 for goodnight, 晚飯 for dinner. The partner of 早 at the other end of the day.",
+ o:"The sun (日) with 免 for the sound — the sun released, gone down.",
+ words:[["晚安","maan5 on1","good night"],["晚飯","maan5 faan6","dinner"],["今晚","gam1 maan5","tonight"]],
+ sent:["今晚食咩呀？","gam1 maan5 sik6 me1 aa3","What are we eating tonight?"]},
+{c:"安",p:"on1",m:"peaceful; safe",comp:["女"],pos:["adj"],
+ story:"Inside 晚安, goodnight. The character is a woman under a roof — the old picture of a household at rest.",
+ o:"A woman (女) under a roof (宀). Safety drawn as shelter.",
+ words:[["晚安","maan5 on1","good night"],["平安","ping4 on1","safe and sound"]],
+ sent:["晚安，聽日見。","maan5 on1 ting1 jat6 gin3","Good night, see you tomorrow."]},
+{c:"對",p:"deoi3",m:"correct; toward; a pair",comp:["寸"],pos:["adj","cov"],
+ story:"You will meet it first in 對唔住 — sorry. Literally 'not able to face you'.",
+ o:"A hand (寸) holding up a lamp-stand, offering it to someone. From 'facing' came 'matching', and from matching came 'correct'.",
+ words:[["對唔住","deoi3 m4 zyu6","sorry"],["對面","deoi3 min6","opposite; across the way"]],
+ sent:["對唔住，我遲咗。","deoi3 m4 zyu6 ngo5 ci4 zo2","Sorry, I'm late."]},
+{c:"住",p:"zyu6",m:"to live; to stay",comp:["人","主"],pos:["v"],
+ story:"Where you live, and also a tag meaning 'hold it there' — 等住 is 'wait and keep waiting'.",
+ o:"A person (亻) beside 主, a lamp burning in a house. Where the lamp is lit is where you live.",
+ words:[["住喺","zyu6 hai2","to live at"],["對唔住","deoi3 m4 zyu6","sorry"]],
+ sent:["我住喺香港。","ngo5 zyu6 hai2 hoeng1 gong2","I live in Hong Kong."]},
+{c:"再",p:"zoi3",m:"again; then",comp:[],pos:["adv"],
+ story:"再見 is goodbye — literally 'see you again'. Cantonese speakers say it less than textbooks suggest; 拜拜 baai1 baai3 is far commoner.",
+ o:"A drawing of a fish hung up twice over. Repetition, shown by doubling.",
+ words:[["再見","zoi3 gin3","goodbye"],["再嚟","zoi3 lai4","come again"]],
+ sent:["聽日再講啦。","ting1 jat6 zoi3 gong2 laa1","Let's talk again tomorrow."]},
+{c:"見",p:"gin3",m:"to see; to meet",comp:["目"],pos:["v"],
+ story:"An eye on legs — a person walking about with their eyes open. Meeting, not just looking.",
+ o:"An eye (目) drawn large on top of a person (儿). Seeing as something a whole body does.",
+ words:[["再見","zoi3 gin3","goodbye"],["見面","gin3 min6","to meet up"],["唔見","m4 gin3","to lose; to go missing"]],
+ sent:["聽日見！","ting1 jat6 gin3","See you tomorrow!"]}
+);
+
+/* ---------- Stage 2 · 我哋 — people, and the particles that hold a cantonese sentence together ---------- */
+HQ.push(
+{c:"人",p:"jan4",m:"person",comp:[],pos:["n"],
+ story:"A person walking, two legs mid-stride. jan4 — the j is an English y, so it sounds like 'yun'.",
+ o:"A side view of a standing figure. Squeezed against a left edge it becomes 亻, which is inside 你, 佢 and 係.",
+ words:[["人哋","jan4 dei6","other people; someone else"],["男人","naam4 jan2","man"],["大人","daai6 jan4","adult"]],
+ sent:["嗰個人係邊個？","go2 go3 jan4 hai6 bin1 go3","Who is that person?"]},
+{c:"個",p:"go3",m:"(general measure word)",comp:["人","固"],pos:["mw"],
+ story:"Cantonese counts with a measure word between the number and the thing. 個 is the all-purpose one — when you don't know which to use, use 個.",
+ o:"A person (亻) with 固 for the sound. Note the simplified form 个 is a different-looking character for the same word.",
+ words:[["個人","go3 jan4","individual; personal"],["一個","jat1 go3","one (of something)"],["呢個","ni1 go3","this one"],["幾個","gei2 go3","how many"]],
+ sent:["我要兩個。","ngo5 jiu3 loeng5 go3","I'd like two."]},
+{c:"佢",p:"keoi5",m:"he; she; it",comp:["人","巨"],pos:["pron"],
+ story:"One word for he, she and it — Cantonese never makes you guess someone's gender to refer to them. keoi5.",
+ o:"A person (亻) beside 巨 for the sound. This character does not exist in Mandarin, which uses 他 and 她; 佢 is one of the first signs you are reading Cantonese and not Standard Chinese.",
+ words:[["佢哋","keoi5 dei6","they; them"],["佢嘅","keoi5 ge3","his; hers; its"]],
+ sent:["佢係我朋友。","keoi5 hai6 ngo5 pang4 jau5","He's my friend."]},
+{c:"哋",p:"dei6",m:"(plural marker for people)",comp:["口","地"],pos:["part-pl"],
+ story:"Stick it on a person-word and you have a crowd: 我哋, 你哋, 佢哋. It never attaches to anything that isn't a person.",
+ o:"A mouth (口) marking a spoken word, beside 地 for the sound. Written Cantonese builds nearly all its particles this way, which is why so many of them have a 口 on the left.",
+ words:[["我哋","ngo5 dei6","we; us"],["你哋","nei5 dei6","you (plural)"],["佢哋","keoi5 dei6","they; them"]],
+ sent:["我哋去食飯。","ngo5 dei6 heoi3 sik6 faan6","We're going to eat."]},
 {c:"嘅",p:"ge3",m:"(possessive / linking particle)",comp:["口","既"],pos:["part-str"],
  story:"Cantonese glue. 我嘅書 is my book, 大嘅 is the big one. Where Mandarin writes 的, Cantonese writes 嘅.",
  o:"A mouth (口) beside 既 for the sound — another particle built by putting a mouth next to a character that sounds right.",
@@ -67,16 +136,6 @@ HQ.push(
  o:"A mouth (口) with a tooth (牙) for the sound. Listed in dictionaries as aa1, but as the softener at the end of a sentence it is aa3.",
  words:[["係呀","hai6 aa3","yes; that's right"],["好呀","hou2 aa3","sure; sounds good"]],
  sent:["你去邊度呀？","nei5 heoi3 bin1 dou6 aa3","Where are you going?"]},
-{c:"人",p:"jan4",m:"person",comp:[],pos:["n"],
- story:"A person walking, two legs mid-stride. jan4 — the j is an English y, so it sounds like 'yun'.",
- o:"A side view of a standing figure. Squeezed against a left edge it becomes 亻, which is inside 你, 佢 and 係.",
- words:[["人哋","jan4 dei6","other people; someone else"],["男人","naam4 jan2","man"],["大人","daai6 jan4","adult"]],
- sent:["嗰個人係邊個？","go2 go3 jan4 hai6 bin1 go3","Who is that person?"]},
-{c:"個",p:"go3",m:"(general measure word)",comp:["人","固"],pos:["mw"],
- story:"Cantonese counts with a measure word between the number and the thing. 個 is the all-purpose one — when you don't know which to use, use 個.",
- o:"A person (亻) with 固 for the sound. Note the simplified form 个 is a different-looking character for the same word.",
- words:[["一個","jat1 go3","one (of something)"],["呢個","ni1 go3","this one"],["幾個","gei2 go3","how many"]],
- sent:["我要兩個。","ngo5 jiu3 loeng5 go3","I'd like two."]},
 {c:"仔",p:"zai2",m:"son; boy; small one",comp:["人","子"],pos:["n"],
  story:"Everywhere in Hong Kong. On its own it is a son or a boy; stuck on the end of a word it shrinks it — 刀仔 is a little knife.",
  o:"A person (亻) with a child (子). Mandarin reads it zǎi and barely uses it; in Cantonese it is one of the most productive endings in the language.",
@@ -96,10 +155,20 @@ HQ.push(
  story:"How you ask anyone's name: 你叫咩名呀？ — literally 'you are called what name?'. It also means to shout, and to order food.",
  o:"A mouth (口) with 丩, a twist of rope, for the sound. The mouth radical does what it always does: this is something you do out loud.",
  words:[["叫人","giu3 jan4","to call someone"],["叫做","giu3 zou6","to be called"],["叫嘢食","giu3 je5 sik6","to order food"]],
- sent:["我叫佢做阿明。","ngo5 giu3 keoi5 zou6 aa3 ming4","I call him Ah Ming."]}
+ sent:["我叫佢做阿明。","ngo5 giu3 keoi5 zou6 aa3 ming4","I call him Ah Ming."]},
+{c:"有",p:"jau5",m:"to have; there is",comp:["月"],pos:["v"],
+ story:"jau5. Its opposite is not 唔有 — Cantonese has a dedicated word, 冇 mou5, and 唔有 is simply wrong.",
+ o:"A hand reaching for a piece of meat — the 月 here is 肉, flesh, not the moon. What is in your hand is what you have.",
+ words:[["有冇","jau5 mou5","is there any?"],["有啲","jau5 di1","some; a bit"],["有名","jau5 meng2","famous"]],
+ sent:["你有冇時間呀？","nei5 jau5 mou5 si4 gaan3 aa3","Do you have time?"]},
+{c:"冇",p:"mou5",m:"to not have; there isn't",comp:["有"],pos:["v"],
+ story:"Look at it beside 有: the same character with its two middle strokes taken out. The writing system rarely gets to be this neat.",
+ o:"A Cantonese invention, made by hollowing out 有. It does not exist in Mandarin, which needs two characters (沒有) to say it.",
+ words:[["冇嘢","mou5 je5","it's nothing; never mind"],["有冇","jau5 mou5","is there any?"],["冇問題","mou5 man6 tai4","no problem"]],
+ sent:["我冇錢。","ngo5 mou5 cin2","I have no money."]}
 );
 
-/* ---------- Stage 2 · 一二三 — numbers, and how to count things ---------- */
+/* ---------- Stage 3 · 一二三 — counting, and the 二 / 兩 distinction that catches everyone ---------- */
 HQ.push(
 {c:"一",p:"jat1",m:"one",comp:[],pos:["num"],
  story:"One stroke. The high flat first tone — hold it level, like the first note of a tune.",
@@ -161,11 +230,6 @@ HQ.push(
  o:"A loom with threads, borrowed for its sound. The 'how many' sense has crowded out everything else in speech.",
  words:[["幾多","gei2 do1","how much; how many"],["幾點","gei2 dim2","what time"],["幾好","gei2 hou2","pretty good"]],
  sent:["幾多錢呀？","gei2 do1 cin2 aa3","How much is it?"]},
-{c:"多",p:"do1",m:"many; much",comp:["夕"],pos:["adj"],
- story:"do1. Pair it with 幾 and you have the single most useful question in any shop: 幾多錢呀？",
- o:"Two evenings (夕) stacked — one night after another after another. Quantity drawn as repetition.",
- words:[["多謝","do1 ze6","thank you (for a gift)"],["好多","hou2 do1","a lot"],["多少","do1 siu2","amount"]],
- sent:["人好多呀。","jan4 hou2 do1 aa3","There are a lot of people."]},
 {c:"少",p:"siu2",m:"few; little",comp:["小"],pos:["adj"],
  story:"The opposite of 多. In a cha chaan teng you will hear 少甜 — less sugar — barked at the kitchen all day.",
  o:"小 (small) with one more stroke taken off it. Less, drawn as literally less.",
@@ -173,76 +237,7 @@ HQ.push(
  sent:["少甜，唔該。","siu2 tim4 m4 goi1","Less sugar, please."]}
 );
 
-/* ---------- Stage 3 · 唔該 — the words that get you through a day ---------- */
-HQ.push(
-{c:"該",p:"goi1",m:"ought to; should",comp:["言"],pos:["aux"],
- story:"On its own it means ought to. In practice it lives inside one phrase — 唔該 — which is the most useful thing in the language: 'please', 'thank you' and 'excuse me' at once.",
- o:"Speech (言) with 亥 for the sound. 唔該 literally reads 'not owed' — you have done me a kindness I have not repaid.",
- words:[["唔該","m4 goi1","please; thank you; excuse me"],["唔該晒","m4 goi1 saai3","thanks very much"]],
- sent:["唔該，一杯水。","m4 goi1 jat1 bui1 seoi2","Excuse me — a glass of water."]},
-{c:"謝",p:"ze6",m:"to thank",comp:["言","身"],pos:["v"],
- story:"Cantonese has two thank-yous and they are not interchangeable. 多謝 is for a gift or a compliment; 唔該 is for a service.",
- o:"Speech (言) with 射, to shoot, for the sound — words sent across to someone.",
- words:[["多謝","do1 ze6","thank you (for a gift)"],["多謝晒","do1 ze6 saai3","thank you very much"]],
- sent:["多謝你嘅禮物。","do1 ze6 nei5 ge3 lai5 mat6","Thank you for the present."]},
-{c:"對",p:"deoi3",m:"correct; toward; a pair",comp:["寸"],pos:["adj","cov"],
- story:"You will meet it first in 對唔住 — sorry. Literally 'not able to face you'.",
- o:"A hand (寸) holding up a lamp-stand, offering it to someone. From 'facing' came 'matching', and from matching came 'correct'.",
- words:[["對唔住","deoi3 m4 zyu6","sorry"],["對面","deoi3 min6","opposite; across the way"]],
- sent:["對唔住，我遲咗。","deoi3 m4 zyu6 ngo5 ci4 zo2","Sorry, I'm late."]},
-{c:"住",p:"zyu6",m:"to live; to stay",comp:["人","主"],pos:["v"],
- story:"Where you live, and also a tag meaning 'hold it there' — 等住 is 'wait and keep waiting'.",
- o:"A person (亻) beside 主, a lamp burning in a house. Where the lamp is lit is where you live.",
- words:[["住喺","zyu6 hai2","to live at"],["對唔住","deoi3 m4 zyu6","sorry"]],
- sent:["我住喺香港。","ngo5 zyu6 hai2 hoeng1 gong2","I live in Hong Kong."]},
-{c:"請",p:"cing2",m:"please; to invite",comp:["言"],pos:["v"],
- story:"More formal than 唔該 — it is the 'please' of signs and announcements rather than of ordering coffee.",
- o:"Speech (言) with 青 for the sound. Asking with words, politely.",
- words:[["請問","cing2 man6","may I ask"],["請坐","cing2 co5","please sit"]],
- sent:["請問，洗手間喺邊度？","cing2 man6 sai2 sau2 gaan1 hai2 bin1 dou6","Excuse me, where is the toilet?"]},
-{c:"問",p:"man6",m:"to ask",comp:["門","口"],pos:["v"],
- story:"A mouth in a doorway. 請問 is how you open any question to a stranger.",
- o:"A mouth (口) inside a gate (門) — calling in at the door to ask. Its twin 聞 puts an ear there instead.",
- words:[["請問","cing2 man6","may I ask"],["問題","man6 tai4","question; problem"]],
- sent:["我想問你一個問題。","ngo5 soeng2 man6 nei5 jat1 go3 man6 tai4","I'd like to ask you something."]},
-{c:"早",p:"zou2",m:"early; morning",comp:["日","十"],pos:["adj","n"],
- story:"早晨 zou2 san4 is 'good morning' — and in Hong Kong a bare 早晨 shouted across an office is the whole greeting.",
- o:"The sun (日) above a line: the sun just clear of the horizon. Early.",
- words:[["早晨","zou2 san4","good morning"],["好早","hou2 zou2","very early"],["早啲","zou2 di1","earlier"]],
- sent:["早晨！","zou2 san4","Good morning!"]},
-{c:"晚",p:"maan5",m:"evening; late",comp:["日","免"],pos:["n","adj"],
- story:"晚安 for goodnight, 晚飯 for dinner. The partner of 早 at the other end of the day.",
- o:"The sun (日) with 免 for the sound — the sun released, gone down.",
- words:[["晚安","maan5 on1","good night"],["晚飯","maan5 faan6","dinner"],["今晚","gam1 maan5","tonight"]],
- sent:["今晚食咩呀？","gam1 maan5 sik6 me1 aa3","What are we eating tonight?"]},
-{c:"安",p:"on1",m:"peaceful; safe",comp:["女"],pos:["adj"],
- story:"Inside 晚安, goodnight. The character is a woman under a roof — the old picture of a household at rest.",
- o:"A woman (女) under a roof (宀). Safety drawn as shelter.",
- words:[["晚安","maan5 on1","good night"],["平安","ping4 on1","safe and sound"]],
- sent:["晚安，聽日見。","maan5 on1 ting1 jat6 gin3","Good night, see you tomorrow."]},
-{c:"再",p:"zoi3",m:"again; then",comp:[],pos:["adv"],
- story:"再見 is goodbye — literally 'see you again'. Cantonese speakers say it less than textbooks suggest; 拜拜 baai1 baai3 is far commoner.",
- o:"A drawing of a fish hung up twice over. Repetition, shown by doubling.",
- words:[["再見","zoi3 gin3","goodbye"],["再嚟","zoi3 lai4","come again"]],
- sent:["聽日再講啦。","ting1 jat6 zoi3 gong2 laa1","Let's talk again tomorrow."]},
-{c:"見",p:"gin3",m:"to see; to meet",comp:["目"],pos:["v"],
- story:"An eye on legs — a person walking about with their eyes open. Meeting, not just looking.",
- o:"An eye (目) drawn large on top of a person (儿). Seeing as something a whole body does.",
- words:[["再見","zoi3 gin3","goodbye"],["見面","gin3 min6","to meet up"],["唔見","m4 gin3","to lose; to go missing"]],
- sent:["聽日見！","ting1 jat6 gin3","See you tomorrow!"]},
-{c:"有",p:"jau5",m:"to have; there is",comp:["月"],pos:["v"],
- story:"jau5. Its opposite is not 唔有 — Cantonese has a dedicated word, 冇 mou5, and 唔有 is simply wrong.",
- o:"A hand reaching for a piece of meat — the 月 here is 肉, flesh, not the moon. What is in your hand is what you have.",
- words:[["有冇","jau5 mou5","is there any?"],["有啲","jau5 di1","some; a bit"],["有名","jau5 meng2","famous"]],
- sent:["你有冇時間呀？","nei5 jau5 mou5 si4 gaan3 aa3","Do you have time?"]},
-{c:"冇",p:"mou5",m:"to not have; there isn't",comp:["有"],pos:["v"],
- story:"Look at it beside 有: the same character with its two middle strokes taken out. The writing system rarely gets to be this neat.",
- o:"A Cantonese invention, made by hollowing out 有. It does not exist in Mandarin, which needs two characters (沒有) to say it.",
- words:[["冇嘢","mou5 je5","it's nothing; never mind"],["有冇","jau5 mou5","is there any?"],["冇問題","mou5 man6 tai4","no problem"]],
- sent:["我冇錢。","ngo5 mou5 cin2","I have no money."]}
-);
-
-/* ---------- Stage 4 · 飲食 — ordering, and the cha chaan teng ---------- */
+/* ---------- Stage 4 · 飲食 — ordering at a cha chaan teng: hot or iced, more or less sugar ---------- */
 HQ.push(
 {c:"食",p:"sik6",m:"to eat",comp:[],pos:["v"],
  story:"Cantonese kept the old word. Mandarin switched to 吃 chī centuries ago; 食 survives in Cantonese as the everyday verb.",
@@ -331,8 +326,18 @@ HQ.push(
  sent:["呢個太甜喇。","ni1 go3 taai3 tim4 laa3","This is too sweet."]}
 );
 
-/* ---------- Stage 5 · 去邊度 — where things are, and getting there ---------- */
+/* ---------- Stage 5 · 去邊度 — asking where something is, and getting on and off things to reach it ---------- */
 HQ.push(
+{c:"請",p:"cing2",m:"please; to invite",comp:["言"],pos:["v"],
+ story:"More formal than 唔該 — it is the 'please' of signs and announcements rather than of ordering coffee.",
+ o:"Speech (言) with 青 for the sound. Asking with words, politely.",
+ words:[["請問","cing2 man6","may I ask"],["請坐","cing2 co5","please sit"]],
+ sent:["請問，洗手間喺邊度？","cing2 man6 sai2 sau2 gaan1 hai2 bin1 dou6","Excuse me, where is the toilet?"]},
+{c:"問",p:"man6",m:"to ask",comp:["門","口"],pos:["v"],
+ story:"A mouth in a doorway. 請問 is how you open any question to a stranger.",
+ o:"A mouth (口) inside a gate (門) — calling in at the door to ask. Its twin 聞 puts an ear there instead.",
+ words:[["請問","cing2 man6","may I ask"],["問題","man6 tai4","question; problem"]],
+ sent:["我想問你一個問題。","ngo5 soeng2 man6 nei5 jat1 go3 man6 tai4","I'd like to ask you something."]},
 {c:"喺",p:"hai2",m:"at; in; to be located",comp:["口","係"],pos:["cov","v"],
  story:"Do not confuse it with 係 hai6. 喺 hai2 is 'at'; 係 hai6 is 'is'. One tone apart, and they do completely different jobs.",
  o:"A mouth (口) beside 係 for the sound — another Cantonese-only character built the usual way. Mandarin uses 在 for this.",
@@ -415,7 +420,7 @@ HQ.push(
  sent:["出口喺嗰度。","ceot1 hau2 hai2 go2 dou6","The exit is over there."]}
 );
 
-/* ---------- Stage 6 · 幾點 — telling the time ---------- */
+/* ---------- Stage 6 · 幾點 — clock and calendar, including the words for morning and lunch that mandarin doesn't have ---------- */
 HQ.push(
 {c:"今",p:"gam1",m:"now; this (day)",comp:["人"],pos:["n"],
  story:"今日 today, 今晚 tonight. Cantonese says gam1 jat6 where Mandarin says jīn tiān — and uses 日 for 'day' where Mandarin prefers 天.",
@@ -484,7 +489,7 @@ HQ.push(
  sent:["新年快樂！","san1 nin4 faai3 lok6","Happy New Year!"]}
 );
 
-/* ---------- Stage 7 · 屋企人 — the people around you ---------- */
+/* ---------- Stage 7 · 屋企人 — the people around you, and the prefix 老 that isn't about age ---------- */
 HQ.push(
 {c:"爸",p:"baa1",m:"dad",comp:["父"],pos:["n"],
  story:"爸爸 baa4 baa1, and in Hong Kong 老豆 lou5 dau6 is just as common — an affectionate 'old bean' for your father.",
@@ -543,7 +548,7 @@ HQ.push(
  sent:["我同朋友去食飯。","ngo5 tung4 pang4 jau5 heoi3 sik6 faan6","I'm going to eat with a friend."]}
 );
 
-/* ---------- Stage 8 · 做乜嘢 — the verbs a day is made of ---------- */
+/* ---------- Stage 8 · 做乜嘢 — the verbs a day is made of — and the ones cantonese keeps where mandarin moved on ---------- */
 HQ.push(
 {c:"做",p:"zou6",m:"to do; to make",comp:["人","故"],pos:["v"],
  story:"做乜嘢 and 做咩 both mean 'what are you doing' — and 做嘢 is to work.",
@@ -627,7 +632,7 @@ HQ.push(
  sent:["唔該幫我寫低。","m4 goi1 bong1 ngo5 se2 dai1","Please write it down for me."]}
 );
 
-/* ---------- Stage 9 · 點形容 — describing things ---------- */
+/* ---------- Stage 9 · 點形容 — big, small, cheap, tired — and the tone pairs that mean opposite things ---------- */
 HQ.push(
 {c:"大",p:"daai6",m:"big",comp:["人","一"],pos:["adj"],
  story:"Remember 好 in front of an adjective means 'very': 好大 is very big.",
@@ -706,13 +711,7 @@ HQ.push(
  sent:["今日返工好攰。","gam1 jat6 faan1 gung1 hou2 gui6","Work was exhausting today."]}
 );
 
-/* ---------- Stage 10 · 語氣 — the particles that carry the tone of voice ----------
-
-   This stage is where Cantonese stops looking like Mandarin with different
-   sounds. English carries attitude in intonation; Cantonese can't, because
-   pitch is already spoken for by the tones. So it carries attitude in a set of
-   little words hung on the end of a sentence — and leaving them off doesn't
-   make you sound neutral, it makes you sound abrupt. */
+/* ---------- Stage 10 · 語氣 — the little words on the end of a sentence that carry everything english puts in the voice ---------- */
 HQ.push(
 {c:"咗",p:"zo2",m:"(completed action marker)",comp:["口","左"],pos:["part-asp"],
  story:"Put it after a verb and the thing is done: 食咗 ate, 買咗 bought, 去咗 went. This is Cantonese's 了.",
@@ -803,24 +802,24 @@ const POS_LABEL = {
    because most writing in Hong Kong is Standard Chinese — and you would learn
    to read a newspaper without being able to order a coffee. */
 const STAGES = [
-  {n:1, icon:"👋", name:"Who",       zh:"你我佢", end:16,  core:true,  blurb:"Pronouns, to-be, negation, and the particles that make a sentence sound human."},
-  {n:2, icon:"🔢", name:"Numbers",   zh:"一二三", end:30,  core:true,  blurb:"Counting, and the difference between 二 and 兩 that catches everyone."},
-  {n:3, icon:"🙏", name:"Getting by",zh:"唔該",   end:43,  core:true,  blurb:"Please, thank you, sorry, and the two verbs for having and not having."},
-  {n:4, icon:"🍜", name:"Eating",    zh:"飲食",   end:60,  core:true,  blurb:"Ordering at a cha chaan teng: hot or iced, more or less sugar."},
-  {n:5, icon:"🗺️", name:"Places",    zh:"去邊度", end:76,  core:true,  blurb:"Here, there, where — and getting on and off things."},
-  {n:6, icon:"🕐", name:"Time",      zh:"幾點",   end:89,  core:true,  blurb:"Clock, calendar, and the Cantonese words for morning and lunch that Mandarin doesn't have."},
-  {n:7, icon:"👨‍👩‍👧", name:"Family", zh:"屋企人", end:100, core:true, blurb:"The people around you, and the prefix 老 that isn't about age."},
-  {n:8, icon:"🏃", name:"Doing",     zh:"做乜嘢", end:116, core:true,  blurb:"The verbs a day is made of — and the ones Cantonese keeps where Mandarin moved on."},
-  {n:9, icon:"📏", name:"Describing",zh:"點形容", end:131, core:true,  blurb:"Big, small, cheap, tired — and the tone pairs that mean opposite things."},
-  {n:10,icon:"💬", name:"Particles", zh:"語氣",   end:145, core:true,  blurb:"The little words on the end of a sentence that carry everything English puts in the voice."}
+  {n:1, icon:"👋", name:"Saying hello", zh:"打招呼", end:16,  core:true, blurb:"Nine phrases you can use on the way out of the first week: hello, good morning, good night, thank you, sorry, goodbye."},
+  {n:2, icon:"🧍", name:"Who", zh:"我哋", end:29,  core:true, blurb:"People, and the particles that hold a Cantonese sentence together."},
+  {n:3, icon:"🔢", name:"Numbers", zh:"一二三", end:42,  core:true, blurb:"Counting, and the 二 / 兩 distinction that catches everyone."},
+  {n:4, icon:"🍜", name:"Eating", zh:"飲食", end:59,  core:true, blurb:"Ordering at a cha chaan teng: hot or iced, more or less sugar."},
+  {n:5, icon:"🗺️", name:"Places", zh:"去邊度", end:77,  core:true, blurb:"Asking where something is, and getting on and off things to reach it."},
+  {n:6, icon:"🕐", name:"Time", zh:"幾點", end:90,  core:true, blurb:"Clock and calendar, including the words for morning and lunch that Mandarin doesn't have."},
+  {n:7, icon:"👨‍👩‍👧", name:"Family", zh:"屋企人", end:101,  core:true, blurb:"The people around you, and the prefix 老 that isn't about age."},
+  {n:8, icon:"🏃", name:"Doing", zh:"做乜嘢", end:117,  core:true, blurb:"The verbs a day is made of — and the ones Cantonese keeps where Mandarin moved on."},
+  {n:9, icon:"📏", name:"Describing", zh:"點形容", end:132,  core:true, blurb:"Big, small, cheap, tired — and the tone pairs that mean opposite things."},
+  {n:10, icon:"💬", name:"Particles", zh:"語氣", end:146,  core:true, blurb:"The little words on the end of a sentence that carry everything English puts in the voice."}
 ];
 
 /* Two doors rather than three: the library is 145 characters, not 763, and a
    third gate would be a locked door with nothing behind it. */
 const TIERS = [
-  {n:1, icon:"🥢", name:"Getting by",  zh:"過日辰", to:76,
+  {n:1, icon:"🥢", name:"Getting by",  zh:"過日辰", to:77,
    blurb:"Enough to greet someone, count, order food and say where you're going."},
-  {n:2, icon:"🗣️", name:"Holding up",  zh:"傾得",   to:145,
+  {n:2, icon:"🗣️", name:"Holding up",  zh:"傾得",   to:146,
    blurb:"Time, family, the everyday verbs, and the particles that make you sound like a person rather than a phrasebook."}
 ];
 
