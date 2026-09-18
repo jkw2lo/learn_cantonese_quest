@@ -223,9 +223,12 @@ Three things had to be true together, and each was measured:
    `padding-top: calc(.55rem + 1px)` that was faking the same result. Measured
    after: both enclosures `87→558`, all four inner blocks `97→548`.
 
-2. **Both enclosures are colourless.** The `--sunken` tint has come off. The
-   texture alone says "these belong together", and it lets the cards inside
-   read as sheets laid on paper rather than panels sunk into it.
+2. **Both enclosures are colourless, but not transparent.** The `--sunken`
+   tint comes off; the ground becomes `--sheet`, the same near-white the cards
+   use. Transparent was tried first and is wrong: it puts the grid on the desk
+   rather than on a sheet of paper, and in dark mode the enclosure then sits
+   *darker* than the cards it holds. `--sheet` reads as squared paper in both
+   themes without a second rule.
 
 3. **The cards inside give up their fill and their border.** This is the one
    that matters and the one that is easy to skip: with the cards left opaque,

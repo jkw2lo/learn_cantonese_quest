@@ -2366,9 +2366,11 @@ button.tier-head:hover { border-color: var(--ink-3); }
    and the ruled lines become graph paper, which is the paper Chinese writing
    practice actually happens on.
 
-   Both enclosures are colourless — the tint has come off. The texture alone
-   says "these belong together", and it lets the cards inside read as sheets
-   laid on paper rather than panels sunk into it.
+   Both enclosures are colourless — the --sunken tint has come off — but not
+   transparent: the ground is --sheet, the same near-white the cards use, so
+   the grid reads as lines printed on a sheet of paper rather than on the desk
+   under it. The cards inside stay fill-less, which is what lets the grid run
+   under them unbroken.
    ============================================================ */
 
 .dash-today { position: relative; }
@@ -2377,7 +2379,7 @@ button.tier-head:hover { border-color: var(--ink-3); }
      weight that stays behind the content rather than competing with it */
   .dash-today, .dash-side {
     padding: .55rem; border-radius: 12px;
-    border: 1px solid var(--rule-2); background-color: transparent;
+    border: 1px solid var(--rule-2); background-color: var(--sheet);
     background-image:
       linear-gradient(color-mix(in srgb, var(--rule) 55%, transparent) 1px, transparent 1px),
       linear-gradient(90deg, color-mix(in srgb, var(--rule) 55%, transparent) 1px, transparent 1px);
