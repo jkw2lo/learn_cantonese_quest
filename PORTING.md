@@ -410,6 +410,41 @@ and `armAdvance`, the `d` branch of `renderDrill`, and the `#replay` handler in
 
 ---
 
+### 9e · Writing practice: two exercises, not one control with two positions
+
+The source switch was a segmented control — one box split in half, the selected
+half filled solid with `--ink`, each side carrying a bare number. Three things
+wrong with that:
+
+- **It said the wrong thing about the choice.** Today's characters and whole
+  words are different exercises, not two settings of one: single characters
+  from today's lesson, or a real word written straight through.
+- **The count had nothing to say what it counted.** "Today's characters 136"
+  — 136 of what?
+- **A solid slab of ink** for "selected" is heavier than anything else on the
+  page, in a view whose whole subject is a faint grey character to trace.
+
+They are two cards now, side by side, each with its Chinese label, its name and
+a count that says what it is a count of ("136 to trace", "203 you can write").
+Selected is a seal wash and a seal border — the same "this one is live" the
+tracing squares already use. Disabled reads "none yet" rather than a greyed
+zero. Below 520px they stack, because side by side at phone width they are two
+cramped boxes rather than a choice.
+
+The rest of the header follows from that: the shuffle button stops sharing a
+row with the switch, the word being written moves out of the title bar and into
+the band at full size (characters, jyutping, meaning), and the progress bar
+spans the same width instead of a `min(26rem, 90vw)` of its own.
+
+**One deletion worth making.** The title bar repeated the word and the round —
+`bin1 dou6 · where` up there, and the same thing in the band six millimetres
+below. It says `抄寫 Writing practice` now, and nothing else.
+
+**Where:** `js/app.js` — `renderNotebook()`, the `mode()` helper and the
+`#nbTitle` line; `css/app.css` — "writing practice: choosing what to write".
+
+---
+
 ### 10 · The 正 tally has to stay in its corner
 
 `tallyRow(n, max)` draws complete marks up to `max` and then collapses to a

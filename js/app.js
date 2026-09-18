@@ -2008,27 +2008,45 @@ function renderNotebook() {
   const total = nb.deck.length;
   const doneSoFar = Math.min(nb.pos + nb.done.filter(Boolean).length, total);
 
-  $("#nbTitle").innerHTML = `<span class="han">抄寫</span> Writing practice
-    <span class="dim" style="font-weight:400;font-size:.82rem">${byWord && nb.word
-      ? esc(nb.word[1]) + " · " + esc(nb.word[2])
-      : `today's characters · round ${nb.round}`}</span>`;
+  /* The word and the round used to be repeated up here. The header band below
+     says both, larger and with the characters themselves — this was the same
+     line twice, six millimetres apart. */
+  $("#nbTitle").innerHTML = `<span class="han">抄寫</span> Writing practice`;
+
+  const words = writableWords();
+  /* The two sources are different exercises, not two settings of one: single
+     characters from today's lesson, or a real word written straight through.
+     A segmented control said that badly — it made them look like one control
+     with two positions, and it left the count reading as a bare number with
+     nothing to say what it counted. */
+  const mode = (src, k, name, n, what, off) => `
+    <button role="tab" class="nb-mode ${nb.source === src ? "on" : ""}" data-nbsrc="${src}"
+      aria-selected="${nb.source === src}" ${off ? "disabled" : ""}>
+      <span class="nb-mode-k han">${k}</span>
+      <span class="nb-mode-t">${name}</span>
+      <span class="nb-mode-n">${off ? "none yet" : `${n} ${what}`}</span>
+    </button>`;
 
   $("#nbStage").innerHTML = `
-    <div class="nb-switch">
+    <div class="nb-head">
       <div class="nb-seg" role="tablist">
-        <button role="tab" class="nb-seg-b ${!byWord ? "on" : ""}" data-nbsrc="today" aria-selected="${!byWord}"
-          ${today.length ? "" : "disabled"}><span class="han">今日</span> Today's characters
-          <small>${today.length}</small></button>
-        <button role="tab" class="nb-seg-b ${byWord ? "on" : ""}" data-nbsrc="word" aria-selected="${byWord}"
-          ${writableWords().length ? "" : "disabled"}><span class="han">詞語</span> Whole words
-          <small>${writableWords().length}</small></button>
+        ${mode("today", "今日", "Today's characters", today.length, "to trace", !today.length)}
+        ${mode("word", "詞語", "Whole words", words.length, "you can write", !words.length)}
       </div>
-      <button class="btn btn-ghost btn-sm nb-next" id="nbNew">${byWord ? "↻ Another word" : "↻ Shuffle"}</button>
-    </div>
 
-    <div class="nb-progress">
-      <span class="nb-count">${doneSoFar} / ${total}</span>
-      <span class="bar"><i style="width:${total ? (doneSoFar / total * 100).toFixed(1) : 0}%"></i></span>
+      <div class="nb-now">
+        <span class="nb-now-what">${byWord && nb.word
+          ? `<b class="han">${esc(nb.word[0])}</b>
+             <span class="p">${esc(nb.word[1])}</span>
+             <span class="m">${esc(nb.word[2])}</span>`
+          : `<span class="m">Round ${nb.round}</span>`}</span>
+        <button class="btn btn-ghost btn-sm nb-next" id="nbNew">${byWord ? "↻ Another word" : "↻ Shuffle"}</button>
+      </div>
+
+      <div class="nb-progress">
+        <span class="bar"><i style="width:${total ? (doneSoFar / total * 100).toFixed(1) : 0}%"></i></span>
+        <span class="nb-count">${doneSoFar} / ${total}</span>
+      </div>
     </div>
 
     <div class="nb-line">
