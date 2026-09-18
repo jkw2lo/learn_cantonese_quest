@@ -2995,7 +2995,7 @@ function renderLibrary() {
       </div>`;
     }
     const isOpen = libOpenTiers[t.n] !== undefined ? libOpenTiers[t.n]
-                 : (t.n === openTier.n || !!libSearch || libFilter !== "all");
+                 : (demoOn() || t.n === openTier.n || !!libSearch || libFilter !== "all");
     return `<div class="tier ${isOpen ? "on" : ""}">
       <button class="tier-head tier-toggle" data-tier="${t.n}" aria-expanded="${isOpen}">
         <span class="tier-icon">${esc(t.icon)}</span>
@@ -4024,16 +4024,16 @@ const asking = () => !!askDone;
 
 const TOUR = [
   { k: "粵", title: "Welcome",
-    body: `${HQ.length} characters, taught in an order where each one makes the next easier —
-           the first week gets you 你好, 唔該, 多謝, 早晨, 晚安, 對唔住 and 再見 — enough to greet
-           someone and thank them before you have learnt thirty characters.
+    body: `${HQ.length} characters, in an order that starts where you can actually start.
+           The first three days are one to five strokes each, so you can write every character you
+           meet. By day five you can say 你好, 唔該 and 多謝.
            Nothing here needs to be finished in a sitting.` },
   { k: "今日", title: "Today is a short list",
     body: `Learn the day's characters, then tick off practising them: recognising,
            reading, saying and writing. Everything is scoped to what you learned today,
            so the list is always finishable.` },
   { k: "睇餐牌", title: "A side quest with an ending",
-    body: `One character a day from a real restaurant menu. The ones you know are inked
+    body: `One character a day from a real cha chaan teng menu. The ones you know are inked
            in; the rest stay grey. Learn them all and you can read the whole thing —
            hover any character for its meaning while you get there.` },
   { k: "速練", title: "A minute, against the clock",
@@ -4120,6 +4120,7 @@ function go(v) {
   $$(".view").forEach(el => el.classList.toggle("on", el.id === id));
   $$("[data-nav]").forEach(b => b.classList.toggle("on", b.dataset.nav === v));
   RENDER[v]();
+  renderDemoBar();
   window.scrollTo(0, 0);
 }
 function renderAll() {

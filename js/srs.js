@@ -715,6 +715,7 @@ function tierProgress(t) {
    tier's *written* characters — and every tier before that too, so a gap
    early on can't be stepped over. */
 function tierUnlocked(t) {
+  if (DEMO_BUILD && state.demo) return true;       /* 示範 — see below */
   for (let i = 0; i < t.n - 1; i++) {
     const p = tierProgress(TIERS[i]);
     if (!p.built || p.pct < TIER_UNLOCK) return false;
@@ -736,7 +737,6 @@ function tierNeeds(t) {
 /* The curriculum position past which nothing may be studied yet. Everything
    the daily session and the Library hand out is checked against this. */
 function unlockedCeiling() {
-  if (DEMO_BUILD && state.demo) return HQ.length;    /* 示範 — see below */
   let ceiling = 0;
   for (const t of TIERS) {
     if (!tierUnlocked(t)) break;

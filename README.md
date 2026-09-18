@@ -175,42 +175,58 @@ able to order a coffee.
 
 | | stage | ends | what it covers |
 |---|---|---|---|
-| 👋 | 打招呼 Saying hello | 16 | Hello, good morning, good night, thank you, sorry, goodbye |
-| 🧍 | 我哋 Who | 29 | People, and the particles that hold a sentence together |
-| 🔢 | 一二三 Numbers | 42 | Counting, and the 二 / 兩 distinction that catches everyone |
-| 🍜 | 飲食 Eating | 59 | Ordering: hot or iced, more or less sugar |
-| 🗺️ | 去邊度 Places | 77 | Asking where something is, and getting there |
-| 🕐 | 幾點 Time | 90 | Clock and calendar, including the words Mandarin doesn't have |
-| 👨‍👩‍👧 | 屋企人 Family | 101 | The people around you, and the prefix 老 that isn't about age |
-| 🏃 | 做乜嘢 Doing | 117 | The verbs a day is made of |
-| 📏 | 點形容 Describing | 132 | Big, small, cheap, tired — and the tone pairs that mean opposite things |
+| 🔢 | 數字 Counting | 16 | The ten numbers and a few pictures — one to five strokes each |
+| 👋 | 打招呼 Saying hello | 32 | Hello, good morning, good night, thank you, sorry, goodbye |
+| 🧍 | 我哋 Who | 46 | People, counting things, and the particles that hold a sentence together |
+| 🍜 | 飲食 Eating | 63 | Ordering: hot or iced, more or less sugar |
+| 🗺️ | 去邊度 Places | 81 | Asking where something is, and getting there |
+| 🕐 | 幾點 Time | 91 | The clock and the calendar |
+| 👨‍👩‍👧 | 屋企人 Family | 102 | The people around you, and the prefix 老 that isn't about age |
+| 🏃 | 做乜嘢 Doing | 118 | The verbs a day is made of |
+| 📏 | 點形容 Describing | 132 | Small, cheap, tired — and the tone pairs that mean opposite things |
 | 💬 | 語氣 Particles | 146 | The little words that carry everything English puts in the voice |
 
-### The first week was reordered, because it wasn't worth showing up for
+### The opening was reordered twice, for two different reasons
 
-The first draft opened with the highest-frequency characters, which is what a
-corpus would tell you to do and is the wrong answer. Measured against what a
-learner could actually **say**, day one gave you 我哋, 你哋 and 佢哋 — three
-plural pronouns, and not one thing you would address to a person. 唔該 and 多謝,
-the two most useful phrases in the language, needed characters at positions 30
-and 31: six weeks at five a day before you could thank anybody.
+**The first draft ordered by frequency**, which is what a corpus tells you to do
+and is the wrong answer. Measured against what a learner could actually *say*,
+day one gave you 我哋, 你哋 and 佢哋 — three plural pronouns, and not one thing
+you would address to a person. 唔該 and 多謝, the two most useful phrases in the
+language, sat at positions 30 and 31: six weeks at five a day before you could
+thank anybody.
 
-The gate at 77 was reordered around usable phrases instead. The same characters,
-one added, in a different order:
+**So it was reordered around phrases** — 你好 on day one, 唔該 多謝 早晨 on day
+two. That fixed the wrong problem. The first sixteen characters then averaged
+**8.9 strokes and peaked at 謝, which has seventeen**. For somebody who has never
+written a Chinese character, being handed 謝 in week one is not gratifying, it is
+a wall.
 
-| after day | new characters | what that unlocks |
-|---|---|---|
-| 1 | 你 好 我 係 唔 | 你好 · 唔係 · 唔好 |
-| 2 | 該 多 謝 早 晨 | 唔該 · 多謝 · 早晨 |
-| 3 | 晚 安 對 住 再 | 晚安 · 對唔住 |
-| 4 | 見 人 個 佢 哋 | 再見 · 我哋 · 佢哋 |
+**The two goals only looked opposed.** Numbers dissolve it: 一二三 are literally
+one, two and three strokes, and they are useful in Hong Kong the moment you leave
+the house — prices, bus routes, floor numbers, how many you want. The opening is
+numbers and pictographs now, with the greetings immediately behind:
 
-Nine usable phrases inside the first four sessions, against zero before.
+| after day | new characters | strokes | what that unlocks |
+|---|---|---|---|
+| 1 | 一 二 三 四 五 | 1–5 | you can write all five |
+| 2 | 六 七 八 九 十 | 2–4 | 二十 · 五月 · 九月 |
+| 3 | 人 大 女 月 今 | 2–4 | 大人 · 女人 · 今日 |
+| 4 | 你 好 我 係 唔 | 6–10 | 你好 · 唔係 · 唔好 |
+| 5 | 該 多 謝 早 晨 | 6–17 | 唔該 · 多謝 · 早晨 |
+
+**2.9 strokes across the first sixteen, against 8.9** — and 你好 still arrives on
+day four, 唔該 and 多謝 on day five, against week six in the original.
 
 晨 is the one character added, taking the library from 145 to 146. It exists
-solely so 早晨 works — the greeting Hong Kong actually uses, far more than 你好,
-and the only word 晨 appears in. Without it the second day has 早 meaning
-"early" and nothing to do with it.
+solely so 早晨 works — the greeting Hong Kong actually uses far more than 你好,
+and the only word 晨 appears in.
+
+A curriculum-order *setting* was considered and rejected. The person who would
+have to choose is the one least able to: day one, no prior knowledge, no way to
+judge which theory suits them. It would not add a setting so much as a second
+curriculum — every guarantee the checkers enforce would have to hold twice — and
+it is unchangeable in practice anyway, since the review schedule is keyed to
+curriculum position. Fixing the one order was the cheaper and better answer.
 
 The last stage is where Cantonese stops looking like Mandarin with different
 sounds. English carries attitude in intonation; Cantonese can't, because pitch
@@ -240,11 +256,22 @@ Every one of these was caught by tooling rather than by reading it back:
 - **Two of the first four characters rendered as an empty box**, because
   hanzi-writer has no data for 佢 or 哋 and nothing fell back to simply drawing
   them. Found by using the app, not by a checker — which is its own lesson.
+- **The "does this character arrive with a readable pairing" check was asking a
+  yes/no question** it could not answer usefully: it could not tell a wait of one
+  character from a wait of sixteen, and a wait of one is not a problem — 你 and
+  好 cannot both be first. It measures the wait now, which made it stricter:
+  characters waiting eleven used to hide inside the same tolerance as 朋 waiting
+  for 友.
 
 ## 示範 Demo mode
 
 A toggle in **Settings** that opens every tier at once, so the Library lists all
-146 characters and any card can be read. For showing somebody the whole app
+146 characters and any card can be read. Opening a tier and *showing* it turned
+out to be two things: the first version patched `unlockedCeiling`, but the
+Library asks `tierUnlocked` directly and never consults the ceiling, so tier 2
+unlocked and then stayed folded shut behind its caret. The gate is patched in
+one place now — `tierUnlocked`, which everything else derives from — and demo
+mode expands every tier rather than only the one you are working in. For showing somebody the whole app
 without spending six weeks earning the right to.
 
 It does that and nothing else. No character is marked known, nothing is graded,
@@ -301,7 +328,7 @@ and 嘢.
 - **The sentences are Cantonese, but they are one sentence long.** Nothing here
   builds toward a paragraph.
 - **146 characters is a beginning.** The structure — stages, tiers, the gate at
-  77 — is built to extend, and `check-jyutping.mjs` will hold new entries to the
+  81 — is built to extend, and `check-jyutping.mjs` will hold new entries to the
   same standard as the existing ones.
 
 ## Licensing

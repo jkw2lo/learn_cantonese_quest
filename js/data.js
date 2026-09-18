@@ -15,7 +15,91 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.
 
 const HQ = [];
 
-/* ---------- Stage 1 · 打招呼 — nine phrases you can use on the way out of the first week: hello, good morning, good night, thank you, sorry, goodbye ---------- */
+/* ---------- Stage 1 · 數字 — the ten numbers and a few pictures ---------- */
+HQ.push(
+{c:"一",p:"jat1",m:"one",comp:[],pos:["num"],
+ story:"One stroke. The high flat first tone — hold it level, like the first note of a tune.",
+ o:"The oracle-bone form three thousand years ago is identical to the one you write today. It has never needed to change.",
+ words:[["一月","jat1 jyut6","January"],["一個","jat1 go3","one (of something)"],["一齊","jat1 cai4","together"],["第一","dai6 jat1","first"]],
+ sent:["我要一杯茶。","ngo5 jiu3 jat1 bui1 caa4","I'd like a cup of tea."]},
+{c:"二",p:"ji6",m:"two",comp:["一"],pos:["num"],
+ story:"For counting aloud — 一、二、三. To count two *things* you need 兩, not 二. Getting that wrong is the commonest beginner slip.",
+ o:"Two strokes for two. The lower line is drawn longer so it can't be mistaken for a badly spaced 一.",
+ words:[["二十","ji6 sap6","twenty"],["二月","ji6 jyut6","February"],["第二","dai6 ji6","second"]],
+ sent:["十二點食飯。","sap6 ji6 dim2 sik6 faan6","Lunch is at twelve."]},
+{c:"三",p:"saam1",m:"three",comp:["一","二"],pos:["num"],
+ story:"saam1, and the counting is literal until four, where the pattern gives up.",
+ o:"Three stacked strokes. 四 breaks the run because four scratches in a row stopped being readable at a glance.",
+ words:[["三個","saam1 go3","three (of something)"],["三月","saam1 jyut6","March"]],
+ sent:["三個人去。","saam1 go3 jan4 heoi3","Three people are going."]},
+{c:"四",p:"sei3",m:"four",comp:["囗"],pos:["num"],
+ story:"sei3 — and it sounds uncomfortably close to 死 sei2, 'to die'. Hong Kong buildings skip the fourth floor for exactly this reason.",
+ o:"Originally four strokes like 三 with one more. It was replaced early by a borrowed character meaning 'nostrils', which is the shape you write now.",
+ words:[["四個","sei3 go3","four (of something)"],["四月","sei3 jyut6","April"]],
+ sent:["我有四個。","ngo5 jau5 sei3 go3","I have four."]},
+{c:"五",p:"ng5",m:"five",comp:["二"],pos:["num"],
+ story:"Another word with no vowel — ng5, hummed at the back of the mouth. Cantonese is comfortable with syllables English would call impossible.",
+ o:"Two lines with a cross between them: five as the midpoint between one and ten, counted on one hand.",
+ words:[["五月","ng5 jyut6","May"],["五個","ng5 go3","five (of something)"],["五點","ng5 dim2","five o'clock"]],
+ sent:["五個人食飯。","ng5 go3 jan4 sik6 faan6","Five people are eating."]},
+{c:"六",p:"luk6",m:"six",comp:[],pos:["num"],
+ story:"luk6 — ending in a hard k that stops the sound dead. Cantonese kept the -p, -t and -k endings Mandarin lost a thousand years ago.",
+ o:"Borrowed for its sound from a character that drew a simple hut. The roof shape survives at the top.",
+ words:[["六個","luk6 go3","six (of something)"],["六月","luk6 jyut6","June"]],
+ sent:["六點見。","luk6 dim2 gin3","See you at six."]},
+{c:"七",p:"cat1",m:"seven",comp:[],pos:["num"],
+ story:"cat1 — spell it like the animal and you will say it right.",
+ o:"Originally a horizontal line cut by a vertical one: 'to cut'. That sense moved to 切 and the shape was left to the number.",
+ words:[["七個","cat1 go3","seven (of something)"],["七月","cat1 jyut6","July"]],
+ sent:["七點鐘返工。","cat1 dim2 zung1 faan1 gung1","Work starts at seven."]},
+{c:"八",p:"baat3",m:"eight",comp:[],pos:["num"],
+ story:"The lucky one. baat3 rhymes with 發 faat3, 'to prosper', which is why Hong Kong number plates ending in 8 sell for a fortune.",
+ o:"Two strokes dividing — the original sense was 'to split apart', which survives inside 分.",
+ words:[["八個","baat3 go3","eight (of something)"],["八月","baat3 jyut6","August"]],
+ sent:["八點開門。","baat3 dim2 hoi1 mun4","It opens at eight."]},
+{c:"九",p:"gau2",m:"nine",comp:[],pos:["num"],
+ story:"gau2, and it sounds like 狗 gau2, 'dog'. Cantonese is full of these near-misses, which is half of why it is so good for wordplay.",
+ o:"A bent arm reaching, borrowed for its sound. Nine was the largest single digit and so came to mean 'many' in old texts.",
+ words:[["九月","gau2 jyut6","September"],["九個","gau2 go3","nine (of something)"],["九龍","gau2 lung4","Kowloon"]],
+ sent:["九點瞓覺。","gau2 dim2 fan3 gaau3","Bed at nine."]},
+{c:"十",p:"sap6",m:"ten",comp:["一"],pos:["num"],
+ story:"sap6. After ten, counting is arithmetic: 十一 is eleven, 二十 is twenty, 二十一 is twenty-one. No new words.",
+ o:"A single vertical stroke meaning ten, with a dot added mid-shaft to tell it apart. The dot stretched into the horizontal bar.",
+ words:[["十個","sap6 go3","ten (of something)"],["十月","sap6 jyut6","October"]],
+ sent:["十個人喺度。","sap6 go3 jan4 hai2 dou6","Ten people are here."]},
+{c:"人",p:"jan4",m:"person",comp:[],pos:["n"],
+ story:"A person walking, two legs mid-stride. jan4 — the j is an English y, so it sounds like 'yun'.",
+ o:"A side view of a standing figure. Squeezed against a left edge it becomes 亻, which is inside 你, 佢 and 係.",
+ words:[["人哋","jan4 dei6","other people; someone else"],["男人","naam4 jan2","man"],["大人","daai6 jan4","adult"]],
+ sent:["嗰個人係邊個？","go2 go3 jan4 hai6 bin1 go3","Who is that person?"]},
+{c:"大",p:"daai6",m:"big",comp:["人","一"],pos:["adj"],
+ story:"Remember 好 in front of an adjective means 'very': 好大 is very big.",
+ o:"A person (人) with arms stretched wide. Size shown by a human gesture rather than by a big thing.",
+ words:[["好大","hou2 daai6","very big"],["大人","daai6 jan4","adult"],["大佬","daai6 lou2","older brother; mate"]],
+ sent:["間屋好大呀。","gaan1 uk1 hou2 daai6 aa3","The flat is very big."]},
+{c:"女",p:"neoi5",m:"woman; female; daughter",comp:[],pos:["n"],
+ story:"neoi5 — round your lips for the eo, somewhere between the vowels in 'her' and 'were'. It is the sound that marks Cantonese out.",
+ o:"A figure kneeling with arms crossed, the ancient posture of a seated woman. It heads a large family of characters, 好 among them.",
+ words:[["女仔","neoi5 zai2","girl"],["女人","neoi5 jan2","woman"],["仔女","zai2 neoi2","children"]],
+ sent:["嗰個女仔係我妹。","go2 go3 neoi5 zai2 hai6 ngo5 mui6","That girl is my younger sister."]},
+{c:"月",p:"jyut6",m:"moon; month",comp:[],pos:["n"],
+ story:"jyut6 — and 粵 jyut6, the character for Cantonese itself, is a homophone. Months are moons in most languages.",
+ o:"A crescent, drawn curved because the moon is rarely full. The 月 inside 有 and 朋 is really 肉, flesh — a different part that collapsed into the same shape.",
+ words:[["一月","jat1 jyut6","January"],["月頭","jyut6 tau4","start of the month"],["個月","go3 jyut6","a month"]],
+ sent:["下個月我去旅行。","haa6 go3 jyut6 ngo5 heoi3 leoi5 hang4","I'm travelling next month."]},
+{c:"今",p:"gam1",m:"now; this (day)",comp:["人"],pos:["n"],
+ story:"今日 today, 今晚 tonight. Cantonese says gam1 jat6 where Mandarin says jīn tiān — and uses 日 for 'day' where Mandarin prefers 天.",
+ o:"A roof over a gathering mark: the moment under this roof. Now, drawn as the present place.",
+ words:[["今日","gam1 jat6","today"],["今晚","gam1 maan5","tonight"],["今朝","gam1 ziu1","this morning"]],
+ sent:["今日星期幾呀？","gam1 jat6 sing1 kei4 gei2 aa3","What day is it today?"]},
+{c:"日",p:"jat6",m:"sun; day",comp:[],pos:["n"],
+ story:"Cantonese counts days with 日 where Mandarin uses 天: 今日, 聽日, 兩日.",
+ o:"A circle with a dot at the centre — the sun. Brush writing squared off the circle and flattened the dot into a line.",
+ words:[["今日","gam1 jat6","today"],["聽日","ting1 jat6","tomorrow"],["生日","saang1 jat6","birthday"]],
+ sent:["聽日我唔返工。","ting1 jat6 ngo5 m4 faan1 gung1","I'm not working tomorrow."]}
+);
+
+/* ---------- Stage 2 · 打招呼 — hello, good morning, good night, thank you, sorry, goodbye ---------- */
 HQ.push(
 {c:"你",p:"nei5",m:"you",comp:["人"],pos:["pron"],
  story:"nei5, where Mandarin says nǐ. Cantonese keeps the older -ei ending that Mandarin flattened.",
@@ -99,13 +183,8 @@ HQ.push(
  sent:["聽日見！","ting1 jat6 gin3","See you tomorrow!"]}
 );
 
-/* ---------- Stage 2 · 我哋 — people, and the particles that hold a cantonese sentence together ---------- */
+/* ---------- Stage 3 · 我哋 — people, counting things, and the particles that hold a sentence together ---------- */
 HQ.push(
-{c:"人",p:"jan4",m:"person",comp:[],pos:["n"],
- story:"A person walking, two legs mid-stride. jan4 — the j is an English y, so it sounds like 'yun'.",
- o:"A side view of a standing figure. Squeezed against a left edge it becomes 亻, which is inside 你, 佢 and 係.",
- words:[["人哋","jan4 dei6","other people; someone else"],["男人","naam4 jan2","man"],["大人","daai6 jan4","adult"]],
- sent:["嗰個人係邊個？","go2 go3 jan4 hai6 bin1 go3","Who is that person?"]},
 {c:"個",p:"go3",m:"(general measure word)",comp:["人","固"],pos:["mw"],
  story:"Cantonese counts with a measure word between the number and the thing. 個 is the all-purpose one — when you don't know which to use, use 個.",
  o:"A person (亻) with 固 for the sound. Note the simplified form 个 is a different-looking character for the same word.",
@@ -141,11 +220,6 @@ HQ.push(
  o:"A person (亻) with a child (子). Mandarin reads it zǎi and barely uses it; in Cantonese it is one of the most productive endings in the language.",
  words:[["仔女","zai2 neoi2","children"],["男仔","naam4 zai2","boy"],["細佬仔","sai3 lou2 zai2","little kid"]],
  sent:["佢有兩個仔。","keoi5 jau5 loeng5 go3 zai2","He has two sons."]},
-{c:"女",p:"neoi5",m:"woman; female; daughter",comp:[],pos:["n"],
- story:"neoi5 — round your lips for the eo, somewhere between the vowels in 'her' and 'were'. It is the sound that marks Cantonese out.",
- o:"A figure kneeling with arms crossed, the ancient posture of a seated woman. It heads a large family of characters, 好 among them.",
- words:[["女仔","neoi5 zai2","girl"],["女人","neoi5 jan2","woman"],["仔女","zai2 neoi2","children"]],
- sent:["嗰個女仔係我妹。","go2 go3 neoi5 zai2 hai6 ngo5 mui6","That girl is my younger sister."]},
 {c:"名",p:"meng2",m:"name",comp:["口","夕"],pos:["n"],
  story:"Two readings, and you need both: 個名 meng2 is the name you call someone, 名字 ming4 zi6 is the formal word. Everyday Cantonese uses meng2.",
  o:"A mouth (口) under the evening (夕) — in the dark you have to say who you are. The picture is three thousand years old and still legible.",
@@ -165,61 +239,7 @@ HQ.push(
  story:"Look at it beside 有: the same character with its two middle strokes taken out. The writing system rarely gets to be this neat.",
  o:"A Cantonese invention, made by hollowing out 有. It does not exist in Mandarin, which needs two characters (沒有) to say it.",
  words:[["冇嘢","mou5 je5","it's nothing; never mind"],["有冇","jau5 mou5","is there any?"],["冇問題","mou5 man6 tai4","no problem"]],
- sent:["我冇錢。","ngo5 mou5 cin2","I have no money."]}
-);
-
-/* ---------- Stage 3 · 一二三 — counting, and the 二 / 兩 distinction that catches everyone ---------- */
-HQ.push(
-{c:"一",p:"jat1",m:"one",comp:[],pos:["num"],
- story:"One stroke. The high flat first tone — hold it level, like the first note of a tune.",
- o:"The oracle-bone form three thousand years ago is identical to the one you write today. It has never needed to change.",
- words:[["一個","jat1 go3","one (of something)"],["一齊","jat1 cai4","together"],["第一","dai6 jat1","first"]],
- sent:["我要一杯茶。","ngo5 jiu3 jat1 bui1 caa4","I'd like a cup of tea."]},
-{c:"二",p:"ji6",m:"two",comp:["一"],pos:["num"],
- story:"For counting aloud — 一、二、三. To count two *things* you need 兩, not 二. Getting that wrong is the commonest beginner slip.",
- o:"Two strokes for two. The lower line is drawn longer so it can't be mistaken for a badly spaced 一.",
- words:[["二十","ji6 sap6","twenty"],["二月","ji6 jyut6","February"],["第二","dai6 ji6","second"]],
- sent:["十二點食飯。","sap6 ji6 dim2 sik6 faan6","Lunch is at twelve."]},
-{c:"三",p:"saam1",m:"three",comp:["一","二"],pos:["num"],
- story:"saam1, and the counting is literal until four, where the pattern gives up.",
- o:"Three stacked strokes. 四 breaks the run because four scratches in a row stopped being readable at a glance.",
- words:[["三個","saam1 go3","three (of something)"],["三月","saam1 jyut6","March"]],
- sent:["三個人去。","saam1 go3 jan4 heoi3","Three people are going."]},
-{c:"四",p:"sei3",m:"four",comp:["囗"],pos:["num"],
- story:"sei3 — and it sounds uncomfortably close to 死 sei2, 'to die'. Hong Kong buildings skip the fourth floor for exactly this reason.",
- o:"Originally four strokes like 三 with one more. It was replaced early by a borrowed character meaning 'nostrils', which is the shape you write now.",
- words:[["四個","sei3 go3","four (of something)"],["四月","sei3 jyut6","April"]],
- sent:["我有四個。","ngo5 jau5 sei3 go3","I have four."]},
-{c:"五",p:"ng5",m:"five",comp:["二"],pos:["num"],
- story:"Another word with no vowel — ng5, hummed at the back of the mouth. Cantonese is comfortable with syllables English would call impossible.",
- o:"Two lines with a cross between them: five as the midpoint between one and ten, counted on one hand.",
- words:[["五個","ng5 go3","five (of something)"],["五點","ng5 dim2","five o'clock"]],
- sent:["五個人食飯。","ng5 go3 jan4 sik6 faan6","Five people are eating."]},
-{c:"六",p:"luk6",m:"six",comp:[],pos:["num"],
- story:"luk6 — ending in a hard k that stops the sound dead. Cantonese kept the -p, -t and -k endings Mandarin lost a thousand years ago.",
- o:"Borrowed for its sound from a character that drew a simple hut. The roof shape survives at the top.",
- words:[["六個","luk6 go3","six (of something)"],["六月","luk6 jyut6","June"]],
- sent:["六點見。","luk6 dim2 gin3","See you at six."]},
-{c:"七",p:"cat1",m:"seven",comp:[],pos:["num"],
- story:"cat1 — spell it like the animal and you will say it right.",
- o:"Originally a horizontal line cut by a vertical one: 'to cut'. That sense moved to 切 and the shape was left to the number.",
- words:[["七個","cat1 go3","seven (of something)"],["七月","cat1 jyut6","July"]],
- sent:["七點鐘返工。","cat1 dim2 zung1 faan1 gung1","Work starts at seven."]},
-{c:"八",p:"baat3",m:"eight",comp:[],pos:["num"],
- story:"The lucky one. baat3 rhymes with 發 faat3, 'to prosper', which is why Hong Kong number plates ending in 8 sell for a fortune.",
- o:"Two strokes dividing — the original sense was 'to split apart', which survives inside 分.",
- words:[["八個","baat3 go3","eight (of something)"],["八月","baat3 jyut6","August"]],
- sent:["八點開門。","baat3 dim2 hoi1 mun4","It opens at eight."]},
-{c:"九",p:"gau2",m:"nine",comp:[],pos:["num"],
- story:"gau2, and it sounds like 狗 gau2, 'dog'. Cantonese is full of these near-misses, which is half of why it is so good for wordplay.",
- o:"A bent arm reaching, borrowed for its sound. Nine was the largest single digit and so came to mean 'many' in old texts.",
- words:[["九個","gau2 go3","nine (of something)"],["九龍","gau2 lung4","Kowloon"]],
- sent:["九點瞓覺。","gau2 dim2 fan3 gaau3","Bed at nine."]},
-{c:"十",p:"sap6",m:"ten",comp:["一"],pos:["num"],
- story:"sap6. After ten, counting is arithmetic: 十一 is eleven, 二十 is twenty, 二十一 is twenty-one. No new words.",
- o:"A single vertical stroke meaning ten, with a dot added mid-shaft to tell it apart. The dot stretched into the horizontal bar.",
- words:[["十個","sap6 go3","ten (of something)"],["十月","sap6 jyut6","October"]],
- sent:["十個人喺度。","sap6 go3 jan4 hai2 dou6","Ten people are here."]},
+ sent:["我冇錢。","ngo5 mou5 cin2","I have no money."]},
 {c:"兩",p:"loeng5",m:"two (of something)",comp:[],pos:["num"],
  story:"The one that catches everyone. Counting aloud uses 二; counting *things* uses 兩. Two cups is 兩杯, never 二杯.",
  o:"A picture of a balanced pair — two matched halves under one yoke. Which is exactly the distinction it still carries.",
@@ -326,7 +346,7 @@ HQ.push(
  sent:["呢個太甜喇。","ni1 go3 taai3 tim4 laa3","This is too sweet."]}
 );
 
-/* ---------- Stage 5 · 去邊度 — asking where something is, and getting on and off things to reach it ---------- */
+/* ---------- Stage 5 · 去邊度 — asking where something is, and getting there ---------- */
 HQ.push(
 {c:"請",p:"cing2",m:"please; to invite",comp:["言"],pos:["v"],
  story:"More formal than 唔該 — it is the 'please' of signs and announcements rather than of ordering coffee.",
@@ -420,18 +440,8 @@ HQ.push(
  sent:["出口喺嗰度。","ceot1 hau2 hai2 go2 dou6","The exit is over there."]}
 );
 
-/* ---------- Stage 6 · 幾點 — clock and calendar, including the words for morning and lunch that mandarin doesn't have ---------- */
+/* ---------- Stage 6 · 幾點 — the clock and the calendar, including the words mandarin doesn't have ---------- */
 HQ.push(
-{c:"今",p:"gam1",m:"now; this (day)",comp:["人"],pos:["n"],
- story:"今日 today, 今晚 tonight. Cantonese says gam1 jat6 where Mandarin says jīn tiān — and uses 日 for 'day' where Mandarin prefers 天.",
- o:"A roof over a gathering mark: the moment under this roof. Now, drawn as the present place.",
- words:[["今日","gam1 jat6","today"],["今晚","gam1 maan5","tonight"],["今朝","gam1 ziu1","this morning"]],
- sent:["今日星期幾呀？","gam1 jat6 sing1 kei4 gei2 aa3","What day is it today?"]},
-{c:"日",p:"jat6",m:"sun; day",comp:[],pos:["n"],
- story:"Cantonese counts days with 日 where Mandarin uses 天: 今日, 聽日, 兩日.",
- o:"A circle with a dot at the centre — the sun. Brush writing squared off the circle and flattened the dot into a line.",
- words:[["今日","gam1 jat6","today"],["聽日","ting1 jat6","tomorrow"],["生日","saang1 jat6","birthday"]],
- sent:["聽日我唔返工。","ting1 jat6 ngo5 m4 faan1 gung1","I'm not working tomorrow."]},
 {c:"聽",p:"teng1",m:"to listen; to hear",comp:["耳"],pos:["v"],
  story:"Two readings doing two jobs. teng1 is to listen; ting1 is the one inside 聽日, tomorrow. Same character, and you need both.",
  o:"An ear (耳) with 王 and a straight heart (直 over 心) — listening drawn as an ear and an honest mind together.",
@@ -477,11 +487,6 @@ HQ.push(
  o:"The moon (月) with 其 for the sound. Time measured in moons, before it was measured in anything else.",
  words:[["星期","sing1 kei4","week"],["下星期","haa6 sing1 kei4","next week"],["日期","jat6 kei4","date"]],
  sent:["下星期見。","haa6 sing1 kei4 gin3","See you next week."]},
-{c:"月",p:"jyut6",m:"moon; month",comp:[],pos:["n"],
- story:"jyut6 — and 粵 jyut6, the character for Cantonese itself, is a homophone. Months are moons in most languages.",
- o:"A crescent, drawn curved because the moon is rarely full. The 月 inside 有 and 朋 is really 肉, flesh — a different part that collapsed into the same shape.",
- words:[["一月","jat1 jyut6","January"],["月頭","jyut6 tau4","start of the month"],["個月","go3 jyut6","a month"]],
- sent:["下個月我去旅行。","haa6 go3 jyut6 ngo5 heoi3 leoi5 hang4","I'm travelling next month."]},
 {c:"年",p:"nin4",m:"year",comp:[],pos:["n"],
  story:"今年 this year, 出年 next year — Cantonese says 出年 where Mandarin says 明年.",
  o:"A person carrying a harvested crop. A year was one harvest, which is how most languages first counted them.",
@@ -548,7 +553,7 @@ HQ.push(
  sent:["我同朋友去食飯。","ngo5 tung4 pang4 jau5 heoi3 sik6 faan6","I'm going to eat with a friend."]}
 );
 
-/* ---------- Stage 8 · 做乜嘢 — the verbs a day is made of — and the ones cantonese keeps where mandarin moved on ---------- */
+/* ---------- Stage 8 · 做乜嘢 — the verbs a day is made of ---------- */
 HQ.push(
 {c:"做",p:"zou6",m:"to do; to make",comp:["人","故"],pos:["v"],
  story:"做乜嘢 and 做咩 both mean 'what are you doing' — and 做嘢 is to work.",
@@ -632,13 +637,8 @@ HQ.push(
  sent:["唔該幫我寫低。","m4 goi1 bong1 ngo5 se2 dai1","Please write it down for me."]}
 );
 
-/* ---------- Stage 9 · 點形容 — big, small, cheap, tired — and the tone pairs that mean opposite things ---------- */
+/* ---------- Stage 9 · 點形容 — small, cheap, tired ---------- */
 HQ.push(
-{c:"大",p:"daai6",m:"big",comp:["人","一"],pos:["adj"],
- story:"Remember 好 in front of an adjective means 'very': 好大 is very big.",
- o:"A person (人) with arms stretched wide. Size shown by a human gesture rather than by a big thing.",
- words:[["好大","hou2 daai6","very big"],["大人","daai6 jan4","adult"],["大佬","daai6 lou2","older brother; mate"]],
- sent:["間屋好大呀。","gaan1 uk1 hou2 daai6 aa3","The flat is very big."]},
 {c:"細",p:"sai3",m:"small",comp:["糸"],pos:["adj"],
  story:"Cantonese says 細 where Mandarin says 小 — 細佬 little brother, 細路 a child, 老細 the boss.",
  o:"Silk (糸) with 田 for the sound. Fine threads, then fineness, then smallness.",
@@ -802,22 +802,22 @@ const POS_LABEL = {
    because most writing in Hong Kong is Standard Chinese — and you would learn
    to read a newspaper without being able to order a coffee. */
 const STAGES = [
-  {n:1, icon:"👋", name:"Saying hello", zh:"打招呼", end:16,  core:true, blurb:"Nine phrases you can use on the way out of the first week: hello, good morning, good night, thank you, sorry, goodbye."},
-  {n:2, icon:"🧍", name:"Who", zh:"我哋", end:29,  core:true, blurb:"People, and the particles that hold a Cantonese sentence together."},
-  {n:3, icon:"🔢", name:"Numbers", zh:"一二三", end:42,  core:true, blurb:"Counting, and the 二 / 兩 distinction that catches everyone."},
-  {n:4, icon:"🍜", name:"Eating", zh:"飲食", end:59,  core:true, blurb:"Ordering at a cha chaan teng: hot or iced, more or less sugar."},
-  {n:5, icon:"🗺️", name:"Places", zh:"去邊度", end:77,  core:true, blurb:"Asking where something is, and getting on and off things to reach it."},
-  {n:6, icon:"🕐", name:"Time", zh:"幾點", end:90,  core:true, blurb:"Clock and calendar, including the words for morning and lunch that Mandarin doesn't have."},
-  {n:7, icon:"👨‍👩‍👧", name:"Family", zh:"屋企人", end:101,  core:true, blurb:"The people around you, and the prefix 老 that isn't about age."},
-  {n:8, icon:"🏃", name:"Doing", zh:"做乜嘢", end:117,  core:true, blurb:"The verbs a day is made of — and the ones Cantonese keeps where Mandarin moved on."},
-  {n:9, icon:"📏", name:"Describing", zh:"點形容", end:132,  core:true, blurb:"Big, small, cheap, tired — and the tone pairs that mean opposite things."},
+  {n:1, icon:"🔢", name:"Counting", zh:"數字", end:16,  core:true, blurb:"The ten numbers and a few pictures — one to five strokes each, so you can write every one of them on the first day."},
+  {n:2, icon:"👋", name:"Saying hello", zh:"打招呼", end:32,  core:true, blurb:"Hello, good morning, good night, thank you, sorry, goodbye."},
+  {n:3, icon:"🧍", name:"Who", zh:"我哋", end:46,  core:true, blurb:"People, counting things, and the particles that hold a sentence together."},
+  {n:4, icon:"🍜", name:"Eating", zh:"飲食", end:63,  core:true, blurb:"Ordering at a cha chaan teng: hot or iced, more or less sugar."},
+  {n:5, icon:"🗺️", name:"Places", zh:"去邊度", end:81,  core:true, blurb:"Asking where something is, and getting there."},
+  {n:6, icon:"🕐", name:"Time", zh:"幾點", end:91,  core:true, blurb:"The clock and the calendar, including the words Mandarin doesn't have."},
+  {n:7, icon:"👨‍👩‍👧", name:"Family", zh:"屋企人", end:102,  core:true, blurb:"The people around you, and the prefix 老 that isn't about age."},
+  {n:8, icon:"🏃", name:"Doing", zh:"做乜嘢", end:118,  core:true, blurb:"The verbs a day is made of."},
+  {n:9, icon:"📏", name:"Describing", zh:"點形容", end:132,  core:true, blurb:"Small, cheap, tired — and the tone pairs that mean opposite things."},
   {n:10, icon:"💬", name:"Particles", zh:"語氣", end:146,  core:true, blurb:"The little words on the end of a sentence that carry everything English puts in the voice."}
 ];
 
 /* Two doors rather than three: the library is 145 characters, not 763, and a
    third gate would be a locked door with nothing behind it. */
 const TIERS = [
-  {n:1, icon:"🥢", name:"Getting by",  zh:"過日辰", to:77,
+  {n:1, icon:"🥢", name:"Getting by",  zh:"過日辰", to:81,
    blurb:"Enough to greet someone, count, order food and say where you're going."},
   {n:2, icon:"🗣️", name:"Holding up",  zh:"傾得",   to:146,
    blurb:"Time, family, the everyday verbs, and the particles that make you sound like a person rather than a phrasebook."}
