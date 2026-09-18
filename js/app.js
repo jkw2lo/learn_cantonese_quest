@@ -1011,6 +1011,32 @@ const REPAIR_SIZE = 5;
    count towards clearing the same character they would in a sprint. */
 const REPAIR_MODE = { r: "r", d: "r", p: "l", l: "l", c: "w", s: "w", a: "w", w: "w" };
 
+/* Teach one named character, then check it landed.
+
+   The Menu's "Learn 個" button called openMenuLesson(), which was never
+   written — the click threw a ReferenceError and the button did nothing at
+   all. What it means is what the daily session does for a new character: show
+   the card, then ask for it back. */
+function teachOne(c) {
+  if (!CHAR_INDEX[c]) return;
+  session.queue = isKnown(c)
+    ? [{ t: "intro", c }, { t: "drill", c, kind: "r" }]
+    : [{ t: "intro", c }, { t: "drill", c, kind: "r", fresh: true }];
+  session.idx = 0;
+  session.right = session.wrong = session.learned = session.reviewed = 0;
+  session.combo = session.bestCombo = 0;
+  session.got = {};
+  session.times = []; session.quick = 0;
+  session.questAtStart = menuProgress().known;
+  session.practice = null;
+  session.todo = null;
+  session.repair = null;
+  session.active = true;
+  $("#session").classList.add("on");
+  document.body.style.overflow = "hidden";
+  renderStep();
+}
+
 function startRepair(chars) {
   const cs = [...new Set(chars)].filter(c => CHAR_INDEX[c] && isKnown(c)).slice(0, REPAIR_SIZE);
   if (!cs.length) return;
@@ -1751,11 +1777,15 @@ function menuNext() {
 
 function renderMenuCard(target, tall) {
   const m = MENU, tier = menuTier().n;
-  const row = it => `<div class="mrow">
+  /* A menu row is a thing to hear, not only a thing to look at — ordering is
+     the point of being able to read it. The jyutping rides along so the sound
+     and the spelling arrive together. */
+  const row = it => `<button class="mrow" data-speak="${esc(it[0])}" title="Hear 「${esc(it[0])}」 — ${esc(it[1])}">
       <span class="dish">${glyphs(it[0], target)}</span>
+      <span class="mpin">${esc(it[1])}</span>
       <span class="dots"></span>
       <span class="price">$${it[3]}</span>
-    </div>${tier >= 2 && it[4] ? `<div class="mdesc">${glyphs(it[4][0], target)}</div>` : ""}`;
+    </button>${tier >= 2 && it[4] ? `<div class="mdesc">${glyphs(it[4][0], target)}</div>` : ""}`;
 
   return `<div class="menu-card ${tall ? "tall" : ""}">
     <div class="menu-top">
@@ -1773,6 +1803,26 @@ function renderMenuCard(target, tall) {
       ${s.items.map(row).join("")}
     </div>`).join("")}
   </div>`;
+}
+
+/* ---------- anything marked [data-speak] says itself ----------
+
+   data-speak was on the menu's five phrases from the start and nothing ever
+   listened for it: "Say it out loud" was a row of buttons that did nothing at
+   all. One delegated listener covers those and the menu rows, and anything
+   marked the same way later. */
+function initSpeakables() {
+  document.addEventListener("click", e => {
+    const b = e.target instanceof Element ? e.target.closest("[data-speak]") : null;
+    if (!b) return;
+    const text = b.dataset.speak;
+    if (!text) return;
+    sayPhrase(text, true);
+    /* a beat of ink so a click that makes no sound still reads as a click —
+       the clips are per character and a dish may have one missing */
+    b.classList.add("said");
+    setTimeout(() => b.classList.remove("said"), 420);
+  });
 }
 
 /* ---------- hover cards ---------- */
@@ -3166,18 +3216,14 @@ function renderQuest() {
         <span class="m">${learnedIt ? `${esc(pch.p)} · ${esc(pch.m)}` : "One character a day. Find it on the menu below."}</span>
         ${learnedIt ? `<span class="p">Next one tomorrow.</span>` : `<span class="p">${esc(pch.words[0][0])} · ${esc(pch.words[0][2])}</span>`}
       </span>
+      ${!learnedIt ? `<button class="btn btn-seal sq-learn" id="learnMenu">Learn ${esc(pch.c)}</button>` : ""}
     </div>` : `<div class="sq-target done">
       <span class="sq-glyph">✓</span>
       <span class="sq-info"><span class="t">Quest complete</span>
       <span class="m">You can read every character on this menu.</span></span>
     </div>`}
 
-    <div class="sq-actions">
-      ${!learnedIt ? `<button class="btn btn-block" id="learnMenu">Learn ${esc(pch.c)}</button>` : ""}
-      <button class="btn btn-ghost" id="openMenuFull">See the full menu</button>
-    </div>
-
-    <div class="menu-wrap">${renderMenuCard(learnedIt ? null : pick2.c)}</div>
+    <div class="menu-wrap full">${renderMenuCard(learnedIt ? null : pick2.c, true)}</div>
 
     <div class="menu-legend">
       <span><b style="color:var(--ink)">黑</b> you can read</span>
@@ -3189,17 +3235,15 @@ function renderQuest() {
 
 
   $("#viewMenu").innerHTML = `<div class="wrap">
-    <div class="today-head">
+    <div class="today-head menu-intro">
       <h1>The menu</h1>
-      <p class="note">A real cha chaan teng menu — a Hong Kong diner, written in the shorthand they actually use.
-        One character a day, and the ones you know ink themselves in. Nothing here is a drill and nothing here
-        is scheduled; it is what the characters are <em>for</em>.</p>
+      <p class="note">A real Hong Kong cha chaan teng menu, in the shorthand they actually use — one character
+        a day, and the ones you know ink themselves in. Tap any dish to hear it.</p>
     </div>
     ${card}
   </div>`;
 
-  $("#openMenuFull")?.addEventListener("click", () => openQuest("menu"));
-  $("#learnMenu")?.addEventListener("click", () => openMenuLesson(pick2.c));
+  $("#learnMenu")?.addEventListener("click", () => teachOne(pick2.c));
 }
 
 /* ---------- library ---------- */
@@ -4512,6 +4556,7 @@ function boot() {
     else if (session.active) $("#sesClose").click();
   });
   initTips();
+  initSpeakables();
   $("#flashClose").onclick = closeFlash;
   $("#placeClose").onclick = closePlacement;
   $("#nbClose").onclick = closeNotebook;

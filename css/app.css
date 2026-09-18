@@ -967,12 +967,14 @@ code {
 
 .sq-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .sq-actions .btn { flex: 1; min-width: 9rem; }
+/* the button belongs to the character it names, not to a row of its own at
+   the far end of the card */
+.sq-learn { flex: none; align-self: center; white-space: nowrap; }
 
 /* the menu itself — printed, not a UI */
 .menu-card {
   border: 1px solid var(--rule); border-radius: 8px;
   background: var(--sheet); padding: 1.1rem 1rem;
-  max-height: 22rem; overflow-y: auto;
 }
 .menu-card.tall { max-height: none; }
 .menu-top { text-align: center; padding-bottom: .7rem; border-bottom: 2px solid var(--seal); margin-bottom: .9rem; }
@@ -987,7 +989,18 @@ code {
 .msec-head .e { font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
 .msec-head::after { content: ""; flex: 1; border-bottom: 1px dotted var(--rule); }
 
-.mrow { display: flex; align-items: baseline; gap: .4rem; padding: .22rem 0; }
+.mrow {
+  display: flex; align-items: baseline; gap: .4rem; padding: .18rem .25rem;
+  width: 100%; text-align: left; border: 0; background: transparent;
+  border-radius: 5px; color: inherit; font: inherit; cursor: pointer;
+}
+.mrow:hover { background: var(--sunken); }
+.mrow.said { background: var(--seal-wash); }
+/* the reading sits with the dish, quiet until you look for it */
+.mrow .mpin {
+  font-family: var(--f-pin); font-size: .68rem; color: var(--ink-3);
+  white-space: nowrap; flex: none;
+}
 .mrow .dish { font-family: var(--f-han-ui); font-size: 1.05rem; letter-spacing: .02em; }
 .mrow .dots { flex: 1; border-bottom: 1px dotted var(--rule); transform: translateY(-.2em); min-width: 1.5rem; }
 .mrow .price { font-family: var(--f-pin); font-size: .82rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -1063,12 +1076,8 @@ code {
 
 /* the menu scrolls inside its own frame — fade the cut so it reads as "more below" */
 .menu-wrap { position: relative; }
-.menu-wrap::after {
-  content: ""; position: absolute; left: 1px; right: 1px; bottom: 1px; height: 3rem;
-  border-radius: 0 0 8px 8px; pointer-events: none;
-  background: linear-gradient(transparent, var(--sheet));
-}
-.menu-wrap.full::after { display: none; }
+/* the fade that hinted at more below went with the clamp — the whole menu
+   is on the page now, so there is nothing hidden to hint at */
 
 /* ============================================================
    Train it in — extra reps on demand
@@ -2586,3 +2595,51 @@ button.tier-head:hover { border-color: var(--ink-3); }
   /* the card is wider, so the type in it can stop being cramped */
   .cardx .words { gap: .5rem .9rem; }
 }
+
+/* ============================================================
+   The menu, whole, and shaped like a menu
+
+   It used to be clamped to 22rem with a fade at the bottom and a "See the
+   full menu" button that opened the same thing again in an overlay — a menu
+   you had to ask twice to read, in a view whose entire point is that you can
+   read it. The clamp is gone and the sections run in columns, which is how a
+   real cha chaan teng menu is laid out anyway: it takes about half the height
+   it did and you can see the lot.
+   ============================================================ */
+
+@media (min-width: 640px) {
+  .menu-card { columns: 2; column-gap: 1.6rem; }
+  .msec { break-inside: avoid; }
+  /* the masthead spans the columns, as it does on the printed thing */
+  .menu-top { column-span: all; }
+}
+@media (min-width: 1060px) {
+  .menu-card { columns: 3; column-gap: 1.5rem; padding: 1.2rem 1.3rem; }
+}
+
+/* the whole dish is one target, so the reading and the price come with it */
+.mrow .dish { flex: none; }
+.mrow .dots { min-width: 1rem; }
+
+/* A menu is set tight — it has to fit on one card that a waiter can hand you.
+   Measured: the card was 504px of an 800px window, which is most of the tab
+   for a thing that is meant to be glanceable. */
+.menu-card .menu-top { padding-bottom: .5rem; margin-bottom: .7rem; }
+.menu-card .menu-top .t { font-size: 1.35rem; letter-spacing: .18em; }
+.menu-card .menu-top .n { font-size: .82rem; margin-top: .1rem; }
+.menu-card .menu-top .e { font-size: .58rem; margin-top: .15rem; }
+.menu-card .msec { margin-bottom: .55rem; }
+.menu-card .msec-head { margin-bottom: .15rem; }
+.menu-card .msec-head .z { font-size: .95rem; }
+.menu-card .mrow { padding: .1rem .25rem; }
+.menu-card .mrow .dish { font-size: .98rem; }
+.menu-card .mrow .price { font-size: .76rem; }
+.menu-card .mdesc { font-size: .7rem; margin: 0 0 .1rem .25rem; }
+
+/* The menu tab is a page you glance at, so its own preamble stays short.
+   Named -intro and not -head: .menu-head is already taken, by the printed
+   masthead of the standalone menu sheet, and reusing it put a 2px vermilion
+   rule and centred type on this page's introduction. */
+.menu-intro { margin-bottom: .6rem; }
+.menu-intro .note { max-width: 46rem; }
+.menu-legend { padding-top: .1rem; }
