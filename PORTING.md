@@ -160,7 +160,59 @@ Three things that were not obvious:
 
 ---
 
-### 7 · The 正 tally has to stay in its corner
+### 7 · The day's block: alignment, the ring, and what the labels say
+
+A pass of detail work on the Today hero, all of it applicable:
+
+- **The progress ring moved to the left.** Every other ring and tick in these
+  apps is left-aligned — the practice list, Go deeper — and this one sat on the
+  right on its own.
+- **The headline is one line.** "You're clear for today, Jen." wrapped to two in
+  a dashboard column, which looked unbalanced beside a ring. The phrasing is
+  shorter and the size is down to 1.45rem with `white-space: nowrap`.
+- **`New` and `Due` did not say what they meant.** They are `To learn` and
+  `To review` now, with titles explaining that the first is your daily goal and
+  the second is the schedule's decision, not yours. `Revised today` → `Done`.
+- **The card aligns with the side rail** at both ends. Two things were in the
+  way: the enclosure contributes a border and padding the rail did not have, and
+  the rail's first sheet carried a 14.4px top margin of its own. Measured after:
+  tops 92/92, bottoms 524/524.
+- **The hero's 96px of slack is distributed** rather than pooling under the last
+  block — `justify-content: space-between`, which also makes the card read as a
+  page with things placed on it.
+- **The practice list distributes its five rows** over the column height instead
+  of sitting at the top of it, and its progress bar has room above it so it
+  reads as a bar rather than as an underline of the heading.
+
+**Where:** `js/app.js` — the `hero` template and `headline`; `css/app.css` —
+`.hero-top`, `.hero-title`, `.dash-side`, `.dash-today .hero`, `.todo-block`.
+
+---
+
+### 8 · The day's characters: a rail, not a wall
+
+At five a day the strip is one row; at sixty-five it was a wall. It is a single
+scrolling row with `‹ ›` arrows, and a **See all** that opens a panel spanning
+the full width of the enclosure — under both columns, since by then it concerns
+the whole day rather than one card.
+
+**Where:** `js/app.js` — `charTile()`, `LT_VISIBLE`, the `.learned-rail` markup,
+the `.today-all` panel inside `.dash-today`, and the arrow handlers;
+`css/app.css` — `.learned-rail`, `.lt-arrow`, `.today-all`, `.today-all-grid`.
+
+---
+
+### 9 · The enclosure reads as a notebook page
+
+Ruled lines, a vermilion margin rule down the left, and two binder holes. Cheap
+— three CSS rules and no markup — and it is what makes the grouping read as one
+page rather than two cards that happen to share a border.
+
+**Where:** `css/app.css` — `.dash-today` background, `::before`, `::after`.
+
+---
+
+### 10 · The 正 tally has to stay in its corner
 
 `tallyRow(n, max)` draws complete marks up to `max` and then collapses to a
 single 正 with a multiplier. The default of 6 was chosen for a page that could
@@ -175,7 +227,7 @@ Swept 15, 16, 20, 26, 31, 34, 50, 120, 400: no overflow, widest 117px.
 
 ---
 
-### 8 · Smaller interface fixes
+### 11 · Smaller interface fixes
 
 | what | why | where |
 |---|---|---|
@@ -185,6 +237,8 @@ Swept 15, 16, 20, 26, 31, 34, 50, 120, 400: no overflow, widest 117px.
 | Word of the week reads across, with a copy button | The meaning was a third line under a tall stack; the copy button had claimed a column | `.wotw-row`, `.wotw-said`, `copyText()`, `legacyCopy()` |
 | The vocabulary deck says 生字 | It sampled its own contents, so its face was whatever word came first — it read as a card about that word | `oneDeck("deckWords", …)` |
 | Go deeper reads across in three | A narrow label, the modes in the middle, the reps on the right in line with the heading | `.dash-wide .deeper` |
+| The streak chip closes what it opened | Clicking a second time removed the class, but `:hover` held the popover open while the pointer was still on the chip | `boot()`, `.streak-pop.shut` |
+| Tooltip listeners guard their target | `closest` is an `Element` method, and an event target is not always one — a click dispatched on `document` threw and took the handler chain with it | `initTips()` |
 
 `copyText()` keeps an `execCommand` fallback deliberately: these apps run from a
 `file://` clone as readily as from a server, and a copy button that silently
@@ -192,7 +246,7 @@ does nothing is worse than none.
 
 ---
 
-### 9 · 示範 Demo mode
+### 12 · 示範 Demo mode
 
 A Settings toggle that opens every tier at once so the Library lists the whole
 library and any card can be read — for showing somebody the app without
@@ -219,7 +273,7 @@ cannot render, and the gate stops consulting the flag. Gone rather than off.
 
 ---
 
-### 10 · Tooling
+### 13 · Tooling
 
 **The pairing check was asking a yes/no question it could not answer.** "Does
 this character arrive with a readable pairing?" cannot tell a wait of one

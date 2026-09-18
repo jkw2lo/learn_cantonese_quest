@@ -1708,7 +1708,7 @@ function initTips() {
   document.body.appendChild(tipEl);
 
   document.addEventListener("mouseover", e => {
-    const g = e.target.closest("[data-ch]");
+    const g = e.target instanceof Element ? e.target.closest("[data-ch]") : null;
     if (!g) return;
     const c = g.dataset.ch;
     const ch = CHAR_INDEX[c];
@@ -1731,12 +1731,18 @@ function initTips() {
     tipEl.classList.add("on");
     place(g);
   });
+  /* `closest` lives on Element, and an event target is not always one — a
+     click dispatched on `document` itself has no `closest` and throws here,
+     taking the rest of the handler chain with it. Cheap to guard, and the
+     alternative is a listener that can be broken by anything else on the page
+     firing a synthetic event. */
+  const hit = e => (e.target instanceof Element ? e.target.closest("[data-ch]") : null);
   document.addEventListener("mouseout", e => {
-    if (e.target.closest("[data-ch]")) tipEl.classList.remove("on");
+    if (hit(e)) tipEl.classList.remove("on");
   });
   /* touch has no hover — open the full card instead */
   document.addEventListener("click", e => {
-    const g = e.target.closest("[data-ch]");
+    const g = hit(e);
     if (g && CHAR_INDEX[g.dataset.ch]) openChar(g.dataset.ch);
   });
 
@@ -2563,6 +2569,16 @@ function tallyRow(n, max = 6) {
    record: it is a glance-state for this visit to the page, not a preference. */
 let todayOpen = false;
 
+/* How many fit the rail before it needs arrows. The rail scrolls either way, so
+   this only decides when the controls appear. */
+const LT_VISIBLE = 5;
+
+const charTile = c => {
+  const ch = CHAR_INDEX[c];
+  return `<button class="lc" data-c="${esc(c)}" title="${esc(ch.m)}">
+    <span class="z">${esc(c)}</span><span class="p">${esc(ch.p)}</span></button>`;
+};
+
 /* Characters you actually sat down and learnt today.
 
    Placement credits happen today too — ensure() stamps `first` with today's
@@ -2668,7 +2684,9 @@ function renderToday() {
   const dateStr = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
   const who = state.name ? `, ${state.name}` : "";
-  const headline = clear ? `You're clear for today${who}.` : done > 0 ? `Keep going${who}.` : `Ready when you are${who}.`;
+  /* One line, at the width this column actually is. "You're clear for today,
+     Jen." wrapped to two and left the block looking unbalanced beside a ring. */
+  const headline = clear ? `All clear${who}.` : done > 0 ? `Keep going${who}.` : `Ready when you are${who}.`;
   const sub = clear
     ? (remainingNew() ? "Nothing is due. You can study ahead whenever you like."
        : "Every character in the library is in your review rotation.")
@@ -2686,12 +2704,12 @@ function renderToday() {
   /* ---- the invitation ---- */
   const hero = `<div class="hero">
     <div class="hero-top">
+      ${ring}
       <div class="hero-head">
         <span class="hero-date">${esc(dateStr)}</span>
         <h1 class="hero-title">${esc(headline)}</h1>
         <p class="hero-sub">${esc(sub)}</p>
       </div>
-      ${ring}
     </div>
     <div class="hero-cta">
       ${newLeft + due > 0
@@ -2700,9 +2718,9 @@ function renderToday() {
             ? `<button class="btn btn-ghost btn-lg btn-block" id="aheadBtn">Study ahead — ${Math.min(5, remainingNew())} more characters</button>`
             : "")}
       <div class="queue">
-        <span class="qpill new">New <b>${newLeft}</b></span>
-        <span class="qpill due">Due <b>${due}</b></span>
-        <span class="qpill" title="${revd.length} character${revd.length === 1 ? "" : "s"} revised today, over ${t.rev} card${t.rev === 1 ? "" : "s"}">Revised today <b>${revd.length}</b></span>
+        <span class="qpill new" title="Characters you have not met yet. Five a day by default — change it in Settings.">To learn <b>${newLeft}</b></span>
+        <span class="qpill due" title="Characters you have met before and are due to see again today. The schedule decides these, not you.">To review <b>${due}</b></span>
+        <span class="qpill" title="${revd.length} character${revd.length === 1 ? "" : "s"} revised today, over ${t.rev} card${t.rev === 1 ? "" : "s"}">Done <b>${revd.length}</b></span>
       </div>
     </div>
 
@@ -2712,13 +2730,13 @@ function renderToday() {
         <span class="dim" style="font-size:.76rem">${got.length} character${got.length === 1 ? "" : "s"}</span>
       </div>
       ${got.length
-        ? `<div class="learned-strip ${todayOpen ? "open" : ""}">${got.map(c => {
-            const ch = CHAR_INDEX[c];
-            return `<button class="lc" data-c="${esc(c)}" title="${esc(ch.m)}">
-              <span class="z">${esc(c)}</span><span class="p">${esc(ch.p)}</span></button>`;
-          }).join("")}</div>
-          ${got.length > 8 ? `<button class="learned-more" id="ltMore">${
-            todayOpen ? "Show fewer" : `Show all ${got.length}`}</button>` : ""}`
+        ? `<div class="learned-rail">
+             ${got.length > LT_VISIBLE ? `<button class="lt-arrow" data-lt="-1" aria-label="Earlier characters">‹</button>` : ""}
+             <div class="learned-strip" id="ltStrip">${got.map(charTile).join("")}</div>
+             ${got.length > LT_VISIBLE ? `<button class="lt-arrow" data-lt="1" aria-label="Later characters">›</button>` : ""}
+           </div>
+           ${got.length > LT_VISIBLE ? `<button class="learned-more" id="ltMore" aria-expanded="${todayOpen}">${
+             todayOpen ? "Close" : `See all ${got.length}`}</button>` : ""}`
         : `<div class="learned-empty"><span class="z">空</span>
             <span>Nothing yet today. Characters you learn will collect here.</span></div>`}
     </div>
@@ -2949,6 +2967,13 @@ function renderToday() {
       <div class="dash-today">
         <div class="dash-col">${hero}</div>
         <div class="dash-col">${todoBlock}</div>
+        ${todayOpen && got.length ? `<div class="today-all">
+          <div class="learned-head">
+            <span class="eyebrow">Everything you learned today ${hanLabel("今日新字")}</span>
+            <span class="dim" style="font-size:.76rem">${got.length} character${got.length === 1 ? "" : "s"}</span>
+          </div>
+          <div class="today-all-grid">${got.map(charTile).join("")}</div>
+        </div>` : ""}
       </div>
       <div class="dash-col dash-side">${wotw}${decks}</div>
       <div class="dash-wide">${deeper}</div>
@@ -2977,6 +3002,10 @@ function renderToday() {
   $("#deckAll")?.addEventListener("click", () => openFlash(all, "All characters"));
   $("#deckWords")?.addEventListener("click", () => openFlash(combos, "Words you can read"));
   $("#ltMore")?.addEventListener("click", () => { todayOpen = !todayOpen; renderToday(); });
+  $$("#viewToday .lt-arrow").forEach(b => b.onclick = () => {
+    const rail = $("#ltStrip");
+    if (rail) rail.scrollBy({ left: +b.dataset.lt * rail.clientWidth * 0.8, behavior: "smooth" });
+  });
   $$("#viewToday .lc").forEach(b => b.onclick = () => openChar(b.dataset.c));
   $$("#viewToday [data-practice]").forEach(b => b.onclick = () => startPractice(b.dataset.practice));
   $$("#viewToday [data-todo]").forEach(b => b.onclick = () => {

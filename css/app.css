@@ -891,10 +891,10 @@ code {
 }
 .hero > * { position: relative; }
 
-.hero-top { display: flex; align-items: flex-start; gap: 1rem; }
+.hero-top { display: flex; align-items: center; gap: .85rem; }
 .hero-head { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .3rem; }
 .hero-date { font-size: .74rem; color: var(--ink-3); letter-spacing: .04em; }
-.hero-title { font-family: var(--f-display); font-size: 1.7rem; line-height: 1.12; letter-spacing: -.02em; text-wrap: balance; }
+.hero-title { font-family: var(--f-display); font-size: 1.45rem; line-height: 1.15; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hero-sub { font-size: .88rem; color: var(--ink-2); max-width: 30rem; line-height: 1.5; }
 
 .hero-ring { width: 74px; height: 74px; flex: none; position: relative; }
@@ -2208,6 +2208,21 @@ button.tier-head:hover { border-color: var(--ink-3); }
     padding: .55rem; border-radius: 12px;
     border: 1px solid var(--rule-2); background: var(--sunken);
   }
+  /* the expanded day spans both columns, under them */
+  .dash-today .today-all { grid-column: 1 / -1; }
+  /* The first card of the side rail starts on the same line as the first card
+     inside the enclosure. The enclosure contributes a border and its padding;
+     the rail had neither, and its first sheet carried a 14px top margin of its
+     own, which is where the 13px offset came from. */
+  .dash-side { padding-top: calc(.55rem + 1px); }
+  .dash-side > :first-child { margin-top: 0; }
+
+  /* The hero had 96px of slack pooling under the day's characters. The three
+     blocks share it instead, which is also what makes the card read as a page
+     with things placed on it rather than a stack that ran out. */
+  .dash-today .hero { justify-content: space-between; }
+  .dash-today .learned-strip .lc { padding: .45rem .3rem; }
+  .dash-today .learned-strip .lc .z { font-size: 1.55rem; }
   .dash-today .sheet, .dash-today .hero { box-shadow: none; }
   .dash-side { grid-column: 2; grid-row: 1; }
   /* Go deeper is a band, not a block: it reads across the foot of the page in
@@ -2333,3 +2348,75 @@ button.tier-head:hover { border-color: var(--ink-3); }
   font-family: var(--f-han-ui); font-size: .92em; color: var(--seal); opacity: .85;
 }
 .eyebrow .han-label [data-ch] { cursor: help; }
+
+/* ============================================================
+   The day, as a notebook page
+
+   The enclosure holding the day's characters and the day's practice reads as
+   one page rather than two cards, so it is given the furniture of one: a ruled
+   margin down the left, and paper rather than a panel.
+   ============================================================ */
+
+.dash-today { position: relative; }
+@media (min-width: 1180px) {
+  .dash-today {
+    background:
+      linear-gradient(var(--rule-2) 1px, transparent 1px) 0 0 / 100% 1.9rem,
+      var(--sunken);
+    background-clip: padding-box;
+  }
+  .dash-today::before {
+    content: ""; position: absolute; top: .4rem; bottom: .4rem; left: 1.35rem;
+    width: 1px; background: var(--seal); opacity: .16; pointer-events: none;
+  }
+  .dash-today > .dash-col { position: relative; }
+  /* the two holes a ring binder would punch */
+  .dash-today::after {
+    content: ""; position: absolute; left: .52rem; top: 22%; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--paper);
+    box-shadow: 0 0 0 1px var(--rule-2), 0 11rem 0 var(--paper), 0 11rem 0 1px var(--rule-2);
+    pointer-events: none;
+  }
+  .dash-today > .dash-col:first-child { margin-left: .9rem; }
+}
+
+/* ---------- the day's characters ---------- */
+
+.learned-rail { display: flex; align-items: center; gap: .3rem; }
+.learned-strip {
+  display: flex; gap: .4rem; flex-wrap: nowrap;
+  overflow-x: auto; scroll-behavior: smooth;
+  max-height: none; flex: 1; min-width: 0;
+  scrollbar-width: none; padding-bottom: 2px;
+}
+.learned-strip::-webkit-scrollbar { height: 0; }
+.learned-strip .lc { flex: none; }
+.lt-arrow {
+  flex: none; width: 1.4rem; height: 2.5rem; border-radius: 6px;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink-3);
+  font-size: .9rem; line-height: 1; display: grid; place-items: center;
+}
+.lt-arrow:hover { color: var(--ink); border-color: var(--ink-3); background: var(--sunken); }
+.learned-more { align-self: flex-start; }
+
+/* the whole day, across the foot of the enclosure */
+.today-all {
+  display: flex; flex-direction: column; gap: .5rem;
+  padding: .7rem .8rem; border-radius: 9px;
+  border: 1px solid var(--rule-2); background: var(--sheet);
+}
+.today-all-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(3.1rem, 1fr));
+  gap: .35rem; max-height: 11rem; overflow-y: auto;
+}
+
+/* ---------- today's practice ---------- */
+
+.todo-block .bar { height: 8px; border-radius: 4px; }
+.todo-block .pr-head { margin-bottom: .35rem; }
+@media (min-width: 1180px) {
+  /* five rows sharing the height rather than sitting at the top of it */
+  .dash .todo-block { justify-content: flex-start; }
+  .dash .todo-list { flex: 1; justify-content: space-evenly; }
+  .dash .todo { padding-top: .3rem; padding-bottom: .3rem; }
+}
