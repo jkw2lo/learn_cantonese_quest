@@ -2643,3 +2643,32 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .menu-intro { margin-bottom: .6rem; }
 .menu-intro .note { max-width: 46rem; }
 .menu-legend { padding-top: .1rem; }
+
+/* the three things the space bar does, said once where they are used */
+.flash-keys {
+  margin: .5rem 0 0; text-align: center;
+  font-size: .68rem; color: var(--ink-3);
+}
+.flash-keys kbd {
+  font-family: var(--f-body); font-size: .66rem;
+  border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px;
+  padding: .04rem .3rem; margin: 0 .05rem; background: var(--paper); color: var(--ink-2);
+}
+@media (hover: none) { .flash-keys { display: none; } }
+
+/* ---------- the tabs, in four groups ----------
+
+   Seven tabs in a row is a list, not a structure. They divide into the day and
+   what it is for (Today, Menu), practice you choose to do (Sprint, Write),
+   things to look up (Library, Radicals), and your own history (Record). */
+.nav-sep {
+  flex: none; align-self: stretch; width: 1px; margin: .35rem .3rem;
+  background: var(--rule-2);
+}
+/* Below 1100px the top nav is already tight enough that a hairline reads as
+   another tab. The grouping survives as a gap. */
+@media (max-width: 1099px) {
+  .nav-sep { background: transparent; width: 0; margin: 0 .18rem; }
+}
+/* the phone bar: a gap where a rule would be a picket fence */
+.nav .grp-end { margin-right: .35rem; }

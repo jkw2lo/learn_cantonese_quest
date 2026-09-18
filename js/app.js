@@ -1896,6 +1896,7 @@ function openFlash(deck, title) {
   renderFlash();
 }
 function closeFlash() {
+  flashKeysReset();
   $("#flash").classList.remove("on");
   document.body.style.overflow = "";
   renderAll();
@@ -1948,7 +1949,7 @@ function renderFlash() {
       <div class="card3d-inner">
         <div class="card-face">
           <span class="big ${f.wide ? "big-wide" : ""}">${esc(f.front)}</span>
-          <span class="hint">Tap to flip</span>
+          <span class="hint">Tap to flip · hold <b>space</b> to peek</span>
         </div>
         <div class="card-face card-back">
           <span class="sm">${esc(f.front)}</span>
@@ -1967,6 +1968,64 @@ function renderFlash() {
   $("#flashPrev").disabled = flash.i === 0;
   $("#flashNext").textContent = flash.i === flash.deck.length - 1 ? "Done" : "Next";
 }
+/* ---------- the space bar, three ways ----------
+
+   One key, because a flashcard is a thing you hold in one hand: tap to hear
+   it, tap twice to move on, hold to peek at the back and let go to put it
+   down again.
+
+   Tap and hold cannot be told apart on keydown — you only know it was a tap
+   when the key comes back up — so keydown starts a clock and keyup decides.
+   A held key also autorepeats, which is why e.repeat is ignored rather than
+   treated as a second press. */
+const FLASH_HOLD_MS = 170;    /* past this, it is a hold and the card turns */
+const FLASH_TAP_MS = 260;     /* a second tap inside this is "next card" */
+const fkey = { down: 0, held: false, holdTimer: null, tapTimer: null };
+
+function flashFlip(to) {
+  if (flash.flipped === to) return;
+  flash.flipped = to;
+  $("#card3d")?.classList.toggle("flipped", to);
+}
+
+function flashKeyDown(e) {
+  if (e.repeat || fkey.down) return;         /* autorepeat is still one press */
+  fkey.down = Date.now();
+  fkey.held = false;
+  fkey.holdTimer = setTimeout(() => {
+    fkey.held = true;
+    /* held: show the back for as long as it is held, and say it once */
+    flashFlip(true);
+    sayPhrase(flashFace(flash.deck[flash.i]).speak);
+  }, FLASH_HOLD_MS);
+}
+
+function flashKeyUp() {
+  if (!fkey.down) return;
+  clearTimeout(fkey.holdTimer);
+  fkey.down = 0;
+  if (fkey.held) { fkey.held = false; flashFlip(false); return; }   /* let go, turn back */
+
+  /* a tap. If one is already waiting, this is the second and they mean next. */
+  if (fkey.tapTimer) {
+    clearTimeout(fkey.tapTimer); fkey.tapTimer = null;
+    stopPhrase();
+    flashStep(1);
+    return;
+  }
+  fkey.tapTimer = setTimeout(() => {
+    fkey.tapTimer = null;
+    sayPhrase(flashFace(flash.deck[flash.i]).speak, true);
+  }, FLASH_TAP_MS);
+}
+
+/* Leaving the deck with the key still down would strand the card face-up and
+   the timers armed. */
+function flashKeysReset() {
+  clearTimeout(fkey.holdTimer); clearTimeout(fkey.tapTimer);
+  fkey.down = 0; fkey.held = false; fkey.holdTimer = fkey.tapTimer = null;
+}
+
 function flashStep(d) {
   if (flash.i + d >= flash.deck.length) return closeFlash();
   flash.i = Math.max(0, flash.i + d);
@@ -2259,7 +2318,7 @@ function renderNotebookPadState() {
    ============================================================ */
 
 const wp = { built: false, rows: 6, guide: null, pen: 8, cell: 84, strokes: [], cur: null,
-             sort: "day", find: "" };
+             sort: "day", find: "", brush: true, w: 8, n: 0 };
 
 /* ---------- the practice diary ----------
    Pages are stored as stroke vectors, not pictures: a densely filled page is
@@ -2310,6 +2369,12 @@ function buildWritePage() {
                 <option value="5">fine</option><option value="8" selected>medium</option><option value="13">broad</option>
               </select>
             </label>
+            <label class="wp-field wp-brush">
+              <select id="wpNib">
+                <option value="brush" selected>毛筆 brush</option>
+                <option value="pen">原子筆 even</option>
+              </select>
+            </label>
             <button class="btn btn-ghost btn-sm" id="wpPad">觸控 Trackpad</button>
             <button class="btn btn-ghost btn-sm" id="wpSave">Save page</button>
             <button class="btn btn-ghost btn-sm" id="wpClear">Clear page</button>
@@ -2337,6 +2402,7 @@ function buildWritePage() {
   wpAutoPad();
 
   $("#wpPen").onchange  = e => { wp.pen = +e.target.value; wpSetPen(); };
+  $("#wpNib").onchange  = e => { wp.brush = e.target.value === "brush"; wpSetPen(); };
   $("#wpClear").onclick = () => wpClear();
   $("#wpSave").onclick  = () => wpSave();
   $("#wpPad").onclick   = () => wpPad();
@@ -2513,19 +2579,61 @@ function wpSetPen() {
   ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#17211E";
 }
 
+/* ---------- the nib ----------
+
+   A 毛筆 is wide where it is pressed and narrow where it is moving, so a
+   stroke thins as the hand accelerates. That is the whole of the effect and
+   it is why 撇 and 捺 taper: you speed up leaving them. There is no pressure
+   to read — the trackpad path synthesises its own coordinates and a mouse
+   reports 0.5 forever — so speed stands in for it, measured as distance per
+   event, which is a fair proxy because the events arrive at a steady rate.
+
+   Two more things a brush does. It starts blunt: 落筆 puts the tip down before
+   it moves, so the first few points fatten from a point rather than beginning
+   at full width. And each segment is stroked on its own path, because a
+   canvas lineWidth applies to the whole path — round caps and joins make the
+   varying widths read as one continuous stroke. */
+const BRUSH_FAST = 11;     /* px per event at which the stroke is at its thinnest */
+const BRUSH_FAT = 1.55;    /* multiplier when the brush is barely moving */
+const BRUSH_THIN = 0.42;   /* and when it is flying */
+const BRUSH_EASE = 0.28;   /* how fast the width chases the speed, 0..1 */
+const BRUSH_TIP = 4;       /* points over which 落筆 comes up to full width */
+
+function wpWidth(dist, first) {
+  if (!wp.brush) return wp.pen;
+  const fast = Math.min(1, dist / BRUSH_FAST);
+  const target = wp.pen * (BRUSH_FAT + (BRUSH_THIN - BRUSH_FAT) * fast);
+  wp.w = first ? wp.pen * 0.5 : wp.w + (target - wp.w) * BRUSH_EASE;
+  /* 落筆: the tip lands and spreads over the first few points */
+  const tip = Math.min(1, (wp.n + 1) / BRUSH_TIP);
+  return Math.max(0.6, wp.w * (0.45 + 0.55 * tip));
+}
+
 function wpDraw(type, x, y) {
   const c = $("#wpInk");
   if (!c) return;
   const ctx = c.getContext("2d");
   if (type === "mousedown") {
     ctx.beginPath(); ctx.moveTo(x, y);
-    wp.cur = [[Math.round(x), Math.round(y)]];
+    wp.n = 0;
+    const w = wpWidth(0, true);
+    wp.cur = [[Math.round(x), Math.round(y), +w.toFixed(2)]];
     wp.strokes.push(wp.cur);
   } else if (type === "mousemove" && wp.cur) {
-    ctx.lineTo(x, y); ctx.stroke();
-    wp.cur.push([Math.round(x), Math.round(y)]);
+    const prev = wp.cur[wp.cur.length - 1];
+    const w = wpWidth(Math.hypot(x - prev[0], y - prev[1]), false);
+    wp.n++;
+    /* one path per segment, so the width can change along the stroke */
+    ctx.beginPath();
+    ctx.lineWidth = w;
+    ctx.moveTo(prev[0], prev[1]);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    wp.cur.push([Math.round(x), Math.round(y), +w.toFixed(2)]);
   } else if (type === "mouseup") {
     wp.cur = null;
+    wp.n = 0;
+    ctx.lineWidth = wp.pen;
   }
 }
 
@@ -2533,13 +2641,29 @@ function wpDraw(type, x, y) {
 function wpPaint(strokes, ctx, scale) {
   ctx.save();
   ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const flat = ctx.lineWidth;
   strokes.forEach(pts => {
     if (!pts.length) return;
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0] * scale, pts[0][1] * scale);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0] * scale, pts[i][1] * scale);
-    ctx.stroke();
+    /* Points gained a third element — the width the brush had there. Pages
+       saved before that have two, and those replay at the pen width they were
+       drawn with rather than being guessed at. */
+    if (pts[0].length < 3) {
+      ctx.lineWidth = flat;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0] * scale, pts[0][1] * scale);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0] * scale, pts[i][1] * scale);
+      ctx.stroke();
+      return;
+    }
+    for (let i = 1; i < pts.length; i++) {
+      ctx.beginPath();
+      ctx.lineWidth = Math.max(0.4, pts[i][2] * scale);
+      ctx.moveTo(pts[i - 1][0] * scale, pts[i - 1][1] * scale);
+      ctx.lineTo(pts[i][0] * scale, pts[i][1] * scale);
+      ctx.stroke();
+    }
   });
+  ctx.lineWidth = flat;
   ctx.restore();
 }
 
@@ -3931,9 +4055,13 @@ function onKey(e) {
     return;
   }
 
-  /* flashcards */
+  /* Flashcards: the space bar does three things, told apart by how it is
+     pressed. Handled in flashKeyDown/Up — the tap and the hold cannot be
+     decided on keydown alone, and a hold repeats. Enter and the arrows keep
+     working as they did, for anyone who wants one key one action. */
   if ($("#flash").classList.contains("on")) {
-    if (e.key === " " || e.key === "Enter") { e.preventDefault(); $("#card3d")?.click(); }
+    if (e.key === " ") { e.preventDefault(); flashKeyDown(e); return; }
+    if (e.key === "Enter") { e.preventDefault(); $("#card3d")?.click(); }
     else if (e.key === "ArrowRight") { e.preventDefault(); flashStep(1); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); flashStep(-1); }
     return;
@@ -3984,7 +4112,12 @@ function onKey(e) {
     const opts = $$("#sesInner .opt:not(:disabled)");
     if (opts[n]) { e.preventDefault(); opts[n].click(); return; }
     const tiles = $$("#sesInner .tile:not(.used)");
-    if (tiles[n]) { e.preventDefault(); tiles[n].click(); }
+    if (tiles[n]) { e.preventDefault(); tiles[n].click(); return; }
+    /* Nothing left to answer means the verdict is up, and 5 is free: no drill
+       offers a fifth option (optionSet caps at four). Getting one wrong and
+       wanting to look at the card is the commonest thing to do from here, and
+       it was the only button on the page you had to reach for the mouse for. */
+    if (e.key === "5") { const rv = $("#review"); if (rv) { e.preventDefault(); rv.click(); } }
     return;
   }
   if (e.key.toLowerCase() === "r") $("#earBtn")?.click();
@@ -4545,6 +4678,15 @@ function boot() {
   /* clicking the dim backdrop is a cancel, like Escape */
   $("#ask").addEventListener("pointerdown", e => { if (e.target === $("#ask")) closeAsk(false); });
   document.addEventListener("keydown", onKey);
+  /* the flashcard space bar is decided on release, so it needs the other half */
+  document.addEventListener("keyup", e => {
+    if (e.key !== " ") return;
+    if (!$("#flash").classList.contains("on")) return flashKeysReset();
+    e.preventDefault();
+    flashKeyUp();
+  });
+  /* a key still down when the window goes away would strand the card face-up */
+  window.addEventListener("blur", flashKeysReset);
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
     if (asking()) { e.preventDefault(); closeAsk(false); return; }   /* the topmost thing open */
