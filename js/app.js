@@ -3860,6 +3860,183 @@ function renderRadicals() {
   $$("#viewRadicals [data-c]").forEach(b => b.onclick = () => openChar(b.dataset.c));
 }
 
+/* ---------- the introduction ----------
+
+   Three stages before the app: hello, then what Cantonese is, then how this
+   goes about teaching it. Each waits for Next — there is nothing else to
+   click — and the wordmark reopens stages two and three afterwards, because
+   "what was that thing about tones" is a question people have on day three
+   and not on day one.
+
+   Deliberately more picture than paragraph. The first version of this was
+   seven cards of prose that people clicked through without reading, which is
+   a worse outcome than not showing it at all. */
+
+let introAt = 0;
+
+/* A schematic of where Cantonese is spoken — the Pearl River Delta, with the
+   estuary cutting north to Guangzhou and Hong Kong and Macau on either side
+   of its mouth. Drawn to be recognisable, not to be accurate: it is labelled
+   as a sketch because that is what it is. */
+const DELTA_MAP = `
+<svg class="ix-map" viewBox="0 0 300 190" role="img" aria-label="Sketch map: the Pearl River Delta, with Guangzhou, Hong Kong and Macau">
+  <rect class="sea" x="0" y="0" width="300" height="190"/>
+  <path class="land" d="M0,0 H300 V128 C268,132 250,142 238,168 L196,168 C190,128 176,104 152,96
+                        C128,104 114,128 108,168 L62,168 C50,142 32,132 0,128 Z"/>
+  <path class="river" d="M152,96 L146,168 M152,96 L162,168" />
+  <g class="pins">
+    <circle cx="152" cy="86" r="4.5"/><text x="152" y="74">Guangzhou 廣州</text>
+    <circle cx="196" cy="160" r="4.5"/><text x="196" y="150">Hong Kong 香港</text>
+    <circle cx="106" cy="160" r="4.5"/><text x="106" y="150">Macau 澳門</text>
+  </g>
+  <text class="region" x="46" y="44">GUANGDONG 廣東</text>
+  <text class="water" x="150" y="184">South China Sea</text>
+</svg>`;
+
+function openIntro(at = 0) {
+  introAt = at;
+  $("#intro").hidden = false;
+  document.body.style.overflow = "hidden";
+  renderIntro();
+}
+
+function closeIntro(thenCoach) {
+  $("#intro").hidden = true;
+  document.body.style.overflow = "";
+  $("#introCard").innerHTML = "";
+  if (thenCoach) setTimeout(() => openCoach(0), 320);
+}
+
+function renderIntro() {
+  const card = $("#introCard");
+  card.className = "intro-card stage-" + introAt;
+
+  /* ---- 0. hello ---- */
+  if (introAt === 0) {
+    card.innerHTML = `
+      <div class="ix-hello">
+        <div class="ix-write"><div id="ixW1"></div><div id="ixW2"></div></div>
+        <h1>nei5 hou2</h1>
+        <p>Hello. You are about to learn to read a language that 85 million people speak
+           and almost no course teaches.</p>
+      </div>`;
+    /* 你好 written out, which is both the greeting and the first thing the app
+       will teach — the animation is the product demonstrating itself */
+    const mk = (id, ch, delay) => {
+      const w = makeWriter($("#" + id), ch, { width: 96, height: 96, showCharacter: false, showOutline: true });
+      setTimeout(() => w && w.animateCharacter(), delay);
+      return w;
+    };
+    mk("ixW1", "你", 260);
+    mk("ixW2", "好", 1500);
+    setTimeout(() => { if (introAt === 0 && !$("#intro").hidden) { introAt = 1; renderIntro(); } }, 3600);
+    return;
+  }
+
+  /* ---- 1. what Cantonese is ---- */
+  if (introAt === 1) {
+    card.innerHTML = `
+      <div class="ix-top">
+        <div class="ix-top-text">
+          <span class="eyebrow">First, the language ${hanLabel("粵語")}</span>
+          <h2>Cantonese is not a dialect of Mandarin</h2>
+          <p>It is its own language — different sounds, different grammar, its own characters. Spoken in
+             Hong Kong, Macau and Guangdong, and by Chinatowns everywhere: Vancouver, San Francisco,
+             Sydney, London.</p>
+          <p class="ix-big"><b>85 million</b> speakers</p>
+        </div>
+        <div class="ix-map-wrap">
+          ${DELTA_MAP}
+          <span class="ix-map-cap">A sketch, not a survey — the Pearl River Delta.</span>
+        </div>
+      </div>
+
+      <div class="ix-half">
+        <section>
+          <span class="eyebrow">The writing ${hanLabel("字")}</span>
+          <div class="ix-build">
+            <span class="ix-part"><b class="han">女</b><small>woman</small><i>meaning</i></span>
+            <span class="ix-op">+</span>
+            <span class="ix-part"><b class="han">馬</b><small>maa5</small><i>sound</i></span>
+            <span class="ix-op">=</span>
+            <span class="ix-part out"><b class="han">媽</b><small>maa1</small><i>mother</i></span>
+          </div>
+          <p>Characters are <b>built</b>, not drawn. Nearly every one is two parts: what it means, and
+             what it sounds like. One character is one syllable.</p>
+        </section>
+        <section>
+          <span class="eyebrow">The tones ${hanLabel("聲調")}</span>
+          <div class="ix-tones">
+            ${[1, 2, 3, 4, 5, 6].map(n => `<span class="ix-tone">
+              <svg viewBox="0 0 20 18" aria-hidden="true"><path d="${TONE_PATHS[n]}"/></svg>
+              <i>${n}</i></span>`).join("")}
+          </div>
+          <div class="ix-pair">
+            <button data-speak="買"><b class="han">買</b><small>maai5 · buy</small></button>
+            <button data-speak="賣"><b class="han">賣</b><small>maai6 · sell</small></button>
+          </div>
+          <p>Six of them, and the pitch <b>is</b> the word. Tap those two — one tone apart, opposite
+             meanings.</p>
+        </section>
+      </div>
+
+      <div class="ix-foot">
+        <span class="ix-dots">${[1, 2].map(i => `<span class="${i === 1 ? "on" : ""}"></span>`).join("")}</span>
+        <button class="btn btn-seal btn-lg" id="ixNext">Next</button>
+      </div>`;
+    $("#ixNext").onclick = () => { introAt = 2; renderIntro(); card.scrollTop = 0; };
+    return;
+  }
+
+  /* ---- 2. how the app teaches it ---- */
+  const first = !state.started;
+  card.innerHTML = `
+    <div class="ix-top-text ix-method-head">
+      <span class="eyebrow">Then, how this works ${hanLabel("點學")}</span>
+      <h2>Five characters a day, and everything else is optional</h2>
+    </div>
+
+    <div class="ix-flow">
+      ${[{ k: "學", t: "Learn", s: "Five new characters, where each comes from and how to remember it." },
+         { k: "練", t: "Practise", s: "A short list: recognise, hear, read in a sentence, write out." },
+         { k: "加", t: "Go deeper", s: "Extra reps, if you want them. Never required." }]
+        .map((x, i) => `<div class="ix-step">
+            <span class="ix-k han">${esc(x.k)}</span>
+            <b>${esc(x.t)}</b><span>${esc(x.s)}</span>
+          </div>${i < 2 ? `<span class="ix-arrow">→</span>` : ""}`).join("")}
+    </div>
+    <p class="ix-note">That is the whole loop, and it takes about ten minutes.</p>
+
+    <div class="ix-fun">
+      <span class="eyebrow">And two things that are just good ${hanLabel("好玩")}</span>
+      <div class="ix-fun-row">
+        <div class="ix-fun-one">
+          <span class="ix-k han">餐牌</span>
+          <b>The menu</b>
+          <span>A real cha chaan teng menu. The characters you know ink themselves in, the rest stay grey.
+            It is what the other ten minutes are <i>for</i>.</span>
+        </div>
+        <div class="ix-fun-one">
+          <span class="ix-k han">速練</span>
+          <b>Sprint</b>
+          <span>Forty questions against a two-minute clock. Reading, listening or writing. Nothing it
+            marks touches your review queue.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ix-foot">
+      <span class="ix-dots"><span></span><span class="on"></span></span>
+      <button class="btn btn-seal btn-lg" id="ixNext">${first ? "Show me the page" : "Done"}</button>
+    </div>`;
+  $("#ixNext").onclick = () => {
+    const wasFirst = !state.started;
+    state.started = true; save();
+    closeIntro(wasFirst);
+    if (wasFirst) go("today");
+  };
+}
+
 /* ---------- the quick-start overlay ----------
 
    Three numbered steps pointed at the real page rather than at a picture of
@@ -3986,7 +4163,6 @@ function capName(raw) {
 }
 
 function renderStart() {
-  const done = !!state.started;
   $("#viewStart").innerHTML = `<div class="wrap st-wrap">
     <div class="today-head st-head">
       <span class="eyebrow">Getting started ${hanLabel("入門")}</span>
@@ -4018,62 +4194,17 @@ function renderStart() {
     </div>
 
     <div class="st-foot" id="stFoot">
-      <p class="note" id="stHint">${done
-        ? "You have been here before — everything is open."
-        : "Read to the end and the rest of the app opens up."}</p>
-      <button class="btn btn-seal btn-lg" id="stGo" ${done ? "" : "disabled"}>
-        ${done ? "Back to today" : "I'm ready — start learning"}</button>
+      <p class="note">There is a shorter version of all this, with a map and the tones you can hear.</p>
+      <button class="btn btn-ghost btn-lg" id="stGo">Play the introduction again</button>
     </div>
   </div>`;
 
-  const go2 = $("#stGo");
-  /* The gate: reaching the foot of the page is the whole requirement.
-
-     Checked on scroll rather than with an IntersectionObserver. The observer
-     version needed 90% of the footer visible and would not fire at all for a
-     programmatic scroll in some contexts, which is a gate that silently never
-     opens — the worst possible failure for the one button standing between a
-     new learner and the app. A rect comparison is dull and always true. */
-  if (!done) {
-    const foot = $("#stFoot");
-    const open = () => {
-      if (!go2.disabled) return;
-      const b = foot.getBoundingClientRect();
-      if (b.top > innerHeight - 60) return;          /* not there yet */
-      go2.disabled = false;
-      $("#stHint").textContent = "That's the lot. Everything is open now.";
-      removeEventListener("scroll", open);
-    };
-    addEventListener("scroll", open, { passive: true });
-    /* a tall screen may already be showing the foot, in which case there is
-       nothing to scroll to and the button should simply be live */
-    setTimeout(open, 60);
-  }
-
-  go2.onclick = () => {
-    const first = !state.started;
-    state.started = true; save();
-    renderNavGate();
-    go("today");
-    /* the guide is the point of the redirect: land on Today and be told what
-       the three things on it are */
-    if (first) setTimeout(() => openCoach(0), 420);
-  };
-}
-
-/* Everything but 入門 stays shut until the page has been read. Disabled, not
-   hidden — you can see what is coming, which is reassuring rather than
-   mysterious. */
-function renderNavGate() {
-  const shut = !state.started;
-  $$("[data-nav]").forEach(b => {
-    const gated = shut && b.dataset.nav !== "start";
-    b.disabled = gated;
-    b.classList.toggle("gated", gated);
-    if (gated) b.title = "Finish Getting started first";
-    else b.removeAttribute("title");
-  });
-  document.querySelector(".help-btn").hidden = shut;
+  /* No gate here any more. Shutting the other tabs until this page had been
+     scrolled made 入門 a toll gate, and it is reference material — it sits at
+     the end of the nav now and is read when something stops making sense.
+     The introduction overlay is what stands between a new learner and the
+     app, and it gates by having nothing else to click. */
+  $("#stGo").onclick = () => openIntro(1);
 }
 
 /* ---------- 聲調 — the six tones ----------
@@ -4484,7 +4615,12 @@ function openSettings() {
           <button class="btn btn-ghost btn-sm" id="placeBtn">${state.placed ? "Retake" : "Start"}</button>
         </div>
         <div class="settings-row">
-          <label>Show the tour again<small>The short walkthrough from your first visit.</small></label>
+          <label>The introduction<small>What Cantonese is, and how this app goes about teaching it.
+            Also behind the wordmark, top left.</small></label>
+          <button class="btn btn-ghost btn-sm" id="introBtn">Play</button>
+        </div>
+        <div class="settings-row">
+          <label>A tour of the tabs<small>What each section of the app is for. Not part of the first run.</small></label>
           <button class="btn btn-ghost btn-sm" id="tourBtn">Replay</button>
         </div>
         <div class="settings-row">
@@ -4515,6 +4651,7 @@ function openSettings() {
   $("#profileBtn").onclick = () => openProfile(false);
   $("#placeBtn").onclick = () => { closeSheet(); setTimeout(openPlacement, 250); };
   $("#tourBtn").onclick = () => { closeSheet(); setTimeout(() => startTour(true), 250); };
+  $("#introBtn").onclick = () => { closeSheet(); setTimeout(() => openIntro(1), 250); };
   $("#resetBtn").onclick = async () => {
     const pages = (await diaryAll()).length;
     if (!await askConfirm({
@@ -4530,7 +4667,7 @@ function openSettings() {
     await diaryClear();                  /* the diary is IndexedDB, not localStorage */
     wpReset();
     closeSheet();
-    startTour(true);                     /* a blank app with no explanation is just blank */
+    openIntro(0);                        /* a blank app with no explanation is just blank */
   };
   $("#voiceSel")?.addEventListener("change", e => {
     const i = zhVoices.findIndex(v => v.name === e.target.value);
@@ -4979,7 +5116,7 @@ function openProfile(firstRun) {
     b.classList.toggle("on", chosen.has(k));
     b.setAttribute("aria-pressed", chosen.has(k));
   });
-  $("#pfSkip").onclick = () => { state.profiled = true; save(); closeSheet(); };
+  $("#pfSkip").onclick = () => { state.profiled = true; save(); closeSheet(); maybeOpenIntro(); };
   $("#pfSave").onclick = () => {
     state.name = capName($("#pfName").value);
     const next = [...chosen];
@@ -4989,6 +5126,7 @@ function openProfile(firstRun) {
     state.profiled = true;
     save();
     closeSheet();
+    maybeOpenIntro();
   };
 }
 
@@ -5318,6 +5456,23 @@ function maybeOfferProfile() {
   setTimeout(() => { if (!state.profiled) openProfile(true); }, 400);
 }
 
+/* The introduction comes last, after the app knows who you are — the
+   questionnaire is two boxes and asking it first means the very first thing a
+   new learner sees is a form. */
+/* The first run, in order: where to start, who you are, then the
+   introduction. Placement and the questionnaire come first because the
+   introduction addresses you by name at the end of it. */
+function maybeStartFirstRun() {
+  state.tour = true;                     /* the tab tour is not part of this */
+  save();
+  maybeOfferPlacement();
+}
+
+function maybeOpenIntro() {
+  if (state.started) return;
+  setTimeout(() => openIntro(0), 450);
+}
+
 function renderTour() {
   const cards = walk.cards || TOUR;
   const t = cards[tourStep], last = tourStep === cards.length - 1;
@@ -5341,9 +5496,6 @@ const RENDER = { start: renderStart, today: renderToday, sprint: renderSprint, m
                  record: renderRecord };
 
 function go(v) {
-  /* The gate is enforced here as well as on the buttons: a keyboard shortcut
-     or a stale handler must not walk around it. */
-  if (!state.started && v !== "start") v = "start";
   view = v;
   const id = "view" + v[0].toUpperCase() + v.slice(1);
   $$(".view").forEach(el => el.classList.toggle("on", el.id === id));
@@ -5472,9 +5624,13 @@ function boot() {
   });
   /* the overlay is anchored to real elements, so it has to follow them */
   addEventListener("resize", () => { if (!$("#coach").hidden) renderCoach(); });
-  renderNavGate();
-  /* A record that has never been past Getting started lands there. */
-  if (!state.started) go("start");
+  document.querySelector(".help-btn").hidden = !state.started;
+  $("#brandBtn").onclick = () => openIntro(1);
+  $("#intro").addEventListener("keydown", e => {
+    /* nothing but Next: the stages are short and skipping them is what the
+       wordmark is for, afterwards */
+    if (e.key === "Escape") e.stopPropagation();
+  });
   initSpeakables();
   $("#flashClose").onclick = closeFlash;
   $("#placeClose").onclick = closePlacement;
@@ -5525,7 +5681,12 @@ function boot() {
   renderStreakChip();
   renderTracker();
   renderDemoBar();
-  startTour();
+  /* The first run is four things now: hello, the language, the method, then
+     the page itself with its parts named. The seven-card tab tour used to
+     come before all of it and said the same things less well — it stays in
+     Settings for anyone who wants the tabs walked through, and stays out of
+     the way of a first morning. */
+  if (!state.started) maybeStartFirstRun(); else state.tour = true;
   connectRemote().then(changed => { if (changed) renderAll(); });
 }
 

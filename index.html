@@ -3,7 +3,7 @@
      A browser that has cached js/app.js will keep serving it until something
      about the URL changes, which is why a push can be live and invisible at
      the same time. Bump with: node tools/version.mjs <next>  -->
-<script>const APP_VERSION = "0.14.0", APP_DATE = "2026-09-18";</script>
+<script>const APP_VERSION = "0.15.0", APP_DATE = "2026-09-18";</script>
 <!-- Newsreader, not Fraunces, for one reason: the J.
 
      Fraunces draws a J that drops below the baseline and curls left, and the
@@ -18,19 +18,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="css/app.css?v=0.14.0">
+<link rel="stylesheet" href="css/app.css?v=0.15.0">
 
 <div class="app">
 
   <header class="topbar">
-    <div class="brand">
+    <!-- The wordmark is also the way back into the introduction: it is the one
+         thing on the page that is obviously "the app itself". -->
+    <button class="brand" id="brandBtn" title="About Cantonese, and how this works"
+            aria-label="About Cantonese, and how this works">
       <span class="brand-seal" aria-hidden="true">粵</span>
       <span class="brand-name">Cantonese Quest</span>
-    </div>
+    </button>
     <!-- Four groups, divided: the day and what it is for; practice you choose
          to do; things to look up; and your own history. -->
     <nav class="top-nav" aria-label="Sections">
-      <button data-nav="start"><span class="nz">入門</span> Start</button>
       <button data-nav="today" class="on"><span class="nz">今日</span> Today</button>
       <button data-nav="menu"><span class="nz">餐牌</span> Menu</button>
       <span class="nav-sep" role="separator"></span>
@@ -42,6 +44,8 @@
       <button data-nav="tones"><span class="nz">聲調</span> Tones</button>
       <span class="nav-sep" role="separator"></span>
       <button data-nav="record"><span class="nz">記錄</span> Record</button>
+      <span class="nav-sep" role="separator"></span>
+      <button data-nav="start"><span class="nz">入門</span> Start</button>
     </nav>
     <!-- The four-week tracker used to be a bar of its own under the top bar,
          saying 🔥 N beside a chip that already said 🔥 N. It lives behind this
@@ -78,7 +82,6 @@
   <!-- same four groups; on a phone the divider is a gap, not a rule — seven
        tabs and three hairlines in 375px is a picket fence -->
   <nav class="nav" aria-label="Sections">
-    <button data-nav="start"><span class="nz">入門</span><span class="nl">Start</span></button>
     <button data-nav="today" class="on"><span class="nz">今日</span><span class="nl">Today</span></button>
     <button data-nav="menu" class="grp-end"><span class="nz">餐牌</span><span class="nl">Menu</span></button>
     <button data-nav="sprint"><span class="nz">速練</span><span class="nl">Sprint</span></button>
@@ -86,7 +89,8 @@
     <button data-nav="library"><span class="nz">字庫</span><span class="nl">Library</span></button>
     <button data-nav="radicals"><span class="nz">部首</span><span class="nl">Radicals</span></button>
     <button data-nav="tones" class="grp-end"><span class="nz">聲調</span><span class="nl">Tones</span></button>
-    <button data-nav="record"><span class="nz">記錄</span><span class="nl">Record</span></button>
+    <button data-nav="record" class="grp-end"><span class="nz">記錄</span><span class="nl">Record</span></button>
+    <button data-nav="start"><span class="nz">入門</span><span class="nl">Start</span></button>
   </nav>
 </div>
 
@@ -196,6 +200,13 @@
   </div>
 </div>
 
+<!-- The introduction: a hello, then what Cantonese is, then how this app
+     goes about teaching it. Three stages, each waiting for Next, and reachable
+     again from the wordmark. -->
+<div class="intro" id="intro" role="dialog" aria-label="Introduction" hidden>
+  <div class="intro-card" id="introCard"></div>
+</div>
+
 <!-- The quick-start overlay: three numbered steps pointed at the real page
      rather than at a picture of it. Reopened by the ? in the top bar, and
      never opened by itself after the first time. -->
@@ -215,13 +226,13 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.1/dist/hanzi-writer.min.js"></script>
-<script src="js/data.js?v=0.14.0"></script>
-<script src="js/strokes.js?v=0.14.0"></script>
-<script src="js/strokes-made.js?v=0.14.0"></script>
+<script src="js/data.js?v=0.15.0"></script>
+<script src="js/strokes.js?v=0.15.0"></script>
+<script src="js/strokes-made.js?v=0.15.0"></script>
 <!-- js/audio.js is deliberately not here. It is 859 KB gzipped of base64 speech
      that nothing needs in the first second, and as a blocking script it held up
      every view behind it. app.js fetches it after the first render. -->
-<script src="js/srs.js?v=0.14.0"></script>
+<script src="js/srs.js?v=0.15.0"></script>
 <!-- before app.js: app.js builds its RENDER map at load and names renderSprint in it -->
-<script src="js/sprint.js?v=0.14.0"></script>
-<script src="js/app.js?v=0.14.0"></script>
+<script src="js/sprint.js?v=0.15.0"></script>
+<script src="js/app.js?v=0.15.0"></script>

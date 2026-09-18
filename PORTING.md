@@ -860,27 +860,32 @@ gaps, but the technique is the same wherever upstream is short.
 
 ---
 
-### 21 · Getting started is a page, not a stack of dialogs
+### 21 · The first run: four stages, and none of them a form
 
-The first run was a tour, a placement offer, a questionnaire and then seven
-primer cards — all clicked through once and none of it findable afterwards.
-The seven cards are the sections of an 入門 tab now: landed on, read at your
-own pace, and still there in a month.
+The first version of this put everything in one 入門 tab and shut the rest of
+the app until it had been scrolled. That made reference material into a toll
+gate, and it was still mostly prose. Reworked into four stages, in this order:
 
-**The rest of the app stays shut until the page has been read** — disabled,
-not hidden, so you can see what is coming. The gate is enforced in `go()` as
-well as on the buttons, or a keyboard shortcut walks round it. Reaching the
-foot of the page is the whole requirement.
+1. **Hello.** A small card, 你好 written stroke by stroke by the app's own
+   animator — the product demonstrating itself — then it moves on by itself.
+2. **What Cantonese is.** One overlay: the language and a sketch map of the
+   Pearl River Delta across the top, then two equal halves below — how
+   characters are built (女 + 馬 = 媽) and the six tones, with 買/賣 to tap.
+3. **How this app teaches it.** Learn → Practise → Go deeper as three cards
+   with arrows, then Menu and Sprint as the two things that are just good.
+4. **The page itself**, with its parts named — the coach overlay.
 
-**Use a scroll check, not an IntersectionObserver.** The observer version
-wanted 90% of the footer visible and did not fire for a programmatic scroll,
-which is a gate that silently never opens — the worst possible failure for the
-one button between a new learner and the app.
+Each of 2 and 3 waits for Next and has nothing else to click, which is the
+gate. Afterwards the **wordmark** reopens stages 2–3, because "what was that
+about tones" is a day-three question.
 
-Then a **quick-start overlay** on Today: five numbered steps with a spotlight
-ring on the real element, not a picture of one. It never opens by itself after
-the first time, and the `?` that reopens it is the quietest button in the bar.
-A step whose target is not on screen is skipped rather than pointed at nothing.
+**More picture than paragraph, deliberately.** The seven prose cards this
+replaced were clicked through unread, which is worse than not showing them.
+
+**Two things that came out of it.** The 入門 tab moves to the *end* of the nav
+— it is reference, consulted once and then occasionally. And the old
+seven-card tab tour is dropped from the first run entirely: it said the same
+things less well and made four dialogs into five. It stays in Settings.
 
 ---
 

@@ -3013,9 +3013,6 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .st-foot .note { margin: 0; }
 .st-foot .btn:disabled { opacity: .45; }
 
-/* a shut tab is visible but plainly unavailable */
-[data-nav].gated { opacity: .35; pointer-events: none; }
-
 /* the ? is the quietest button in the bar */
 .help-btn { font-family: var(--f-display); font-weight: 600; opacity: .55; }
 .help-btn:hover { opacity: 1; }
@@ -3057,3 +3054,123 @@ button.tier-head:hover { border-color: var(--ink-3); }
 
 /* the arrow keys, named on the buttons they drive */
 .flash-foot .fk { opacity: .55; font-size: .95em; }
+
+/* ============================================================
+   The introduction
+
+   Three stages: a hello, what Cantonese is, and how this app goes about
+   teaching it. More picture than paragraph on purpose — the version this
+   replaced was seven cards of prose that people clicked through without
+   reading, which is a worse outcome than not showing it at all.
+   ============================================================ */
+
+.intro { position: fixed; inset: 0; z-index: 72; display: grid; place-items: center; padding: 1rem; }
+.intro[hidden] { display: none; }
+.intro::before { content: ""; position: absolute; inset: 0; background: color-mix(in srgb, var(--ink) 62%, transparent); }
+.intro-card {
+  position: relative; z-index: 1;
+  width: min(60rem, 96vw); max-height: 92vh; overflow-y: auto;
+  padding: 1.5rem 1.6rem 1.3rem; border-radius: 16px;
+  background: var(--sheet); border: 1px solid var(--rule);
+  box-shadow: var(--shadow-lift);
+  animation: rise .28s ease both;
+}
+.intro-card.stage-0 { width: min(26rem, 92vw); text-align: center; padding: 2.2rem 1.6rem 2rem; }
+
+/* ---- stage 0: hello ---- */
+.ix-hello h1 { font-family: var(--f-pin); font-size: 1.5rem; color: var(--jade); margin: .7rem 0 .4rem; letter-spacing: .02em; }
+.ix-hello p { margin: 0; font-size: .88rem; line-height: 1.6; color: var(--ink-2); }
+.ix-write { display: flex; justify-content: center; gap: .5rem; }
+.ix-write > div { width: 96px; height: 96px; border: 1px solid var(--rule-2); border-radius: 8px; background: var(--paper); }
+
+/* ---- stage 1: the language ---- */
+.ix-top { display: grid; grid-template-columns: 1fr; gap: 1.1rem; align-items: center; }
+@media (min-width: 820px) { .ix-top { grid-template-columns: minmax(0, 1fr) 20rem; } }
+.ix-top-text h2 { font-size: 1.32rem; line-height: 1.25; margin: .3rem 0 .45rem; }
+.ix-top-text p { margin: 0 0 .4rem; font-size: .88rem; line-height: 1.6; color: var(--ink-2); }
+.ix-big { font-size: .92rem !important; color: var(--ink) !important; }
+.ix-big b { font-size: 1.25rem; color: var(--seal); }
+
+/* the sketch map */
+.ix-map { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--rule-2); display: block; }
+.ix-map .sea { fill: color-mix(in srgb, var(--jade) 12%, var(--paper)); }
+.ix-map .land { fill: color-mix(in srgb, var(--gold) 18%, var(--sheet)); stroke: var(--rule); stroke-width: 1; }
+.ix-map .river { stroke: color-mix(in srgb, var(--jade) 40%, transparent); stroke-width: 1.5; fill: none; }
+.ix-map .pins circle { fill: var(--seal); }
+.ix-map .pins text { font-size: 9px; fill: var(--ink); text-anchor: middle; font-family: var(--f-body); }
+.ix-map .region { font-size: 9.5px; fill: var(--ink-3); letter-spacing: .12em; font-family: var(--f-body); }
+.ix-map .water { font-size: 8.5px; fill: var(--ink-3); text-anchor: middle; font-style: italic; font-family: var(--f-body); }
+
+.ix-half { display: grid; grid-template-columns: 1fr; gap: .8rem; margin-top: 1.1rem; }
+@media (min-width: 720px) { .ix-half { grid-template-columns: 1fr 1fr; } }
+.ix-half section {
+  padding: .85rem .95rem .9rem; border-radius: 11px;
+  border: 1px solid var(--rule-2); background: var(--sunken);
+  display: flex; flex-direction: column; gap: .5rem;
+}
+.ix-half p { margin: 0; font-size: .81rem; line-height: 1.55; color: var(--ink-2); }
+
+.ix-build { display: flex; align-items: center; justify-content: center; gap: .45rem; flex-wrap: wrap; }
+.ix-part { display: flex; flex-direction: column; align-items: center; gap: .05rem; }
+.ix-part .han { font-family: var(--f-han); font-size: 2.1rem; line-height: 1.05; }
+.ix-part small { font-family: var(--f-pin); font-size: .7rem; color: var(--ink-2); }
+.ix-part i { font-size: .62rem; color: var(--ink-3); font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.ix-part.out .han { color: var(--seal); }
+.ix-op { font-size: 1.05rem; color: var(--ink-3); }
+
+.ix-tones { display: flex; justify-content: center; gap: .35rem; }
+.ix-tone { display: flex; flex-direction: column; align-items: center; }
+.ix-tone svg { width: 34px; height: 30px; }
+.ix-tone svg path { fill: none; stroke: var(--seal); stroke-width: 2.1; stroke-linecap: round; }
+.ix-tone i { font-size: .62rem; color: var(--ink-3); font-style: normal; }
+.ix-pair { display: flex; justify-content: center; gap: .5rem; }
+.ix-pair button {
+  display: flex; flex-direction: column; align-items: center; gap: .05rem;
+  padding: .4rem .7rem; border-radius: 8px;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink);
+}
+.ix-pair button:hover, .ix-pair button.said { border-color: var(--seal); background: var(--seal-wash); }
+.ix-pair .han { font-family: var(--f-han); font-size: 1.7rem; line-height: 1; }
+.ix-pair small { font-family: var(--f-pin); font-size: .68rem; color: var(--ink-2); }
+
+/* ---- stage 2: the method ---- */
+.ix-method-head h2 { margin-bottom: .8rem; }
+.ix-flow { display: flex; align-items: stretch; gap: .5rem; flex-wrap: wrap; }
+.ix-step {
+  flex: 1 1 12rem; position: relative;
+  padding: .9rem 1rem 1rem; border-radius: 11px;
+  border: 1px solid var(--rule-2); background: var(--sunken);
+  display: flex; flex-direction: column; gap: .15rem;
+}
+.ix-k { font-family: var(--f-han); font-size: 1.5rem; line-height: 1; color: var(--seal); }
+.ix-step b { font-size: .95rem; }
+.ix-step span:last-child { font-size: .79rem; line-height: 1.5; color: var(--ink-2); }
+.ix-arrow { align-self: center; color: var(--ink-3); font-size: 1.1rem; }
+.ix-note { margin: .55rem 0 1.1rem; font-size: .82rem; color: var(--ink-3); }
+
+.ix-fun-row { display: grid; grid-template-columns: 1fr; gap: .6rem; margin-top: .4rem; }
+@media (min-width: 720px) { .ix-fun-row { grid-template-columns: 1fr 1fr; } }
+.ix-fun-one {
+  padding: .85rem .95rem .9rem; border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--seal) 24%, transparent); background: var(--seal-wash);
+  display: flex; flex-direction: column; gap: .15rem;
+}
+.ix-fun-one b { font-size: .95rem; }
+.ix-fun-one span:last-child { font-size: .79rem; line-height: 1.5; color: var(--ink-2); }
+
+/* ---- the foot ---- */
+.ix-foot { display: flex; align-items: center; gap: .8rem; margin-top: 1.2rem; padding-top: .9rem; border-top: 1px solid var(--rule-2); }
+.ix-dots { display: flex; gap: .3rem; margin-right: auto; }
+.ix-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--rule); }
+.ix-dots span.on { background: var(--seal); }
+
+/* the wordmark is a button now, and must not look like one */
+.brand {
+  border: 0; background: none; padding: 0; color: inherit; font: inherit;
+  display: flex; align-items: center; gap: .5rem; cursor: pointer; border-radius: 8px;
+}
+.brand:hover .brand-name { color: var(--seal); }
+
+/* the map says what it is: a sketch drawn to be recognised, not measured */
+.ix-map-wrap { display: flex; flex-direction: column; gap: .3rem; }
+.ix-map-cap { font-size: .68rem; color: var(--ink-3); text-align: center; }
