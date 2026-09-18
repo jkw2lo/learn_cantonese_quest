@@ -2982,45 +2982,20 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .tn-nine .tn-rung .n { font-size: .64rem; }
 
 /* ============================================================
-   入門 — getting started, and the quick-start overlay
+   Background notes, and the quick-start overlay
+
+   The 入門 tab is gone: its sections sit in the tabs they are about — what a
+   character is and what written Cantonese is in the Library, the full forms
+   in the exercise book, jyutping with the tones.
    ============================================================ */
 
-.st-head { margin-bottom: 1rem; }
-.st-head h1 { margin-top: .2rem; }
-
-/* the three steps, before the seven explanations */
-.st-steps { margin-bottom: 1.4rem; }
-.st-steps-row { display: grid; grid-template-columns: 1fr; gap: .6rem; margin-top: .5rem; }
-@media (min-width: 820px) { .st-steps-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.st-step {
-  position: relative; padding: .9rem 1rem 1rem 2.9rem; border-radius: 10px;
-  border: 1px solid var(--rule-2); background: var(--sunken);
-}
-.st-n {
-  position: absolute; left: .8rem; top: .85rem;
-  width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center;
-  background: var(--seal); color: var(--paper); font-size: .78rem; font-weight: 600;
-}
-.st-step .st-k { position: absolute; right: .8rem; top: .7rem; font-family: var(--f-han); font-size: 1.4rem; color: var(--rule); }
-.st-step b { font-size: .92rem; display: block; margin-bottom: .2rem; }
-.st-step p { margin: 0; font-size: .8rem; line-height: 1.55; color: var(--ink-2); }
-
-/* the seven sections */
-.st-sections { display: grid; grid-template-columns: 1fr; gap: .7rem; }
-@media (min-width: 900px) { .st-sections { grid-template-columns: 1fr 1fr; align-items: start; } }
-.st-sec { padding: .95rem 1.1rem 1.05rem; }
-.st-sec-head { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .35rem; }
-.st-sec-head h2 { font-size: 1.02rem; }
-.st-sec-head .st-k { font-family: var(--f-han); font-size: 1.3rem; color: var(--seal); flex: none; }
-.st-sec p { margin: 0; font-size: .86rem; line-height: 1.65; color: var(--ink-2); }
-
-.st-foot {
-  margin-top: 1.4rem; padding: 1.2rem; border-radius: 12px; text-align: center;
-  border: 1px solid var(--rule-2); background: var(--sunken);
-  display: flex; flex-direction: column; align-items: center; gap: .6rem;
-}
-.st-foot .note { margin: 0; }
-.st-foot .btn:disabled { opacity: .45; }
+.notes-row { display: grid; grid-template-columns: 1fr; gap: .7rem; margin-top: 1.4rem; }
+@media (min-width: 900px) { .notes-row:has(> :nth-child(2)) { grid-template-columns: 1fr 1fr; align-items: start; } }
+.note-sec { padding: .95rem 1.1rem 1.05rem; }
+.note-sec-head { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .35rem; }
+.note-sec-head h2 { font-size: 1.02rem; }
+.note-k { font-family: var(--f-han); font-size: 1.3rem; color: var(--seal); flex: none; }
+.note-sec p { margin: 0; font-size: .86rem; line-height: 1.65; color: var(--ink-2); }
 
 /* the ? is the quietest button in the bar */
 .help-btn { font-family: var(--f-display); font-weight: 600; opacity: .55; }
@@ -3244,3 +3219,36 @@ button.tier-head:hover { border-color: var(--ink-3); }
    borrowed class name was the cause. */
 .deck-bare { opacity: .55; }
 .deck-bare .deck-go { visibility: hidden; }
+
+/* ---- one line each, in both walkthroughs ----
+
+   The interest labels wrapped inside their buttons and the coach titles
+   wrapped inside their cards, so both grids came out a ragged mix of one- and
+   two-line rows. Neither string is long; they just needed the room. */
+.ix-int-grid { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+.ix-int-grid .int-body b { white-space: nowrap; }
+.ix-int-grid .int { align-items: center; }
+.coach-card { width: 22rem !important; }
+.ch-top b { white-space: nowrap; }
+
+/* ---- the level gauge ---- */
+.ix-level { margin-top: 1.1rem; display: flex; flex-direction: column; gap: .4rem; }
+.ix-gauge { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; }
+@media (max-width: 620px) { .ix-gauge { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ix-rung {
+  display: flex; flex-direction: column; align-items: center; gap: .2rem;
+  padding: .55rem .5rem .6rem; border-radius: 10px; text-align: center;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink);
+}
+.ix-rung:hover { border-color: var(--ink-3); background: var(--sunken); }
+.ix-rung.on { border-color: var(--seal); background: var(--seal-wash); }
+/* a bar that grows with the claim — the gauge is the point of the question */
+.ix-rung-bar {
+  width: 100%; height: 2.4rem; display: flex; align-items: flex-end;
+  border-radius: 5px; background: var(--sunken); overflow: hidden;
+}
+.ix-rung.on .ix-rung-bar { background: color-mix(in srgb, var(--seal) 12%, transparent); }
+.ix-rung-bar > i { display: block; width: 100%; background: color-mix(in srgb, var(--jade) 55%, transparent); }
+.ix-rung.on .ix-rung-bar > i { background: var(--seal); }
+.ix-rung b { font-size: .82rem; white-space: nowrap; }
+.ix-rung small { font-size: .68rem; color: var(--ink-3); line-height: 1.3; }

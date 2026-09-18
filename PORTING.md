@@ -940,6 +940,68 @@ What changed after using it:
 
 ---
 
+### 21c · The 入門 tab dissolves into the tabs it was about
+
+A whole tab of background notes is read once and never again. The four that
+survive live where they belong: *what a character is* and *what written
+Cantonese is* in the Library, *the full forms* in the exercise book, and
+*jyutping* with the tones. Two are deleted rather than moved — "Cantonese, not
+Chinese" is the opening of the introduction and "characters are built" is the
+entire 部首 page. The "what you actually do" steps go too: the introduction has
+just walked through them.
+
+A reference note gets read when it sits next to the thing it explains.
+
+---
+
+### 21d · Placement waits for the moment it is relevant
+
+Placement used to be a stranger's opening question — and for a complete
+beginner it was a quiz whose only possible result was "you know nothing".
+
+The introduction asks instead, with a gauge: none at all / a few words / I can
+get by / I read some. Then the **first** press of the session button decides:
+
+- **"None at all"** — no question. The session starts at the first character.
+- **anything else** — asked once, here, where it is finally relevant: take the
+  check, or start from the beginning anyway. The wording quotes what they
+  said, so it reads as a follow-up rather than a fresh interrogation.
+
+After that it is an ordinary button for good (`state.levelAsked`). The level
+itself is kept and not otherwise acted on, which is the honest position: we do
+not yet know what else to do with it, and collecting it costs nothing.
+
+---
+
+### 21e · Space moves you on; it does not answer for you
+
+`#skipW` was in the space-bar target list. On a writing drill — the one that
+comes straight after meeting a character — **two taps of space gave up on the
+quiz without a stroke being written**: the first dismissed the card, the second
+hit "Show me the strokes". That reads as the space bar skipping the quiz,
+because it is.
+
+Skip keeps its own key (`S`), where pressing it is a decision rather than a
+reflex. And when there is nothing to advance to, space is swallowed rather than
+ignored, so a held key cannot run ahead into whatever renders next.
+
+---
+
+### 21f · Four more interests, and the check that caught them
+
+Work & money, Getting around, Moods & feelings, Games & mahjong — eight
+categories now. Every reading was looked up in CC-Canto before it was written
+down, and `check-jyutping.mjs` agreed.
+
+**`smoke.mjs` then failed**, correctly: *every one of them has a clip — 16
+missing*. New vocabulary brings new characters, and a word you can see is a
+word you can tap; one missing clip makes `sayPhrase` give up on the whole word.
+`node tools/make-audio.mjs Sinji` regenerates the bundle (386 clips, 2.8 MB).
+**Adding interest words means regenerating audio — the checker will tell you,
+but only if you run it.**
+
+---
+
 ### 22 · Three small ones
 
 | what | why | where |

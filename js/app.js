@@ -2449,6 +2449,7 @@ function buildWritePage() {
           <span class="note" id="wpCount"></span>
         </div>
         <div class="sheet wp-diary" id="wpDiary"></div>
+        ${noteCard(["traditional"])}
       </div>
       <div class="col-side">
         <div class="sheet wp-picker" id="wpPicker"></div>
@@ -3423,7 +3424,7 @@ function renderToday() {
     if (e) sayPhrase(e.word[0], true);
     renderToday();
   });
-  $("#startBtn")?.addEventListener("click", startSession);
+  $("#startBtn")?.addEventListener("click", firstSessionOr(startSession));
   /* today only — the setting is not the place to record "one more round" */
   $("#aheadBtn")?.addEventListener("click", () => { studyAhead(5); startSession(); });
   $("#deckToday")?.addEventListener("click", () => openFlash(got, "Today's characters"));
@@ -3659,6 +3660,7 @@ function renderLibrary() {
       <span><i style="background:var(--jade)"></i>Strong</span>
       <span><i style="background:var(--rule)"></i>Not started</span>
     </div>
+    ${noteCard(["syllable", "spoken"])}
   </div>`;
 
   $$("#viewLibrary .filt").forEach(b => b.onclick = () => { libFilter = b.dataset.f; renderLibrary(); });
@@ -3874,6 +3876,21 @@ function renderRadicals() {
 
 let introAt = 0;
 
+/* How much Cantonese someone arrives with, asked once and kept.
+
+   It decides one thing today: whether the first session offers the placement
+   check at all. A complete beginner has nothing to place and should not be
+   made to sit a quiz to be told so; anyone else is asked, once, the first
+   time they press the button. Kept rather than acted on further because the
+   honest answer to "how should the app adapt?" is that we do not know yet,
+   and collecting it costs nothing. */
+const LEVELS = [
+  { id: "none",  name: "None at all",   note: "Starting from zero." },
+  { id: "words", name: "A few words",   note: "Hello, thank you, some food." },
+  { id: "some",  name: "I can get by",  note: "Speak a bit, read little." },
+  { id: "read",  name: "I read some",   note: "Characters are not new to me." }
+];
+
 /* A schematic of where Cantonese is spoken — the Pearl River Delta, with the
    estuary cutting north to Guangzhou and Hong Kong and Macau on either side
    of its mouth. Drawn to be recognisable, not to be accurate: it is labelled
@@ -3988,10 +4005,30 @@ function renderIntro() {
           <p class="note dim">Pick none and you get all of them, which is a perfectly good answer.</p>
         </div>
       </div>
+
+      <div class="ix-level">
+        <span class="eyebrow">How much Cantonese is already in there? ${hanLabel("程度")}</span>
+        <div class="ix-gauge" role="radiogroup" aria-label="How much Cantonese do you already know">
+          ${LEVELS.map((l, i) => `<button class="ix-rung ${state.level === l.id ? "on" : ""}"
+              data-level="${esc(l.id)}" role="radio" aria-checked="${state.level === l.id}">
+              <span class="ix-rung-bar"><i style="height:${18 + i * 22}%"></i></span>
+              <b>${esc(l.name)}</b>
+              <small>${esc(l.note)}</small>
+            </button>`).join("")}
+        </div>
+      </div>
       <div class="ix-foot">
         <span class="ix-dots">${[1, 2, 3].map(i => `<span class="${i === 1 ? "on" : ""}"></span>`).join("")}</span>
         <button class="btn btn-seal btn-lg" id="ixNext">Next</button>
       </div>`;
+    $$(".ix-gauge .ix-rung", card).forEach(b => b.onclick = () => {
+      state.level = b.dataset.level;
+      save();
+      $$(".ix-gauge .ix-rung", card).forEach(x => {
+        x.classList.toggle("on", x === b);
+        x.setAttribute("aria-checked", x === b);
+      });
+    });
     $$(".ix-int-grid .int", card).forEach(b => b.onclick = () => {
       const k = b.dataset.int;
       if (chosen.has(k)) chosen.delete(k); else chosen.add(k);
@@ -4217,86 +4254,6 @@ function renderCoach() {
   $("#chNext").onclick = () => { if (last) closeCoach(true); else { coachAt++; renderCoach(); } };
 }
 
-/* ---------- 入門 — the getting-started page ----------
-
-   The first run used to be a stack of dialogs: a tour, a placement offer, a
-   questionnaire, then seven primer cards. All of it clicked through once and
-   none of it findable afterwards. This is the same material as a page you
-   land on, read at your own pace, and can come back to — and the rest of the
-   app stays shut until you have been to the bottom of it, because a nav bar
-   of nine tabs is exactly what makes a new interface feel foreign.
-
-   The gate is deliberately gentle: scroll to the end and press the button.
-   Nothing is timed and nothing is a quiz. */
-
-const STEPS = [
-  { n: 1, k: "學", title: "Learn the day's characters",
-    body: `Press the big button on Today. You meet five new characters — where each one comes from, how to
-           remember it, the words it turns up in — and then get asked for them back.` },
-  { n: 2, k: "練", title: "Work through today's list",
-    body: `Under the session is a short checklist: recognise them, hear them, read them in a sentence, write
-           them out. It is scoped to what you learned today and it finishes.` },
-  { n: 3, k: "睇", title: "Go and look at the menu",
-    body: `The 餐牌 tab is a real Hong Kong diner menu. The characters you know are inked in and the rest are
-           grey. That is the point of the other two steps.` }
-];
-
-/* A name is a name, so it is capitalised however it was typed.
-
-   Each word, and after a hyphen or an apostrophe too — mary-jane is
-   Mary-Jane and o'brien is O'Brien. The rest of the word is left exactly as
-   given, because lowercasing it would break McRae, DeAndre and van der Berg
-   in the name of tidiness. */
-function capName(raw) {
-  return String(raw).trim().slice(0, 40)
-    .replace(/(^|[\s\-'’])(\p{L})/gu, (m, sep, first) => sep + first.toLocaleUpperCase());
-}
-
-function renderStart() {
-  $("#viewStart").innerHTML = `<div class="wrap st-wrap">
-    <div class="today-head st-head">
-      <span class="eyebrow">Getting started ${hanLabel("入門")}</span>
-      <h1>Before the first character</h1>
-      <p class="note">Seven short things about the language you are about to read. None of it is a test, and
-        this page stays in the tabs — come back whenever something stops making sense.</p>
-    </div>
-
-    <div class="st-steps">
-      <span class="eyebrow">What you actually do, each day ${hanLabel("三步")}</span>
-      <div class="st-steps-row">
-        ${STEPS.map(x => `<div class="st-step">
-          <span class="st-n">${x.n}</span>
-          <span class="st-k han">${esc(x.k)}</span>
-          <b>${esc(x.title)}</b>
-          <p>${esc(x.body)}</p>
-        </div>`).join("")}
-      </div>
-    </div>
-
-    <div class="st-sections">
-      ${PRIMER.map((c, i) => `<section class="sheet st-sec">
-        <div class="st-sec-head">
-          <span class="st-k han">${esc(c.k)}</span>
-          <h2>${esc(c.title)}</h2>
-        </div>
-        <p>${c.body}</p>
-      </section>`).join("")}
-    </div>
-
-    <div class="st-foot" id="stFoot">
-      <p class="note">There is a shorter version of all this, with a map and the tones you can hear.</p>
-      <button class="btn btn-ghost btn-lg" id="stGo">Play the introduction again</button>
-    </div>
-  </div>`;
-
-  /* No gate here any more. Shutting the other tabs until this page had been
-     scrolled made 入門 a toll gate, and it is reference material — it sits at
-     the end of the nav now and is read when something stops making sense.
-     The introduction overlay is what stands between a new learner and the
-     app, and it gates by having nothing else to click. */
-  $("#stGo").onclick = () => openIntro(2);
-}
-
 /* ---------- 聲調 — the six tones ----------
 
    The app had six tone contours drawn next to every reading from the start
@@ -4364,6 +4321,8 @@ function renderTones() {
         syllable, and in Cantonese the pitch is part of the word — not emphasis, not mood. Change it and you
         have said something else.</p>
     </div>
+
+    ${noteCard(["jyutping"])}
 
     <div class="sheet tn-hero">
       <span class="eyebrow">The whole problem, in two characters ${hanLabel("買賣")}</span>
@@ -5036,8 +4995,19 @@ function onKey(e) {
   }
 
   if (e.key === " " || e.key === "Enter") {
-    const go2 = $("#cont") || $("#gotIt") || $("#fin") || $("#again") || $("#skipW");
+    /* Space moves you on. It does not answer for you.
+
+       #skipW was in this list, which meant that on a writing drill — the one
+       that comes straight after meeting a character — two taps of space gave
+       up on the quiz without a stroke being written: the first tap dismissed
+       the card, the second hit "Show me the strokes". That reads as the space
+       bar skipping the quiz, because it is. The skip button keeps its own key
+       (S) where pressing it is a decision rather than a reflex. */
+    const go2 = $("#cont") || $("#gotIt") || $("#fin") || $("#again");
     if (go2) { e.preventDefault(); go2.click(); }
+    /* nothing to advance to means the question is still open: swallow it, so
+       a held key cannot run ahead into whatever renders next */
+    else if (session.queue[session.idx]?.t === "drill") e.preventDefault();
     return;
   }
   if (/^[1-9]$/.test(e.key)) {
@@ -5253,7 +5223,9 @@ function closePlacement() {
    questions itself; afterwards the standalone sheet is still the way to
    change them. */
 function afterPlacement() {
-  if (!state.started) maybeOpenIntro(); else maybeOfferProfile();
+  if (!state.started) maybeOpenIntro();
+  else if (!state.profiled) maybeOfferProfile();
+  else if (state.levelAsked) setTimeout(startSession, 350);   /* it interrupted a session; resume it */
 }
 
 function placementOptions(c) {
@@ -5485,51 +5457,48 @@ function finishTour() {
   maybeOfferPlacement();
 }
 
-/* ---------- 入門 — the language, not the app ----------
+/* ---------- 入門 — the background notes ----------
 
-   The app tour explains the tabs. Nothing explained the writing system, so a
-   first-time learner met 你好 on day one with no idea what a character is, why
-   there are two next to each other, or what the little number after the
-   romanisation was for. Seven cards, once, after the questionnaire — because
-   by then the app knows your name and can address you. */
-/* These were seven cards you clicked through once and could never find
-   again — which is the wrong shape for reference material. They are the
-   sections of the 入門 tab now: read at your own pace the first time, and
-   still there in a month when you have forgotten which of j and y is which. */
-const PRIMER = [
-  { k: "粵語", title: "Cantonese, not Chinese",
-    body: `“Chinese” is a family. <b>Cantonese</b> is what is spoken in Hong Kong, Macau and Guangdong —
-           about 85 million people — and it is not a dialect of Mandarin any more than Portuguese is a
-           dialect of Spanish. Same writing system, different language: different sounds, different
-           grammar words, its own characters. This app teaches Cantonese.` },
-  { k: "字", title: "A character is a syllable",
+   These were seven cards clicked through once and never findable again, then
+   seven sections of a tab of their own, which nobody visits twice. They are
+   split by subject now and live in the tab they are about: what a character
+   is and what written Cantonese is go to the Library, the full forms go to
+   the exercise book, and jyutping goes with the tones. A reference note gets
+   read when it sits next to the thing it explains.
+
+   Two of the original seven are gone rather than moved. "Cantonese, not
+   Chinese" is the opening of the introduction, and "characters are built" is
+   the entire 部首 page. */
+const NOTES = {
+  syllable: { k: "字", title: "A character is a syllable",
     body: `Every character is exactly one syllable and usually one lump of meaning. They are not letters
            and they are not words — they are the pieces words are made of. 好 is <i>good</i>, 多 is
            <i>many</i>, and 好多 is <i>a lot</i>. Learn the pieces and the words start assembling
            themselves.` },
-  { k: "部首", title: "Characters are built, not drawn",
-    body: `Nearly every character is two parts: one hinting at the <b>meaning</b>, one at the <b>sound</b>.
-           媽 (mother) is 女 <i>woman</i> beside 馬 <i>maa</i> — what it is, and what it sounds like. That
-           is why they stop looking like a thousand unrelated squiggles, and it is what the 部首 tab is a
-           list of.` },
-  { k: "粵拼", title: "Jyutping is the sound, written down",
-    body: `<b>jyut6 ping3</b> spells a Cantonese syllable in the Latin alphabet, and the number on the end
-           is the tone. It is a tool, not the language — you will stop needing it. Do not read it as
-           English: <i>j</i> is the <i>y</i> of <i>yes</i>, and <i>eo</i> is a vowel English has not got.` },
-  { k: "聲調", title: "Six tones, and they are the word",
-    body: `The number is the pitch of the syllable, and in Cantonese the pitch is part of the word — not
-           emphasis, not mood. <b>maai5</b> is <i>to buy</i>; <b>maai6</b> is <i>to sell</i>. Same mouth,
-           different note, opposite meaning. The 聲調 tab has all six with sound.` },
-  { k: "繁體", title: "The full forms",
-    body: `Hong Kong writes <b>traditional</b> characters, so that is what you will learn here. The
-           mainland simplified many of them in the 1950s — 學 became 学 — and where a character has a
-           simplified twin this app shows it, so you can read both.` },
-  { k: "口語", title: "Written the way it is spoken",
+  spoken: { k: "口語", title: "Written the way it is spoken",
     body: `Formal Chinese writing is Mandarin on paper even in Hong Kong. But Cantonese has its own written
            form for texting, comics and speech bubbles, with characters that exist nowhere else: 嘅 咩 呢
            啦 佢 哋. That is the Cantonese you will actually be spoken to in, and it is the one this app
-           teaches.` }
-];
+           teaches.` },
+  jyutping: { k: "粵拼", title: "Jyutping is the sound, written down",
+    body: `<b>jyut6 ping3</b> spells a Cantonese syllable in the Latin alphabet, and the number on the end
+           is the tone. It is a tool, not the language — you will stop needing it. Do not read it as
+           English: <i>j</i> is the <i>y</i> of <i>yes</i>, and <i>eo</i> is a vowel English has not got.` },
+  traditional: { k: "繁體", title: "The full forms",
+    body: `Hong Kong writes <b>traditional</b> characters, so that is what you will learn here. The
+           mainland simplified many of them in the 1950s — 學 became 学 — and where a character has a
+           simplified twin this app shows it, so you can read both.` }
+};
+
+const noteCard = keys => `<div class="notes-row">
+  ${keys.map(k => {
+    const n = NOTES[k];
+    return `<section class="sheet note-sec">
+      <div class="note-sec-head"><span class="note-k han">${esc(n.k)}</span><h2>${esc(n.title)}</h2></div>
+      <p>${n.body}</p>
+    </section>`;
+  }).join("")}
+</div>`;
 
 /* Offered once, at the end of the tour, and only to a genuinely empty record —
    asking someone mid-streak where they'd like to start would be alarming. */
@@ -5559,10 +5528,50 @@ function maybeOfferProfile() {
 /* The first run, in order: where to start, who you are, then the
    introduction. Placement and the questionnaire come first because the
    introduction addresses you by name at the end of it. */
+/* The first run is the introduction and nothing else. Placement used to come
+   first, which meant a stranger's opening question was a quiz — and for a
+   complete beginner it was a quiz with no possible use. It waits for the
+   first session now, and only happens at all if the gauge said there was
+   something to place. */
 function maybeStartFirstRun() {
   state.tour = true;                     /* the tab tour is not part of this */
   save();
-  maybeOfferPlacement();
+  maybeOpenIntro();
+}
+
+/* The first press of the session button, once.
+
+   Someone who said "none at all" on the gauge has nothing to place: they get
+   the session, straight away, starting at the beginning — being made to sit a
+   quiz to be told you know nothing is a poor welcome. Anyone who said
+   otherwise is asked, here, where the question is finally relevant: take the
+   check, or start from scratch anyway. After that this is an ordinary button
+   for good. */
+function firstSessionOr(go2) {
+  return async () => {
+    if (state.levelAsked || wasPlaced() || Object.keys(state.chars).length) return go2();
+    state.levelAsked = true;
+    if (!state.level || state.level === "none") {
+      /* nothing to place — start at the first character */
+      state.placed = { at: 0, on: dayKey() };
+      save();
+      return go2();
+    }
+    const yes = await askConfirm({
+      k: "定位",
+      title: "Shall we find where you are first?",
+      body: `You said you already ${state.level === "read" ? "read some characters"
+            : state.level === "some" ? "get by in Cantonese" : "know a few words"}. `
+          + `A quick check walks the ${HQ.length} characters in order and marks what you already know, so `
+          + "you don't spend a fortnight on characters you have had for years. Under two minutes, and it "
+          + "only ever adds — it never takes progress away.",
+      yes: "Find my level", no: "Start from the beginning"
+    });
+    if (yes) { save(); openPlacement(); return; }
+    state.placed = { at: 0, on: dayKey() };
+    save();
+    go2();
+  };
 }
 
 /* Nobody should ever meet the word of the week's "tell the app what you're
@@ -5600,7 +5609,7 @@ function renderTour() {
    ============================================================ */
 
 let view = "today";
-const RENDER = { start: renderStart, today: renderToday, sprint: renderSprint, menu: renderQuest,
+const RENDER = { today: renderToday, sprint: renderSprint, menu: renderQuest,
                  library: renderLibrary, write: renderWrite, radicals: renderRadicals, tones: renderTones,
                  record: renderRecord };
 

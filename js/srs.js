@@ -63,6 +63,8 @@ const blank = () => ({
   tour: false,
   primer: false,
   started: false,
+  level: null,          /* how much Cantonese they arrived with — see LEVELS */
+  levelAsked: false,    /* whether the first session has offered placement yet */
   writeDrills: true,
   padAuto: false,
   demo: false,

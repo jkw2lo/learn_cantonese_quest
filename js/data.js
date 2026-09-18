@@ -1067,6 +1067,33 @@ const INTERESTS = {
     ["無厘頭","mou4 lei4 tau4","nonsense comedy","The Stephen Chow genre. Literally 'without a head to it'."],
     ["K歌","kei1 go1","a karaoke song","Cantopop written to be sung badly by other people, which is a real craft."],
     ["字幕","zi6 mok6","subtitles","Hong Kong films were subtitled in Chinese and English from the start, because the audience never all spoke one language."]
+  ]},
+  work:   { icon: "💼", name: "Work & money", zh: "返工", words: [
+    ["返工","faan1 gung1","to go to work","Literally 'return to work' — you go back, every time, which is the joke."],
+    ["收工","sau1 gung1","to knock off","The other half of 返工, and the better one."],
+    ["人工","jan4 gung1","salary","Not 'artificial', which is the same two characters in Mandarin. Context does the work."],
+    ["老細","lou5 sai3","the boss","Also what you call a shopkeeper you want something from. Flattery, lightly applied."],
+    ["炒魷魚","caau2 jau4 jyu2","to be fired","'Stir-fried squid' — squid curls up when it hits the pan, like a bedroll being packed."]
+  ]},
+  move:   { icon: "🚇", name: "Getting around", zh: "出街", words: [
+    ["港鐵","gong2 tit3","the MTR","Two characters: Hong Kong, rail. Most of the city is fifteen minutes from a station."],
+    ["的士","dik1 si2","taxi","A sound-borrowing of the English, and the source of 'taxi' in Mandarin too."],
+    ["過海","gwo3 hoi2","to cross the harbour","A whole category of decision. Fares change, moods change, plans get abandoned."],
+    ["塞車","sak1 ce1","a traffic jam","Literally 'blocked cars'."],
+    ["搭車","daap3 ce1","to take transport","搭 is the verb for boarding anything that carries you."]
+  ]},
+  mood:   { icon: "😤", name: "Moods & feelings", zh: "心情", words: [
+    ["激氣","gik1 hei3","infuriating","The specific rage of dealing with something avoidable and slow."],
+    ["心散","sam1 saan2","unable to focus","'Scattered heart'. Every learner meets this one eventually."],
+    ["論盡","leon6 zeon6","clumsy, all thumbs","Said fondly more often than not."],
+    ["爽","song2","satisfying, refreshing","A cold drink is 爽. So is a decision you have been putting off."],
+    ["攰","gui6","worn out","A character that exists only in Cantonese, for a feeling that does not."]
+  ]},
+  play:   { icon: "🀄", name: "Games & mahjong", zh: "娛樂", words: [
+    ["打麻雀","daa2 maa4 zoek2","to play mahjong","Literally 'hit sparrows', after the noise the tiles make."],
+    ["食糊","sik6 wu2","to win a hand","'Eat the pot'. The word everyone at the table dreads hearing."],
+    ["執生","zap1 saang1","to improvise","'Pick up life as you go'. Said to someone being sent into a situation with no plan."],
+    ["出貓","ceot1 maau1","to cheat in an exam","'Let the cat out'. Nobody agrees on why."]
   ]}
 };
 
