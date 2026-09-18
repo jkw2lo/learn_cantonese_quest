@@ -1084,6 +1084,52 @@ nothing off the dish list is pickable.
 
 ---
 
+### The clip can teach a different word from the card
+
+Ten characters here are taught with a **colloquial** reading that is not the
+dictionary default — 文白異讀, the literary/spoken split. `say` reads a
+character in isolation, so it uses the default, and the recording then teaches
+a different word from the one on the card. Reported as "some of the tone
+pronunciations are off".
+
+**Check it by comparison, not by ear** — synthesise the character and a
+homophone of the reading you expect, and compare the audio. Identical bytes
+mean the voice used that reading:
+
+    行 == 恆    say uses hang4;   card teaches haang4   wrong
+    喎 == 蛙    say uses waa1;    card teaches wo3      wrong
+    聽 != 廳    say is not teng1; card teaches teng1    wrong
+    朝 != 招    say is not ziu1;  card teaches ziu1     wrong
+    呀 == 亞    say uses aa3;     card teaches aa3      fine
+    返 == 番    say uses faan1;   card teaches faan1    fine
+
+`SAY_AS` in `tools/make-audio.mjs` records those two from a homophone instead —
+same syllable, same tone, a character the voice is sure of. **`UNFIXED` lists
+the six that cannot be fixed this way** (名 meng2, 呢 ni1, 坐 co5, 平 peng4,
+行 haang4, 喎 wo3): the reading belongs to that character alone, so no
+substitute exists. Recording the *word* each appears in would fix it, and the
+bundle is per character. Written down rather than quietly lived with.
+
+**A trap in the smoke check for it.** Two separate encodes of the same sound
+are not byte-identical — the M4A container stamps each with its own creation
+time, so they diverge from byte 67. Compare the `mdat` atom, not the file, or
+the check reports a difference nobody can hear. And assert that two *different*
+characters fail the comparison, or it proves nothing.
+
+Mandarin has the same literary/colloquial splits, so Hanzi Quest will have its
+own list — run the comparison rather than copying mine.
+
+---
+
+### The gear was invisible, then it was wrong
+
+`⚙` (U+2699) renders as thin monochrome text and all but vanished. `⚙️` with
+the emoji selector is a colour glyph, which sits oddly on a pale bar between
+two line icons. An inline SVG inherits `currentColor` and matches its
+neighbours in both themes.
+
+---
+
 ## §10 · Smaller fixes
 
 ### Smaller interface fixes

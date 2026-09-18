@@ -53,12 +53,44 @@ const clips = {};
 const silent = [];
 let bytes = 0;
 
+/* ---------- characters the voice reads with a different reading ----------
+
+   Ten characters here are taught with a colloquial reading that is not the
+   dictionary default — 文白異讀, the literary/spoken split — and `say` reads a
+   character in isolation, so it uses the default. The clip then teaches a
+   different word from the one on the card.
+
+   Established by comparison, which is the only way to check this without
+   listening: synthesise the character and a homophone of the reading you
+   expect, and compare the audio. Identical bytes mean `say` used that reading.
+
+     行 == 恆    say uses hang4;   the card teaches haang4   wrong
+     喎 == 蛙    say uses waa1;    the card teaches wo3      wrong
+     聽 != 廳    say is not teng1; the card teaches teng1    wrong
+     朝 != 招    say is not ziu1;  the card teaches ziu1     wrong
+     呀 == 亞    say uses aa3;     the card teaches aa3      fine
+     返 == 番    say uses faan1;   the card teaches faan1    fine
+
+   Where a common homophone of the taught reading exists the clip is recorded
+   from that instead: same syllable, same tone, a character the voice is sure
+   of. Both below are confirmed by CC-Canto. */
+const SAY_AS = {
+  "聽": "廳",     /* teng1 — 廳 is teng1 and nothing else */
+  "朝": "招"      /* ziu1  — 招 is ziu1 and nothing else */
+};
+
+/* Readings no single character can supply, because they belong to that
+   character alone. The clip is the voice's own reading and does not match the
+   card. Recording the word each appears in would fix it, and this bundle is
+   per character — so it is written down rather than quietly lived with. */
+const UNFIXED = ["名", "呢", "坐", "平", "行", "喎"];
+
 const WANTED = speakable();
 process.stdout.write(`speaking ${WANTED.length} characters as ${VOICE}`);
 process.stdout.write(` (${HQ.length} taught, ${WANTED.length - HQ.length} from words, sentences and the menu)\n`);
 WANTED.forEach((c, i) => {
   const aiff = join(work, 'c.aiff'), m4a = join(work, 'c.m4a');
-  execFileSync('say', ['-v', VOICE, '-o', aiff, c]);
+  execFileSync('say', ['-v', VOICE, '-o', aiff, SAY_AS[c] || c]);
   const info = execFileSync('afinfo', [aiff]).toString();
   const dur = parseFloat((info.match(/estimated duration: ([\d.]+)/) || [])[1] || '0');
   if (dur < MIN_SECONDS) { silent.push(c); return; }
@@ -76,6 +108,10 @@ window.HQ_AUDIO = ${JSON.stringify(clips)};
 `;
 writeFileSync(join(root, 'js/audio.js'), out);
 
+const swapped = Object.keys(SAY_AS).filter(c => WANTED.includes(c));
+if (swapped.length) console.log(`\nread from a homophone: ${swapped.map(c => c + ' \u2192 ' + SAY_AS[c]).join(', ')}`);
+const stillOff = UNFIXED.filter(c => WANTED.includes(c));
+if (stillOff.length) console.log(`the voice's own reading, not the card's: ${stillOff.join(' ')}`);
 console.log(`\nbundled ${Object.keys(clips).length} clips`);
 if (silent.length) console.log(`no audio for: ${silent.join(' ')}`);
 console.log(`audio ${(bytes / 1024 / 1024).toFixed(2)} MB → js/audio.js ${(out.length / 1024 / 1024).toFixed(2)} MB`);

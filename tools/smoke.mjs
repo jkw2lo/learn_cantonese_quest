@@ -731,6 +731,45 @@ ok('the tour is due again', fresh.tour === false);
    of this library with no exceptions. If a word list ever contradicts it,
    either the reading is wrong or the page is lying. */
 
+/* ---------- clips and the readings they are meant to carry ----------
+
+   Ten characters are taught with a colloquial reading that is not the
+   dictionary default, and `say` reads a character in isolation — so for those
+   the clip can teach a different word from the card. Two are recorded from a
+   homophone instead (tools/make-audio.mjs, SAY_AS). This checks the swap is
+   still in the bundle: an identical clip means the same audio was used. */
+
+console.log('\naudio: the clip matches the reading on the card');
+{
+  /* Evaluate the bundle rather than pattern-match it: it is one very long
+     object literal on one line, and a regex over 2.8 MB of base64 is a way to
+     be confidently wrong. */
+  const w = {};
+  new Function('window', read('js/audio.js'))(w);
+  /* Compare the audio, not the file. Two separate encodes of the same sound
+     differ from byte 67 — the M4A container stamps each one with its own
+     creation time — so comparing the clips whole reports a difference that
+     nobody can hear. The mdat atom is the audio itself. */
+  const grab = c => {
+    const raw = (w.HQ_AUDIO || {})[c];
+    if (!raw) return null;
+    const buf = Buffer.from(raw, 'base64');
+    const i = buf.indexOf('mdat');
+    return i < 0 ? null : buf.slice(i + 4);
+  };
+  for (const [c, via] of [['聽', '廳'], ['朝', '招']]) {
+    const a = grab(c), b = grab(via);
+    ok(`${c} is recorded as ${via}`, !!a && !!b && a.equals(b),
+       !a ? 'no clip' : !b ? `${via} is not in the bundle` : 'the audio differs');
+  }
+  /* and the comparison is worth something: two different characters must not
+     pass it */
+  ok('two different characters do not match', !grab('一').equals(grab('二')));
+  const src = read('tools/make-audio.mjs');
+  ok('and the six with no homophone are written down',
+     /const UNFIXED = \[[^\]]*"呢"[^\]]*\]/.test(src));
+}
+
 console.log('\ntones: what the 聲調 page claims');
 {
   const toneOfP = p => +((String(p).match(/([1-6])\s*$/) || [])[1] || 0);
