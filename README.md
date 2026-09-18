@@ -337,14 +337,33 @@ A second pass took it the rest of the way:
 - **Go deeper reads across in three**: a narrow label, the three modes in the
   middle with the room they need, and the reps on the right in line with the
   heading rather than stacked beneath it.
+- **The day's characters and the day's practice share an enclosure.** They are
+  the same subject — what you learned, and what to do with it — rather than two
+  cards that happen to be adjacent.
+- **The word of the week sits above the flashcards** in the side rail.
+
+### The tally stays in its corner
+
+The 正 tally collapses past a threshold: `tallyRow(n, max)` draws marks up to
+`max` complete ones and then switches to a single 正 with a multiplier. The
+default of 6 was chosen for a page that could scroll, and in the dashboard's
+corner it was wrong in a way that only showed at particular counts — **50 reps
+was fine** (`正 × 10`) while **31 drew seven marks** and pushed the band into
+overflow, squeezing the three mode buttons.
+
+The corner passes `max: 3`. Swept across 15, 16, 20, 26, 31, 34, 50, 120 and 400
+reps: no overflow at any of them, widest 117px.
 
 ### One heading convention, and every character in it hoverable
 
 The interface had two conventions at once. `sprint.js` put Chinese first —
 錯字本 Mistake notebook — while Today put it last or left it out entirely:
-"Go deeper 加練", and a bare "Flashcards". The nav, the drill labels and the
-settings sheet were all Chinese-first already, so that is the one that stayed,
-and every section now carries both halves in that order.
+"Go deeper 加練", and a bare "Flashcards". Every section carries both halves
+now, **English first**: the English is the label and the Chinese follows as its
+gloss, set quieter and without the uppercase tracking.
+
+That is deliberately the opposite of the drill labels and the nav, which stay
+Chinese-first — there the Chinese *is* the label rather than a gloss on one.
 
 Those characters are hoverable like any other on screen, which they weren't:
 加練 and 錯字本 are exactly the kind of thing a learner wants to look up, and

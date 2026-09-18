@@ -441,7 +441,7 @@ function sprintMarked(run, best, prev) {
         title="${i + 1}. ${esc(q.ch.c)} ${esc(q.ch.p)}">${esc(q.ch.c)}</span>`).join("")}</div>
 
       ${missed.length ? `<div class="sp-wrong">
-        <span class="eyebrow">${hanLabel("批改")} What went wrong</span>
+        <span class="eyebrow">What went wrong ${hanLabel("批改")}</span>
         ${missed.map(q => `<button class="sp-wrong-row" data-c="${esc(q.c)}">
           <span class="han">${esc(q.ch.c)}</span>
           <span class="sp-wrong-body"><b>${esc(q.ch.p)} · ${esc(q.ch.m)}</b>
@@ -594,7 +594,7 @@ function sprintPanelHtml(mode, short) {
       </div>
       <button class="btn btn-block" data-sp-go="${mode}" ${short ? "disabled" : ""}>Start the sheet</button>
       ${bests.length ? `<div class="sp-mini">
-        <span class="eyebrow">${hanLabel("試卷")} Your sheets</span>
+        <span class="eyebrow">Your sheets ${hanLabel("試卷")}</span>
         ${bests.map(b => `<div class="sp-mini-row">
           <span>${b.n} in ${fmtClock(b.secs * 1000)}${b.style ? ` · ${esc(WRITE_STYLES[b.style].zh)}` : ""}</span>
           <span class="sp-mini-n"><b>${b.right}</b>/${b.n}${b.done ? ` <span class="han sp-fin">完</span>` : ""}</span>
@@ -609,7 +609,7 @@ function sprintNotebookHtml(trouble, fluent) {
   return `<div class="sheet sp-book">
     <div class="stack" style="gap:.7rem">
       <div class="sec-head">
-        <span class="eyebrow">${hanLabel("錯字本")} Mistake notebook</span>
+        <span class="eyebrow">Mistake notebook ${hanLabel("錯字本")}</span>
         <span class="dim" style="font-size:.76rem">${trouble.length} open</span>
       </div>
       ${trouble.length ? `
@@ -629,7 +629,7 @@ function sprintNotebookHtml(trouble, fluent) {
       : `<p class="note">Nothing on this page. Characters land here when you miss them twice under time, or when
           you've been missing them more often than getting them anywhere in the app.</p>`}
       ${fluent.length ? `<div class="sp-fluent">
-        <span class="eyebrow">${hanLabel("熟字")} Cold, at speed</span>
+        <span class="eyebrow">Cold, at speed ${hanLabel("熟字")}</span>
         <p class="note">${fluent.length} character${fluent.length === 1 ? "" : "s"} answered right ${SPRINT_FLUENT}+ times running under the clock.</p>
         <div class="sp-fluent-row">${fluent.slice(0, 40).map(c => `<button class="sp-fl leech-open" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>
       </div>` : ""}
@@ -642,7 +642,7 @@ function sprintBoardHtml() {
   const total = sprintTotal();
   return `<div class="sheet" style="padding:1rem">
     <div class="stack" style="gap:.7rem">
-      <span class="eyebrow">${hanLabel("記錄")} The board</span>
+      <span class="eyebrow">The board ${hanLabel("記錄")}</span>
       ${runs.length ? `<div class="sp-board">
         ${runs.map(r => {
           const cfg = SPRINT[r.mode];

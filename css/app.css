@@ -2189,15 +2189,25 @@ button.tier-head:hover { border-color: var(--ink-3); }
 
 .dash-wide { min-width: 0; }
 
+/* The day's characters and the day's practice, in one enclosure. */
+.dash-today { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
 @media (min-width: 900px) {
   .dash { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-  /* two columns: the third stacks under the second */
-  .dash-col:nth-child(3) { grid-column: 2; }
+  .dash-today { display: contents; }
+  .dash-side { grid-column: 1 / -1; }
   .dash-wide { grid-column: 1 / -1; }
 }
 @media (min-width: 1180px) {
-  .dash { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, .95fr); }
-  .dash-col:nth-child(3) { grid-column: 3; }
+  .dash { grid-template-columns: minmax(0, 2.1fr) minmax(0, .95fr); }
+  .dash-today {
+    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: .55rem; align-items: stretch;
+    padding: .55rem; border-radius: 12px;
+    border: 1px solid var(--rule-2); background: var(--sunken);
+  }
+  .dash-today .sheet, .dash-today .hero { box-shadow: none; }
+  .dash-side { grid-column: 2; grid-row: 1; }
   /* Go deeper is a band, not a block: it reads across the foot of the page in
      one line rather than eating 283px of a column. */
   .dash-wide .deeper { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; }
@@ -2261,6 +2271,7 @@ button.tier-head:hover { border-color: var(--ink-3); }
 @media (min-width: 1180px) {
   .dash { align-items: stretch; }
   .dash-col > :last-child { flex: 1 1 auto; }
+  .dash-today > .dash-col { height: 100%; }
 
   /* Go deeper reads across in three: a narrow label, the three modes in the
      middle with the room they need, and the reps on the right in line with the
@@ -2273,13 +2284,14 @@ button.tier-head:hover { border-color: var(--ink-3); }
   .dash-wide .deeper-head { display: contents; }
   .dash-wide .deeper-title { display: flex; flex-direction: column; gap: .15rem; }
   .dash-wide .deeper-sub { font-size: .7rem; line-height: 1.35; margin: 0; }
-  .dash-wide .deeper-count { order: 3; }
+  .dash-wide .deeper-count { order: 3; min-width: 0; max-width: 12rem; }
+  .dash-wide .tally-row { flex-wrap: nowrap; }
   .dash-wide .pr-grid-3 { order: 2; gap: .5rem; }
   .dash-wide .pr-deep { padding: .5rem .6rem; }
 
-  /* the flashcards and the word of the week read as one column, not two blocks
+  /* the word of the week and the flashcards read as one column, not two blocks
      with a gutter between them */
-  .dash-col:nth-child(3) { gap: .5rem; }
+  .dash-side { gap: .5rem; }
 }
 
 .deeper-count {
@@ -2310,3 +2322,12 @@ button.tier-head:hover { border-color: var(--ink-3); }
 }
 .wotw-row:hover .wotw-copy, .wotw-copy:focus-visible { opacity: 1; border-color: var(--rule); }
 .wotw-row .wotw-copy.copied { opacity: 1; }
+
+/* A section heading reads "Flashcards 生字卡": the English is the label and the
+   Chinese follows as its gloss, so it is set quieter and without the uppercase
+   tracking the English carries. */
+.eyebrow .han-label {
+  margin-left: .35rem; letter-spacing: 0; text-transform: none;
+  font-family: var(--f-han-ui); font-size: .92em; color: var(--seal); opacity: .85;
+}
+.eyebrow .han-label [data-ch] { cursor: help; }
