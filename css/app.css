@@ -2255,7 +2255,10 @@ button.tier-head:hover { border-color: var(--ink-3); }
   /* Column three was the tallest at 509px and the word of the week was most of
      the slack in it — a big empty card round a two-character word, plus a hint
      that repeats what the button already says. */
-  .dash .wotw-word { gap: .1rem; }
+  /* .wotw-word became a row when the meaning moved beside the characters; this
+     override was written for the column it used to be, and .1rem left 劏房
+     touching its own jyutping. */
+  .dash .wotw-word { gap: .75rem; }
   .dash .wotw-word .z { font-size: 2rem; }
   .dash .wotw .note.dim { display: none; }
   .dash .decks .deck-body b { font-size: .88rem; }
@@ -2397,11 +2400,20 @@ button.tier-head:hover { border-color: var(--ink-3); }
     left: calc(-.45rem - .5px); width: 1px;
     background: var(--seal); opacity: .18; pointer-events: none;
   }
-  /* and the two holes a ring binder would punch through it */
+  /* and the three holes a ring binder punches through it.
+
+     The first version was one dot plus a second faked with a box-shadow at a
+     fixed `0 11rem`, which is why there were only two: a third shadow would
+     have landed past the bottom of a column whose height is not fixed. Three
+     radial gradients on a full-height strip place themselves at 20/50/80% of
+     whatever the column turns out to be, and each paints its own 1px rim. */
   .dash-today > .dash-col:nth-child(2)::after {
-    content: ""; position: absolute; left: calc(-.45rem - 3px); top: 22%;
-    width: 6px; height: 6px; border-radius: 50%; background: var(--paper);
-    box-shadow: 0 0 0 1px var(--rule), 0 11rem 0 var(--paper), 0 11rem 0 1px var(--rule);
+    content: ""; position: absolute; top: 0; bottom: 0;
+    left: calc(-.45rem - 4px); width: 8px;
+    background-image:
+      radial-gradient(circle at 50% 20%, var(--paper) 0 3px, var(--rule) 3px 4px, transparent 4px),
+      radial-gradient(circle at 50% 50%, var(--paper) 0 3px, var(--rule) 3px 4px, transparent 4px),
+      radial-gradient(circle at 50% 80%, var(--paper) 0 3px, var(--rule) 3px 4px, transparent 4px);
     pointer-events: none;
   }
 
@@ -2413,17 +2425,63 @@ button.tier-head:hover { border-color: var(--ink-3); }
   .dash-today > .dash-col > *, .dash-side > * {
     background: transparent; border-color: transparent; box-shadow: none;
   }
-  /* the things actually written on the paper keep their own ground — the
-     decks are left out on purpose, because their fill is the ramp */
-  .dash-today .lc, .dash-today .today-all, .dash-side .wotw-word {
+  /* Anything with a run of text in it keeps its own ground. Ruled lines behind
+     a heading are paper; ruled lines behind a paragraph are noise, and the
+     grid was running straight through the day's characters, the practice list
+     and the word's definition. They are the same --sheet as the enclosure, so
+     the fill shows as nothing at all — which is the point: it stops the grid
+     rather than drawing a box. */
+  .dash-today .lc, .dash-today .today-all, .dash-side .wotw-word,
+  .dash-today .learned, .dash-today .todo-list, .dash-side .wotw-note,
+  .dash-side .wotw .note, .dash-today .learned-empty {
     background-color: var(--sheet);
   }
+  /* and a little room, so the fill has an edge rather than ending at the ink */
+  .dash-today .learned, .dash-today .todo-list,
+  .dash-side .wotw-note, .dash-side .wotw .note {
+    border-radius: 8px; padding: .4rem .5rem;
+  }
+  .dash-today .learned { padding-bottom: .5rem; }
 
   /* The side rail is now an enclosure of its own, with the same border and
      padding, so its first card starts on the line the enclosure's first card
      starts on. That is what the old `padding-top: calc(.55rem + 1px)` was
      faking; it is real geometry now. */
   .dash-side > :first-child { margin-top: 0; }
+}
+
+/* ---------- a section is titled, not just labelled ----------
+
+   On a plain card an .eyebrow floating above the content is enough. On squared
+   paper it is not: the rules run straight through it and it reads as one more
+   line of text rather than the name of what follows. So on the dashboard it
+   becomes a tab — a small stuck-on label, sitting slightly proud of the block
+   it names.
+
+   Only inside the two paper enclosures and the Go deeper band; every other
+   .eyebrow in the app is still on a plain card and still wants to be quiet. */
+@media (min-width: 1180px) {
+  .dash-today .eyebrow, .dash-side .eyebrow, .dash-wide .deeper-title .eyebrow {
+    /* inline-block alone is not enough: in .decks and .deeper-title the label
+       is a flex child and stretched to the full column, which made two of the
+       five tabs full-width bands and the other three chips */
+    display: inline-block; align-self: flex-start; padding: .2rem .5rem .22rem;
+    border-radius: 6px; border: 1px solid var(--rule-2);
+    background: var(--sunken); color: var(--ink-2);
+    letter-spacing: .1em;
+  }
+  /* Go deeper's band is itself --sunken, so a --sunken tab on it is invisible
+     but for its border. The tab is always the other one of the pair. */
+  .dash-wide .deeper-title .eyebrow { background: var(--sheet); }
+
+  /* the Chinese gloss is part of the label, so it sits inside the same tab */
+  .dash-today .eyebrow .han-label, .dash-side .eyebrow .han-label,
+  .dash-wide .deeper-title .eyebrow .han-label { opacity: 1; }
+
+  /* the tab wants the line to itself when the count beside it would otherwise
+     be baseline-aligned to a box rather than to text */
+  .dash-today .pr-head, .dash-today .learned-head,
+  .dash-side .pr-head { align-items: center; }
 }
 
 /* ---------- the day's characters ---------- */

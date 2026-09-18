@@ -230,11 +230,26 @@ Three things had to be true together, and each was measured:
    *darker* than the cards it holds. `--sheet` reads as squared paper in both
    themes without a second rule.
 
-3. **The cards inside give up their fill and their border.** This is the one
-   that matters and the one that is easy to skip: with the cards left opaque,
-   the paper only showed in the 9px of padding around them, which is a texture
-   on a frame and not a page. Only `.lc`, `.today-all` and `.wotw-word` keep a
-   ground of their own, because they are the things *written on* the paper.
+3. **The cards give up their fill, but the text does not.** With the cards
+   left opaque, the paper only showed in the 9px of padding around them —
+   texture on a frame, not a page. But grid lines behind a *paragraph* are
+   noise, not paper: the rules were running straight through the day's
+   characters, the practice list and the word's definition. So the cards go
+   fill-less and the text areas keep a ground — `.lc`, `.today-all`,
+   `.wotw-word`, `.learned`, `.todo-list`, `.wotw-note`. They are the same
+   `--sheet` as the enclosure, so the fill draws no box; it just stops the
+   grid, which is all it is there to do.
+
+4. **Three binder holes, not two.** The first version drew one dot and faked a
+   second with `box-shadow: 0 11rem 0` — which is why there were only two: a
+   third shadow would have landed past the bottom of a column whose height is
+   not fixed. Three `radial-gradient`s on a full-height strip place themselves
+   at 20/50/80% of whatever the column turns out to be, and each paints its
+   own 1px rim. Measured at 480px of column: holes at 20/50/80% exactly.
+
+5. **`.wotw-word`'s gap.** The dashboard carried `gap: .1rem`, written when
+   that card was a vertical stack. It became a row when the meaning moved
+   beside the characters, and .1rem left 劏房 touching its own jyutping.
 
 **Where:** `css/app.css` — the `.dash-today, .dash-side` block, the two
 `.dash-col:nth-child(2)` pseudo-elements, and the transparency rule. The gutter
@@ -244,6 +259,32 @@ against the real gutter centre rather than guessed.
 
 Nothing below 1180px changes — the enclosure only exists at that breakpoint, so
 the narrow layouts keep their ordinary cards.
+
+---
+
+### 9b · A section on paper needs a title, not a label
+
+On a plain card a floating `.eyebrow` is enough. On squared paper it is not:
+the rules run through it and it reads as one more line of text rather than the
+name of what follows. On the dashboard it becomes a small stuck-on tab —
+`--sunken` ground, 1px rule, 6px radius — sitting slightly proud of the block
+it names, with the Chinese gloss brought up to full opacity because it is part
+of the label now rather than a whisper after it.
+
+Two things that are easy to get wrong:
+
+- **`display: inline-block` is not enough.** In `.decks` and `.deeper-title`
+  the label is a *flex child*, so it stretches to the full column — two of the
+  five tabs came out as full-width bands and the other three as chips. It
+  needs `align-self: flex-start` as well.
+- **Go deeper's band is itself `--sunken`**, so a `--sunken` tab on it is
+  invisible but for its border. That one takes `--sheet`. The tab is always
+  the other half of the pair from whatever it sits on.
+
+Scope it to the paper enclosures and the Go deeper band. Every other
+`.eyebrow` in the app is still on a plain card and still wants to be quiet.
+
+**Where:** `css/app.css` — "a section is titled, not just labelled".
 
 ---
 
