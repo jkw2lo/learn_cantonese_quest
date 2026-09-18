@@ -315,6 +315,59 @@ disappears into the ground it sits on.
 
 ---
 
+### 9c · The teaching card fits on the screen it is being taught on
+
+`charCard()` is six blocks in a 34rem column — the character, where it comes
+from, how to remember it, what it is built from, the words it turns up in, and
+a sentence. Measured on a 1280-wide screen: **1352px of reading inside a 632px
+window**, 720px of overflow, with roughly 700px of screen empty on either side
+of the column. You met a new character by scrolling past it.
+
+Above 1000px the column widens to 64rem and the card becomes two parts — the
+character on the left, everything written about it on the right:
+
+    .cardx        grid: 17rem | 1fr
+    .cardx-blocks columns: 2
+
+**Multi-column, not grid.** Five blocks of unequal length into two columns of
+equal height is exactly what column balancing does; a 2-column grid leaves one
+column a row short. Each block needs `break-inside: avoid`, and its gap becomes
+`margin-bottom`, since `column-gap` is horizontal only.
+
+**The markup change is two wrappers.** `charCard()` gains `<div class="cardx">`
+round everything and `<div class="cardx-blocks">` round the five text blocks.
+Both call sites — the session intro and the Library detail — get it for free.
+
+**The intro's header had to move.** "New character · 👤 Who" plus the menu chip
+was a band across the full width above the card: 66px of header for eleven
+words, and it is the character's label anyway. `charCard()` takes a `topper`
+now and renders it at the top of the hero column. That one change is 66px of
+the 76px that separated "just overflows" from "comfortable" at 1280×720.
+
+Measured after, all 146 characters:
+
+| window | tallest card | overflowing |
+|---|---|---|
+| 1280 × 720 | 551 of 592 | 0 of 146 |
+| 1024 × 768 | 551 of 640 | 0 of 146 |
+
+The tallest are 冇 咗 喎 — the ones with no stroke data, where the explanatory
+note makes the *hero* the binding side rather than the text. The card needs 679px
+of window height; below that it scrolls again, as it should.
+
+**What did not need fixing:** all seven drill kinds, before and after answering
+— tallest 470 of 637. The drills were never the problem, and it is worth
+measuring before widening them too. Nor the Library sheet's own chrome: its
+first measurement said every character overflowed by 29px, which was
+`document.documentElement.scrollHeight` reading the page *behind* the dialog.
+The sheet has its own scroller and fits with 68px to spare.
+
+**Where:** `js/app.js` — `charCard()` signature and its two wrappers, the
+intro branch in `renderStep()`; `css/app.css` — "The teaching card, on a screen
+wider than a phone".
+
+---
+
 ### 10 · The 正 tally has to stay in its corner
 
 `tallyRow(n, max)` draws complete marks up to `max` and then collapses to a

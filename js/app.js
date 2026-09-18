@@ -773,7 +773,7 @@ const highlightWord = (word, char) =>
    The character card
    ============================================================ */
 
-function charCard(ch, { writerId }) {
+function charCard(ch, { writerId, topper = "" }) {
   const comps = ch.comp.length
     ? `<div class="block sheet">
         <div class="block-head"><span class="k">部件</span><span class="t">Built from</span></div>
@@ -785,8 +785,13 @@ function charCard(ch, { writerId }) {
         <span class="comp-plus">→</span><span class="comp"><em>${esc(ch.c)}</em></span></div>
       </div>` : "";
 
+  /* Two parts, wrapped, so a wide screen can put them side by side: the
+     character itself on the left and everything written about it on the
+     right. Stacked, this card is 1352px of reading in a 632px window. */
   return `
+  <div class="cardx">
   <div class="card-hero">
+    ${topper}
     ${writerBox(ch.c, writerId)}
     <div class="hero-meta">
       <div class="hero-pin">${esc(ch.p)} ${toneMark(ch.p)}</div>
@@ -805,6 +810,7 @@ function charCard(ch, { writerId }) {
       predate anyone typesetting that. You can read it and say it; the app just can't animate it.</p>`}
   </div>
 
+  <div class="cardx-blocks">
   <div class="block sheet">
     <div class="block-head"><span class="k">字源</span><span class="t">Where it comes from</span></div>
     <p class="origin">${esc(ch.o)}</p>
@@ -835,6 +841,8 @@ function charCard(ch, { writerId }) {
       <div class="sen-pin">${esc(ch.sent[1])}</div>
       <div class="sen-en">${esc(ch.sent[2])}</div>
     </div>
+  </div>
+  </div>
   </div>`;
 }
 
@@ -1120,12 +1128,14 @@ function renderStep() {
     const wid = "w" + Math.random().toString(36).slice(2, 8);
     const st = STAGES.find(s => s.n === ch.stage);
     const onMenu = MENU_CHARS.includes(ch.c);
-    body.innerHTML = `
-      <div class="stack" style="gap:.3rem;align-items:center;text-align:center">
+    /* This used to be a band across the full width above the card. Beside a
+       two-column card that is 66px of header for eleven words, and it is the
+       character's label anyway — so it goes in the character's own column. */
+    body.innerHTML = charCard(ch, { writerId: wid, topper: `
+      <div class="stack card-topper" style="gap:.3rem;align-items:center;text-align:center">
         <span class="eyebrow">${isNew ? "New character" : "Revisiting"} · ${esc(st.icon)} ${esc(st.name)}</span>
         ${onMenu ? `<span class="chip" style="background:var(--seal-wash);color:var(--seal)">🍜 on the menu</span>` : ""}
-      </div>
-      ${charCard(ch, { writerId: wid })}`;
+      </div>` });
     bindCard(body, ch, wid);
     foot.innerHTML = `<button class="btn btn-block" id="gotIt">Got it — keep going</button>`;
     $("#gotIt").onclick = () => {
