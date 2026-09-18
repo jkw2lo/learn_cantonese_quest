@@ -163,21 +163,35 @@ button { font: inherit; color: inherit; cursor: pointer; background: none; }
 
 /* ---------- the four-week tracker: one row, under the bar ---------- */
 
+/* ---------- the four-week tracker, behind the streak chip ----------
+   It was a full-width sticky bar that opened with 🔥 N — directly under a chip
+   that also said 🔥 N. Two rows of chrome for one fact. */
+.streak-pop { position: relative; display: flex; }
+.streak-pop .chip-streak { cursor: pointer; }
 .tracker {
-  position: sticky; top: 0; z-index: 39;
-  display: flex; align-items: center; gap: .7rem;
-  padding: .45rem .85rem;
-  border-bottom: 1px solid var(--rule-2);
-  background: var(--sunken);
+  position: absolute; top: calc(100% + .5rem); right: 0; z-index: 60;
+  display: flex; flex-direction: column; align-items: stretch; gap: .45rem;
+  width: max-content; max-width: min(24rem, calc(100vw - 1.6rem));
+  padding: .6rem .7rem;
+  border: 1px solid var(--rule); border-radius: 9px;
+  background: var(--sheet); box-shadow: var(--shadow-lift);
+  opacity: 0; visibility: hidden; transform: translateY(-3px);
+  transition: opacity .13s ease, transform .13s ease, visibility .13s;
 }
+.streak-pop:hover .tracker,
+.streak-pop:focus-within .tracker,
+.streak-pop.on .tracker { opacity: 1; visibility: visible; transform: none; }
+@media (hover: none) { .streak-pop:hover .tracker { opacity: 0; visibility: hidden; } }
+.streak-pop.on .tracker { opacity: 1 !important; visibility: visible !important; }
 .tracker-lbl {
   font-size: .62rem; letter-spacing: .1em; text-transform: uppercase;
   color: var(--ink-3); font-weight: 600; white-space: nowrap;
 }
-.tracker-row { display: flex; gap: 3px; flex: 1; min-width: 0; overflow-x: auto; padding: 2px 0; }
+.tracker-row { display: flex; gap: 3px; min-width: 0; padding: 2px 0; }
 .tracker-row::-webkit-scrollbar { height: 0; }
 .tracker-row .day { flex: none; }
-.tracker-note { font-size: .7rem; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tracker-note { font-size: .7rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tracker-note .sep { margin: 0 .3rem; opacity: .5; }
 
 main { flex: 1; width: 100%; }
 .wrap { max-width: 34rem; margin: 0 auto; padding: 1rem .85rem 5.5rem; }
@@ -2236,3 +2250,56 @@ button.tier-head:hover { border-color: var(--ink-3); }
   border: 1px solid var(--rule); background: transparent; color: var(--ink-3);
 }
 .learned-more:hover { color: var(--ink); border-color: var(--ink-3); background: var(--sunken); }
+
+/* ============================================================
+   Dashboard refinements
+   ============================================================ */
+
+/* Equal columns. The cards used to size to their contents, so three columns of
+   different lengths left a ragged bottom edge with the Go deeper band hanging
+   below the shortest of them. */
+@media (min-width: 1180px) {
+  .dash { align-items: stretch; }
+  .dash-col > :last-child { flex: 1 1 auto; }
+
+  /* Go deeper, compact: the counts sit in the corner and the footer is gone,
+     folded into the corner and the subtitle. */
+  .dash-wide .deeper { padding: .6rem .9rem; }
+  .dash-wide .deeper-head { align-items: flex-start; }
+  .dash-wide .deeper-sub { font-size: .72rem; line-height: 1.4; max-width: 34rem; }
+  .dash-wide .pr-grid-3 { gap: .5rem; }
+  .dash-wide .pr-deep { padding: .5rem .6rem; }
+
+  /* the flashcards and the word of the week read as one column, not two blocks
+     with a gutter between them */
+  .dash-col:nth-child(3) { gap: .5rem; }
+}
+
+.deeper-count {
+  display: flex; flex-direction: column; align-items: flex-end; gap: .1rem;
+  flex: none; text-align: right;
+}
+.deeper-n { font-size: .74rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.deeper-n b { color: var(--ink); font-weight: 600; font-size: .9rem; }
+.deeper-count .deeper-life { font-size: .66rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* The word reads across: characters on the left, sound and sense beside them,
+   instead of a tall stack with the meaning hidden at the bottom. */
+.wotw-row { position: relative; }
+.wotw-word {
+  flex-direction: row; align-items: center; gap: .7rem; text-align: left;
+  padding-right: 2rem;
+}
+.wotw-word .z { flex: none; }
+.wotw-said { display: flex; flex-direction: column; gap: .1rem; min-width: 0; text-align: left; }
+.wotw-said .p { font-size: .85rem; }
+.wotw-said .m { font-size: .8rem; }
+
+/* the copy button stops claiming a column of its own */
+.wotw-row .wotw-copy {
+  position: absolute; top: .3rem; right: .3rem;
+  width: 1.5rem; height: 1.5rem; font-size: .75rem;
+  border-color: transparent; background: transparent; opacity: .45;
+}
+.wotw-row:hover .wotw-copy, .wotw-copy:focus-visible { opacity: 1; border-color: var(--rule); }
+.wotw-row .wotw-copy.copied { opacity: 1; }

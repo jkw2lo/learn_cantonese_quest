@@ -2493,11 +2493,13 @@ function renderTracker() {
     cells.push(`<span class="day ${lvl} ${k === dayKey() ? "today" : ""}" title="${k}: ${n} card${n === 1 ? "" : "s"}"></span>`);
   }
   const s = liveStreak(), total = daysStudied();
+  /* No 🔥 N in here any more: this hangs off the chip that already says it. */
   $("#tracker").innerHTML = `
     <span class="tracker-lbl">Last 4 weeks</span>
     <span class="tracker-row">${cells.join("")}</span>
     <span class="tracker-note" title="A missed day leaves an empty box — nothing you've done is ever cleared.">
-      ${s ? `🔥 ${s}` : "🔥 0"}<span class="sep">·</span>${total} day${total === 1 ? "" : "s"} studied</span>`;
+      ${s ? `${s} day${s === 1 ? "" : "s"} in a row` : "No streak going"}<span class="sep">·</span>${
+      total} day${total === 1 ? "" : "s"} studied · best ${state.streak.best}</span>`;
 }
 
 /* ---------- 正 as a counting mark ----------
@@ -2760,8 +2762,10 @@ function renderToday() {
       <div class="wotw-row">
         <button class="wotw-word" id="wotwSay" title="Hear it">
           <span class="z">${renderZh(word)}</span>
-          <span class="p">${esc(pin)}</span>
-          ${open ? `<span class="m">${esc(mean)}</span>` : ""}
+          <span class="wotw-said">
+            <span class="p">${esc(pin)}</span>
+            ${open ? `<span class="m">${esc(mean)}</span>` : ""}
+          </span>
         </button>
         <button class="wotw-copy" id="wotwCopy" data-copy="${esc(word)}"
           title="Copy ${esc(word)}" aria-label="Copy ${esc(word)} to the clipboard">⧉</button>
@@ -2789,7 +2793,7 @@ function renderToday() {
       `${all.length} card${all.length === 1 ? "" : "s"} you've learned`, "all", all[all.length - 1])}
     ${oneDeck("deckWords", combos, "Words you can read",
       `${combos.length} combination${combos.length === 1 ? "" : "s"} of characters you know`, "words",
-      combos.length ? combos[0][0] : "", "Learn two characters that go together and this fills up")}
+      "生字", "Learn two characters that go together and this fills up")}
   </div>`;
 
   /* ---- the to-do list ----
@@ -2869,12 +2873,16 @@ function renderToday() {
     <div class="deeper-head">
       <span class="deeper-title">
         <span class="eyebrow">Go deeper <span class="han">加練</span></span>
-        <p class="deeper-sub">Reps past today's list. None of it is required and none of it can be finished —
-          that's what makes it the part that compounds.</p>
+        <p class="deeper-sub">Reps past today's list — never required, never finished. ${PASSES_FOR_SOLID} clean
+          passes makes a character solid, shakiest first.</p>
       </span>
-      <span class="deeper-count" title="${exToday} rep${exToday === 1 ? "" : "s"} today · one stroke of 正 each, five to a mark">
-        ${tallyRow(exToday)}
-        <span class="deeper-n"><b>${exToday}</b> rep${exToday === 1 ? "" : "s"} today</span>
+      <span class="deeper-count" title="${exToday} rep${exToday === 1 ? "" : "s"} today — one stroke of 正 each, five to a mark${
+        exAll ? ` · ${exAll.toLocaleString()} all told${exBest > 4 ? `, best day ${exBest}` : ""}` : ""}">
+        ${exToday ? tallyRow(exToday) : ""}
+        <span class="deeper-n">${exToday
+          ? `<b>${exToday}</b> today`
+          : `<b class="dim">—</b> none today`}</span>
+        ${exAll ? `<span class="deeper-life">${exAll.toLocaleString()} all told</span>` : ""}
       </span>
     </div>
     <div class="pr-grid pr-grid-3">
@@ -2907,12 +2915,6 @@ function renderToday() {
           </span>
         </button>`;
       }).join("")}
-    </div>
-    <div class="deeper-foot">
-      <span>${PASSES_FOR_SOLID} clean passes makes a character solid · shakiest first</span>
-      <span class="deeper-life">${exAll
-        ? `${exAll.toLocaleString()} rep${exAll === 1 ? "" : "s"} all told${exBest > 4 ? ` · best day ${exBest}` : ""}`
-        : "Your first rep starts the count"}</span>
     </div>
   </section>`;
 
@@ -4373,6 +4375,18 @@ function boot() {
   /* #nbPad lives inside the notebook stage now, and is bound when it renders */
   $("#flashPrev").onclick = () => flashStep(-1);
   $("#flashNext").onclick = () => flashStep(1);
+  /* Hover and focus are handled in CSS; a tap needs a class, and a tap
+     anywhere else needs to put it away again. */
+  $$(".streak-chip").forEach(chip => chip.addEventListener("click", e => {
+    e.stopPropagation();
+    const pop = chip.closest(".streak-pop");
+    const on = pop.classList.toggle("on");
+    chip.setAttribute("aria-expanded", on ? "true" : "false");
+  }));
+  document.addEventListener("click", () => $$(".streak-pop.on").forEach(p => {
+    p.classList.remove("on");
+    $(".streak-chip", p)?.setAttribute("aria-expanded", "false");
+  }));
   $$(".settings-btn").forEach(b => b.onclick = openSettings);
   $$(".save-btn").forEach(b => b.onclick = openBackup);
   $("#tourNext").onclick = () => { if (tourStep === TOUR.length - 1) endTour(); else { tourStep++; renderTour(); } };

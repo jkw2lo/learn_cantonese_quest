@@ -321,9 +321,21 @@ ate 283px. The one block that grew without bound, the day's character strip, is
 clamped to two rows with a **Show all** underneath: at sixty characters it was
 362px on its own, more than half the screen.
 
-**766px**, down from 1451. That fits a 13" MacBook and a 1440×900; a 1280×720
-still scrolls a little, and closing that last 46px would start costing
-legibility rather than padding.
+A second pass took it the rest of the way:
+
+- **The columns are equal height.** They used to size to their contents, so
+  three columns of different lengths left a ragged bottom edge with the Go
+  deeper band hanging under the shortest of them.
+- **Go deeper lost its footer**, folded into a subtitle and a count in the top
+  right corner. Its empty state said "no reps yet today", then "0 today", then
+  "no reps yet" — three ways of saying nothing.
+- **The word of the week reads across** rather than down, with the copy button
+  moved into its corner instead of claiming a column of its own.
+- **The four-week tracker moved behind the streak chip.** It was a full-width
+  sticky bar that opened with 🔥 N, sitting directly under a chip that also said
+  🔥 N — two rows of chrome for one fact. Hover the chip, focus it, or tap it.
+
+**672px**, down from 1451. That fits a 1280×720 laptop with room to spare.
 
 ## 睇餐牌 The menu, and its pacing
 
