@@ -26,7 +26,12 @@ const { HQ, RADICALS, SIMPLIFIED } =
   new Function(readFileSync(root + 'js/data.js', 'utf8') + '\nreturn {HQ,RADICALS,SIMPLIFIED};')();
 const win = {};
 new Function('window', readFileSync(root + 'js/strokes.js', 'utf8'))(win);
-const bundle = win.STROKE_DATA;
+try { new Function('window', readFileSync(root + 'js/strokes-made.js', 'utf8'))(win); } catch { /* not built */ }
+const upstreamBundle = win.STROKE_DATA;
+const composed = win.STROKE_COMPOSED || {};
+const madeList = win.STROKE_MADE || [];
+/* the app merges these at load; the audit has to see the same thing it does */
+const bundle = Object.assign({}, upstreamBundle, composed);
 
 /* Make Me a Hanzi's dictionary: decomposition, radical, and the character's
    own identity. Same corpus the graphics come from, so a disagreement between
@@ -64,6 +69,7 @@ const note = msg => { notes++; say('!', msg); };
 /* ---------- 1. coverage ---------- */
 console.log('\ncoverage');
 const missing = HQ.filter(c => !bundle[c.c]).map(c => c.c);
+if (madeList.length) say('.', `${madeList.length} composed from parts: ${madeList.join(' ')}`);
 const have = HQ.length - missing.length;
 say('.', `${have} of ${HQ.length} characters carry stroke data`);
 if (missing.length) {
@@ -179,6 +185,39 @@ for (const ch of HQ) {
   }
 }
 if (!structural) say('.', `every glyph has one median per stroke, inside the box, with a real path`);
+
+/* ---------- 4b. the composed glyphs ---------- */
+if (madeList.length) {
+  console.log('\ncomposed glyphs');
+  let bad4 = 0;
+  /* nothing generated may quietly shadow something upstream actually has */
+  const shadow = madeList.filter(c => upstreamBundle[c]);
+  if (shadow.length) { bad(`generated over real upstream data: ${shadow.join(' ')}`); bad4++; }
+  /* a composed glyph is only ever the strokes of its parts, in order, so its
+     count must equal the sum of the parts it was built from */
+  const RECIPE = { "哋": ["口", "地"], "喺": ["口", "係"], "嚟": ["口", "黎"], "嗰": ["口", "個"],
+                   "咗": ["口", "左"], "喎": ["口", "咼"] };
+  for (const [c, parts] of Object.entries(RECIPE)) {
+    if (!composed[c]) continue;
+    const want = parts.reduce((a, p) => a + (upstreamBundle[p] ? upstreamBundle[p].strokes.length : 0), 0);
+    if (composed[c].strokes.length !== want) {
+      bad(`${c} has ${composed[c].strokes.length} strokes; ${parts.join(' + ')} is ${want}`); bad4++;
+    }
+  }
+  if (composed["佢"] && composed["佢"].strokes.length !== 2 + (upstreamBundle["巨"]?.strokes.length || 0)) {
+    bad(`佢 is not 亻(2) + 巨(${upstreamBundle["巨"]?.strokes.length})`); bad4++;
+  }
+  if (composed["冇"] && composed["冇"].strokes.length !== (upstreamBundle["有"]?.strokes.length || 0) - 2) {
+    bad(`冇 should be 有 less its two inner strokes`); bad4++;
+  }
+  /* and it has to sit inside the glyph box, or it draws off the square */
+  for (const [c, g] of Object.entries(composed)) {
+    const all = g.medians.flat();
+    const out = all.filter(([x, y]) => x < -120 || x > 1140 || y < -160 || y > 1100);
+    if (out.length) { bad(`${c}: ${out.length} point(s) outside the box`); bad4++; }
+  }
+  if (!bad4) say('.', `every composed glyph is its parts' strokes, in order, inside the box`);
+}
 
 /* ---------- 5. components, second opinion ---------- */
 console.log('\ncomponents, against Make Me a Hanzi');

@@ -822,6 +822,79 @@ still there while you write. Again / Step (with a stroke counter) / Show.
 
 ---
 
+### 20 · Stroke data for characters no font has ever drawn
+
+Ten characters here had no upstream graphics — 佢 哋 冇 喺 嚟 嗰 攰 咗 喎 啱 —
+all Cantonese-only, all invented for writing Cantonese after the fonts the
+data comes from were built. They showed as a static glyph in a different
+typeface with 筆順 and 默寫 hidden, which made the first characters a learner
+meets the ugliest things on the page.
+
+**Eight of them are ordinary compounds of parts that do have data**, so
+`tools/compose-strokes.mjs` builds them: 口 + 地 for 哋, 口 + 個 for 嗰, 亻 + 巨
+for 佢, and so on. 冇 is not a compound — it is 有 with the two short strokes
+inside the 月 removed, which is exactly what its own etymology says, and
+strokes 5 and 6 of 有 are precisely those two.
+
+**The composition is measured, not guessed.** The app already teaches real
+口+X characters with upstream data — 嘅 咩 呀 啦 喇 囉 嘢 — so the frame the
+mouth sits in and the frame its partner sits in are read off those and
+averaged. What comes out is an approximation of the *shape* and an exact
+account of the stroke **order** and **count**, which is what the writing
+drills check.
+
+**The mistake worth inheriting:** the first version measured one left frame
+from the 口 compounds and used it for everything, which squashed 亻 — tall and
+narrow — into the mouth's squat box, and 佢 rendered as a bare 巨. Each radical
+needs its own donors. Always look at the output: this is the one kind of
+generated data where correctness is a thing you can see.
+
+Output goes to `js/strokes-made.js`, **not** into `js/strokes.js`, so
+`check-strokes.mjs` can go on comparing the real bundle byte-for-byte with
+upstream. The app merges them at load and never overwrites a real entry;
+`STROKE_MADE` lists what was generated, and the card footnotes it rather than
+hiding the buttons. Coverage went 136/146 → 144/146.
+
+Hanzi Quest teaches simplified from a much larger set and will have far fewer
+gaps, but the technique is the same wherever upstream is short.
+
+---
+
+### 21 · Getting started is a page, not a stack of dialogs
+
+The first run was a tour, a placement offer, a questionnaire and then seven
+primer cards — all clicked through once and none of it findable afterwards.
+The seven cards are the sections of an 入門 tab now: landed on, read at your
+own pace, and still there in a month.
+
+**The rest of the app stays shut until the page has been read** — disabled,
+not hidden, so you can see what is coming. The gate is enforced in `go()` as
+well as on the buttons, or a keyboard shortcut walks round it. Reaching the
+foot of the page is the whole requirement.
+
+**Use a scroll check, not an IntersectionObserver.** The observer version
+wanted 90% of the footer visible and did not fire for a programmatic scroll,
+which is a gate that silently never opens — the worst possible failure for the
+one button between a new learner and the app.
+
+Then a **quick-start overlay** on Today: five numbered steps with a spotlight
+ring on the real element, not a picture of one. It never opens by itself after
+the first time, and the `?` that reopens it is the quietest button in the bar.
+A step whose target is not on screen is skipped rather than pointed at nothing.
+
+---
+
+### 22 · Three small ones
+
+| what | why | where |
+|---|---|---|
+| Today's practice rows share the height equally | `space-evenly` distributes what is left *after* the flex gap, so the space above the first row was 23px and between rows 16 — even by the spec, uneven to the eye. A grid of equal fractions is even to both | `.dash .todo-list` |
+| Names are capitalised | Each word, and after a hyphen or apostrophe: mary-jane → Mary-Jane, o'brien → O'Brien. The rest of the word is left alone or McRae and van der Berg break in the name of tidiness. Applied on save *and* on load, since records already exist | `capName()`, `load()` |
+| The greeting takes the first name only | The headline is one line by design and "Ready when you are, Jen O'Brien." came out as "…, J…" | `renderToday()` |
+| Flashcard buttons show ← and → | The footer named the space bar and said nothing about the arrow keys that were already working | `renderFlash()` |
+
+---
+
 ## Do not port these
 
 Cantonese-specific, and wrong for Hanzi Quest:

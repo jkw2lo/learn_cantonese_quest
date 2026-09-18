@@ -505,7 +505,23 @@ function makeWriter(mount, char, opts = {}) {
    because hanzi-writer's corpus comes from fonts that predate written
    Cantonese being typeset seriously — and they include 佢 and 哋, the third
    and fourth characters anybody ever meets here. */
+/* Make Me a Hanzi has no entry for any of the ten Cantonese-only characters
+   this app teaches, so eight of them are composed from the real strokes of
+   their parts (tools/compose-strokes.mjs). They are merged in here rather
+   than into js/strokes.js, which tools/check-strokes.mjs compares
+   byte-for-byte with upstream and must stay untouched. */
+(() => {
+  if (!window.STROKE_COMPOSED) return;
+  window.STROKE_DATA = window.STROKE_DATA || {};
+  for (const [c, g] of Object.entries(window.STROKE_COMPOSED)) {
+    if (!window.STROKE_DATA[c]) window.STROKE_DATA[c] = g;
+  }
+})();
 const drawable = c => !!(window.STROKE_DATA && window.STROKE_DATA[c]);
+/* Drawn from its parts rather than published: the shape is an approximation,
+   the stroke order and count are exact. Said wherever it is drawn, because a
+   learner copying a shape deserves to know how sure the shape is. */
+const madeUp = c => !!(window.STROKE_MADE && window.STROKE_MADE.includes(c));
 
 /* The 田字格, with the character in it.
 
@@ -829,7 +845,12 @@ function charCard(ch, { writerId, topper = "" }) {
       <button class="tool" data-act="animate"><span class="han">筆順</span> Stroke order</button>
       <button class="tool" data-act="practise"><span class="han">默寫</span> Try writing</button>` : ""}
     </div>
-    ${drawable(ch.c) ? "" : `<p class="note no-strokes">Nobody has published stroke-order data for
+    ${drawable(ch.c)
+      ? (madeUp(ch.c) ? `<p class="note made-note"><b>*</b> Nobody has published stroke data for
+          <b class="han">${esc(ch.c)}</b> — it was invented for writing Cantonese, and the fonts this data
+          comes from predate anyone typesetting that. The strokes here are composed from its parts, so the
+          order and the count are right and the proportions are an approximation.</p>` : "")
+      : `<p class="note no-strokes">Nobody has published stroke-order data for
       <b class="han">${esc(ch.c)}</b> — it was invented for Cantonese, and the fonts the data comes from
       predate anyone typesetting that. You can read it and say it; the app just can't animate it.</p>`}
   </div>
@@ -1988,7 +2009,11 @@ function renderFlash() {
     if (flash.flipped) sayPhrase(f.speak);
   };
   $("#flashPrev").disabled = flash.i === 0;
-  $("#flashNext").textContent = flash.i === flash.deck.length - 1 ? "Done" : "Next";
+  /* the arrows say what the arrow keys do — the footer lists the space bar and
+     said nothing about left and right */
+  $("#flashPrev").innerHTML = `<span class="fk">←</span> Back`;
+  const last = flash.i === flash.deck.length - 1;
+  $("#flashNext").innerHTML = last ? "Done" : `Next <span class="fk">→</span>`;
 }
 /* ---------- the space bar, three ways ----------
 
@@ -3079,7 +3104,11 @@ function renderToday() {
   const clear = newLeft === 0 && due === 0;
   const dateStr = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
-  const who = state.name ? `, ${state.name}` : "";
+  /* The greeting uses the first name only. The headline is one line by
+     design, and "Ready when you are, Jen O'Brien." does not fit on it — it
+     came out as "Ready when you are, J…". A greeting wants a first name
+     anyway; Settings keeps whatever was typed. */
+  const who = state.name ? `, ${String(state.name).trim().split(/\s+/)[0]}` : "";
   /* One line, at the width this column actually is. "You're clear for today,
      Jen." wrapped to two and left the block looking unbalanced beside a ring. */
   const headline = clear ? `All clear${who}.` : done > 0 ? `Keep going${who}.` : `Ready when you are${who}.`;
@@ -3829,6 +3858,222 @@ function renderRadicals() {
   </div>`;
 
   $$("#viewRadicals [data-c]").forEach(b => b.onclick = () => openChar(b.dataset.c));
+}
+
+/* ---------- the quick-start overlay ----------
+
+   Three numbered steps pointed at the real page rather than at a picture of
+   it, so the first thing a new learner sees is their own dashboard with the
+   parts named. It is dismissible from anywhere, it never opens by itself
+   after the first time, and the ? that reopens it is the quietest button in
+   the top bar — a guide you cannot escape is worse than no guide at all. */
+
+const COACH = [
+  { sel: ".hero-cta .btn, .hero-cta", n: 1, k: "學",
+    title: "Start here",
+    body: "One button, once a day. It introduces the day's new characters and then asks for them back. " +
+          "Five minutes, and it is the only thing you have to do." },
+  { sel: ".todo-block", n: 2, k: "練",
+    title: "Then work down this list",
+    body: "Four ways to practise what you just met — recognising, hearing, reading in a sentence, writing " +
+          "it out. It is scoped to today's characters, so it finishes." },
+  { sel: ".learned", n: 3, k: "字",
+    title: "What you learned today",
+    body: "Every character you meet collects here, and stays in the library for good. Tap one to see its " +
+          "card again." },
+  { sel: ".dash-side .decks", n: 4, k: "卡",
+    title: "Flashcards, when you want them",
+    body: "Not part of the list and never required — a deck of what you know, for the bus." },
+  { sel: ".deeper", n: 5, k: "加",
+    title: "And extra reps, if you want them",
+    body: "Unbounded practice past today's list. Never required, never finished; it just counts what you do." }
+];
+
+let coachAt = 0;
+
+function openCoach(i = 0) {
+  if (view !== "today") go("today");
+  coachAt = i;
+  $("#coach").hidden = false;
+  document.body.style.overflow = "hidden";
+  renderCoach();
+}
+
+function closeCoach() {
+  $("#coach").hidden = true;
+  document.body.style.overflow = "";
+}
+
+function renderCoach() {
+  const step = COACH[coachAt];
+  const last = coachAt === COACH.length - 1;
+  const el = document.querySelector(step.sel);
+  const ring = $("#coachRing"), card = $("#coachCard");
+
+  /* A step whose target is not on screen — the flashcards column is stacked
+     away on a narrow layout — is skipped rather than pointed at nothing. */
+  if (!el || !el.getBoundingClientRect().width) {
+    if (last) return closeCoach();
+    coachAt++; return renderCoach();
+  }
+
+  const b = el.getBoundingClientRect(), pad = 8;
+  ring.style.cssText = `top:${b.top - pad}px; left:${b.left - pad}px;` +
+                       `width:${b.width + pad * 2}px; height:${b.height + pad * 2}px`;
+
+  card.innerHTML = `
+    <div class="ch-top">
+      <span class="ch-n">${step.n}</span>
+      <span class="ch-k han">${esc(step.k)}</span>
+      <b>${esc(step.title)}</b>
+      <button class="icon-btn" id="chX" aria-label="Close">✕</button>
+    </div>
+    <p>${esc(step.body)}</p>
+    <div class="ch-foot">
+      <span class="ch-dots">${COACH.map((_, i) => `<span class="${i === coachAt ? "on" : ""}"></span>`).join("")}</span>
+      <button class="btn btn-ghost btn-sm" id="chBack" ${coachAt ? "" : "disabled"}>Back</button>
+      <button class="btn btn-sm" id="chNext">${last ? "Got it" : "Next"}</button>
+    </div>`;
+
+  /* put the card beside what it is pointing at, and never off the screen */
+  const cw = 310, gap = 14;
+  let left = b.right + gap;
+  if (left + cw > innerWidth - 12) left = Math.max(12, b.left - cw - gap);
+  if (left < 12) left = 12;
+  const ch = card.offsetHeight || 200;
+  let top = b.top + b.height / 2 - ch / 2;
+  top = Math.max(12, Math.min(top, innerHeight - ch - 12));
+  card.style.cssText = `left:${left}px; top:${top}px; width:${cw}px`;
+
+  $("#chX").onclick = closeCoach;
+  $("#chBack").onclick = () => { if (coachAt) { coachAt--; renderCoach(); } };
+  $("#chNext").onclick = () => { if (last) closeCoach(); else { coachAt++; renderCoach(); } };
+}
+
+/* ---------- 入門 — the getting-started page ----------
+
+   The first run used to be a stack of dialogs: a tour, a placement offer, a
+   questionnaire, then seven primer cards. All of it clicked through once and
+   none of it findable afterwards. This is the same material as a page you
+   land on, read at your own pace, and can come back to — and the rest of the
+   app stays shut until you have been to the bottom of it, because a nav bar
+   of nine tabs is exactly what makes a new interface feel foreign.
+
+   The gate is deliberately gentle: scroll to the end and press the button.
+   Nothing is timed and nothing is a quiz. */
+
+const STEPS = [
+  { n: 1, k: "學", title: "Learn the day's characters",
+    body: `Press the big button on Today. You meet five new characters — where each one comes from, how to
+           remember it, the words it turns up in — and then get asked for them back.` },
+  { n: 2, k: "練", title: "Work through today's list",
+    body: `Under the session is a short checklist: recognise them, hear them, read them in a sentence, write
+           them out. It is scoped to what you learned today and it finishes.` },
+  { n: 3, k: "睇", title: "Go and look at the menu",
+    body: `The 餐牌 tab is a real Hong Kong diner menu. The characters you know are inked in and the rest are
+           grey. That is the point of the other two steps.` }
+];
+
+/* A name is a name, so it is capitalised however it was typed.
+
+   Each word, and after a hyphen or an apostrophe too — mary-jane is
+   Mary-Jane and o'brien is O'Brien. The rest of the word is left exactly as
+   given, because lowercasing it would break McRae, DeAndre and van der Berg
+   in the name of tidiness. */
+function capName(raw) {
+  return String(raw).trim().slice(0, 40)
+    .replace(/(^|[\s\-'’])(\p{L})/gu, (m, sep, first) => sep + first.toLocaleUpperCase());
+}
+
+function renderStart() {
+  const done = !!state.started;
+  $("#viewStart").innerHTML = `<div class="wrap st-wrap">
+    <div class="today-head st-head">
+      <span class="eyebrow">Getting started ${hanLabel("入門")}</span>
+      <h1>Before the first character</h1>
+      <p class="note">Seven short things about the language you are about to read. None of it is a test, and
+        this page stays in the tabs — come back whenever something stops making sense.</p>
+    </div>
+
+    <div class="st-steps">
+      <span class="eyebrow">What you actually do, each day ${hanLabel("三步")}</span>
+      <div class="st-steps-row">
+        ${STEPS.map(x => `<div class="st-step">
+          <span class="st-n">${x.n}</span>
+          <span class="st-k han">${esc(x.k)}</span>
+          <b>${esc(x.title)}</b>
+          <p>${esc(x.body)}</p>
+        </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="st-sections">
+      ${PRIMER.map((c, i) => `<section class="sheet st-sec">
+        <div class="st-sec-head">
+          <span class="st-k han">${esc(c.k)}</span>
+          <h2>${esc(c.title)}</h2>
+        </div>
+        <p>${c.body}</p>
+      </section>`).join("")}
+    </div>
+
+    <div class="st-foot" id="stFoot">
+      <p class="note" id="stHint">${done
+        ? "You have been here before — everything is open."
+        : "Read to the end and the rest of the app opens up."}</p>
+      <button class="btn btn-seal btn-lg" id="stGo" ${done ? "" : "disabled"}>
+        ${done ? "Back to today" : "I'm ready — start learning"}</button>
+    </div>
+  </div>`;
+
+  const go2 = $("#stGo");
+  /* The gate: reaching the foot of the page is the whole requirement.
+
+     Checked on scroll rather than with an IntersectionObserver. The observer
+     version needed 90% of the footer visible and would not fire at all for a
+     programmatic scroll in some contexts, which is a gate that silently never
+     opens — the worst possible failure for the one button standing between a
+     new learner and the app. A rect comparison is dull and always true. */
+  if (!done) {
+    const foot = $("#stFoot");
+    const open = () => {
+      if (!go2.disabled) return;
+      const b = foot.getBoundingClientRect();
+      if (b.top > innerHeight - 60) return;          /* not there yet */
+      go2.disabled = false;
+      $("#stHint").textContent = "That's the lot. Everything is open now.";
+      removeEventListener("scroll", open);
+    };
+    addEventListener("scroll", open, { passive: true });
+    /* a tall screen may already be showing the foot, in which case there is
+       nothing to scroll to and the button should simply be live */
+    setTimeout(open, 60);
+  }
+
+  go2.onclick = () => {
+    const first = !state.started;
+    state.started = true; save();
+    renderNavGate();
+    go("today");
+    /* the guide is the point of the redirect: land on Today and be told what
+       the three things on it are */
+    if (first) setTimeout(() => openCoach(0), 420);
+  };
+}
+
+/* Everything but 入門 stays shut until the page has been read. Disabled, not
+   hidden — you can see what is coming, which is reassuring rather than
+   mysterious. */
+function renderNavGate() {
+  const shut = !state.started;
+  $$("[data-nav]").forEach(b => {
+    const gated = shut && b.dataset.nav !== "start";
+    b.disabled = gated;
+    b.classList.toggle("gated", gated);
+    if (gated) b.title = "Finish Getting started first";
+    else b.removeAttribute("title");
+  });
+  document.querySelector(".help-btn").hidden = shut;
 }
 
 /* ---------- 聲調 — the six tones ----------
@@ -4734,9 +4979,9 @@ function openProfile(firstRun) {
     b.classList.toggle("on", chosen.has(k));
     b.setAttribute("aria-pressed", chosen.has(k));
   });
-  $("#pfSkip").onclick = () => { state.profiled = true; save(); closeSheet(); maybeOfferPrimer(); };
+  $("#pfSkip").onclick = () => { state.profiled = true; save(); closeSheet(); };
   $("#pfSave").onclick = () => {
-    state.name = $("#pfName").value.trim().slice(0, 40);
+    state.name = capName($("#pfName").value);
     const next = [...chosen];
     /* a changed interest set invalidates a pick that may no longer be in it */
     if ((state.interests || []).join() !== next.join()) state.wotw = null;
@@ -4744,7 +4989,6 @@ function openProfile(firstRun) {
     state.profiled = true;
     save();
     closeSheet();
-    maybeOfferPrimer();
   };
 }
 
@@ -5013,6 +5257,10 @@ function finishTour() {
    there are two next to each other, or what the little number after the
    romanisation was for. Seven cards, once, after the questionnaire — because
    by then the app knows your name and can address you. */
+/* These were seven cards you clicked through once and could never find
+   again — which is the wrong shape for reference material. They are the
+   sections of the 入門 tab now: read at your own pace the first time, and
+   still there in a month when you have forgotten which of j and y is which. */
 const PRIMER = [
   { k: "粵語", title: "Cantonese, not Chinese",
     body: `“Chinese” is a family. <b>Cantonese</b> is what is spoken in Hong Kong, Macau and Guangdong —
@@ -5047,26 +5295,6 @@ const PRIMER = [
            啦 佢 哋. That is the Cantonese you will actually be spoken to in, and it is the one this app
            teaches.` }
 ];
-
-function startPrimer() {
-  walk = { cards: PRIMER, done: finishPrimer, label: "Got it" };
-  tourStep = 0;
-  $("#tour").classList.add("on");
-  document.body.style.overflow = "hidden";
-  renderTour();
-}
-
-function finishPrimer() {
-  state.primer = true; save();
-  closeWalk();
-}
-
-/* Offered after the questionnaire, once, and never to someone who has already
-   learned a hundred characters — they have worked all this out. */
-function maybeOfferPrimer() {
-  if (state.primer || Object.keys(state.chars).length > 20) return;
-  setTimeout(startPrimer, 350);
-}
 
 /* Offered once, at the end of the tour, and only to a genuinely empty record —
    asking someone mid-streak where they'd like to start would be alarming. */
@@ -5108,10 +5336,14 @@ function renderTour() {
    ============================================================ */
 
 let view = "today";
-const RENDER = { today: renderToday, sprint: renderSprint, menu: renderQuest, library: renderLibrary,
-                 write: renderWrite, radicals: renderRadicals, tones: renderTones, record: renderRecord };
+const RENDER = { start: renderStart, today: renderToday, sprint: renderSprint, menu: renderQuest,
+                 library: renderLibrary, write: renderWrite, radicals: renderRadicals, tones: renderTones,
+                 record: renderRecord };
 
 function go(v) {
+  /* The gate is enforced here as well as on the buttons: a keyboard shortcut
+     or a stale handler must not walk around it. */
+  if (!state.started && v !== "start") v = "start";
   view = v;
   const id = "view" + v[0].toUpperCase() + v.slice(1);
   $$(".view").forEach(el => el.classList.toggle("on", el.id === id));
@@ -5233,6 +5465,16 @@ function boot() {
     else if (session.active) $("#sesClose").click();
   });
   initTips();
+  $("#helpBtn").onclick = () => openCoach(0);
+  $("#coach").addEventListener("click", e => {
+    /* the veil closes it; the card does not */
+    if (e.target.classList.contains("coach-veil")) closeCoach();
+  });
+  /* the overlay is anchored to real elements, so it has to follow them */
+  addEventListener("resize", () => { if (!$("#coach").hidden) renderCoach(); });
+  renderNavGate();
+  /* A record that has never been past Getting started lands there. */
+  if (!state.started) go("start");
   initSpeakables();
   $("#flashClose").onclick = closeFlash;
   $("#placeClose").onclick = closePlacement;

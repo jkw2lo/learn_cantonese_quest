@@ -62,6 +62,7 @@ const blank = () => ({
   timer: true,
   tour: false,
   primer: false,
+  started: false,
   writeDrills: true,
   padAuto: false,
   demo: false,
@@ -79,6 +80,10 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) state = Object.assign(blank(), JSON.parse(raw));
     if (!(state.goalNew >= GOAL_MIN && state.goalNew <= GOAL_MAX)) state.goalNew = blank().goalNew;
+    /* Names are capitalised on the way in now; a record written before that
+       carries whatever was typed, and the greeting says it every morning. */
+    if (state.name) state.name = String(state.name).trim()
+      .replace(/(^|[\s\-'\u2019])(\p{L})/gu, (m, sep, first) => sep + first.toLocaleUpperCase());
   } catch { /* private mode, cleared storage — carry on with a fresh record */ }
   return state;
 }

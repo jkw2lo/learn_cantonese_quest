@@ -243,11 +243,15 @@ main { flex: 1; width: 100%; }
    them the row used to wrap — 今天 landing under Today, the wordmark under
    the seal. The tabs are the thing that has to stay legible, so the padding
    tightens and the wordmark stands down until there is room again. */
-@media (min-width: 860px) and (max-width: 1099px) {
+/* Nine tabs now: 入門 and 聲調 both arrived after this bar was last measured,
+   and the wordmark has to stand down for longer than it used to. At 1280 it
+   was being overrun rather than wrapped, so nothing looked broken — "Start"
+   simply sat on top of "Quest". */
+@media (min-width: 860px) and (max-width: 1439px) {
   .brand-name { display: none; }
   .brand { margin-right: .6rem; }
   .top-nav { gap: 0; }
-  .top-nav button { padding: .4rem .48rem; font-size: .82rem; gap: .3rem; }
+  .top-nav button { padding: .4rem .5rem; font-size: .84rem; gap: .3rem; }
   .top-nav button .nz { font-size: .86rem; }
 }
 
@@ -2557,10 +2561,20 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .todo-block .bar { height: 8px; border-radius: 4px; }
 .todo-block .pr-head { margin-bottom: .35rem; }
 @media (min-width: 1180px) {
-  /* five rows sharing the height rather than sitting at the top of it */
+  /* Five rows sharing the height, genuinely equally.
+
+     space-evenly distributes what is left over *after* the flex gap, so the
+     space above the first row came out 23px while the space between rows came
+     out 16 — even by the spec and uneven to the eye, which is the only
+     measure that counts here. A grid of equal fractions gives every row the
+     same height and lets each centre its own content, so the run of ticks is
+     evenly spaced from the title to the last row. */
   .dash .todo-block { justify-content: flex-start; }
-  .dash .todo-list { flex: 1; justify-content: space-evenly; }
-  .dash .todo { padding-top: .3rem; padding-bottom: .3rem; }
+  .dash .todo-list {
+    flex: 1; display: grid; grid-auto-rows: 1fr;
+    align-content: stretch; gap: 0;
+  }
+  .dash .todo { align-items: center; padding-top: 0; padding-bottom: 0; }
 }
 
 /* ============================================================
@@ -2957,3 +2971,89 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .tn-nine .note { margin: 0; max-width: 52rem; }
 .tn-nine-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; width: min(26rem, 100%); }
 .tn-nine .tn-rung .n { font-size: .64rem; }
+
+/* ============================================================
+   入門 — getting started, and the quick-start overlay
+   ============================================================ */
+
+.st-head { margin-bottom: 1rem; }
+.st-head h1 { margin-top: .2rem; }
+
+/* the three steps, before the seven explanations */
+.st-steps { margin-bottom: 1.4rem; }
+.st-steps-row { display: grid; grid-template-columns: 1fr; gap: .6rem; margin-top: .5rem; }
+@media (min-width: 820px) { .st-steps-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.st-step {
+  position: relative; padding: .9rem 1rem 1rem 2.9rem; border-radius: 10px;
+  border: 1px solid var(--rule-2); background: var(--sunken);
+}
+.st-n {
+  position: absolute; left: .8rem; top: .85rem;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--seal); color: var(--paper); font-size: .78rem; font-weight: 600;
+}
+.st-step .st-k { position: absolute; right: .8rem; top: .7rem; font-family: var(--f-han); font-size: 1.4rem; color: var(--rule); }
+.st-step b { font-size: .92rem; display: block; margin-bottom: .2rem; }
+.st-step p { margin: 0; font-size: .8rem; line-height: 1.55; color: var(--ink-2); }
+
+/* the seven sections */
+.st-sections { display: grid; grid-template-columns: 1fr; gap: .7rem; }
+@media (min-width: 900px) { .st-sections { grid-template-columns: 1fr 1fr; align-items: start; } }
+.st-sec { padding: .95rem 1.1rem 1.05rem; }
+.st-sec-head { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .35rem; }
+.st-sec-head h2 { font-size: 1.02rem; }
+.st-sec-head .st-k { font-family: var(--f-han); font-size: 1.3rem; color: var(--seal); flex: none; }
+.st-sec p { margin: 0; font-size: .86rem; line-height: 1.65; color: var(--ink-2); }
+
+.st-foot {
+  margin-top: 1.4rem; padding: 1.2rem; border-radius: 12px; text-align: center;
+  border: 1px solid var(--rule-2); background: var(--sunken);
+  display: flex; flex-direction: column; align-items: center; gap: .6rem;
+}
+.st-foot .note { margin: 0; }
+.st-foot .btn:disabled { opacity: .45; }
+
+/* a shut tab is visible but plainly unavailable */
+[data-nav].gated { opacity: .35; pointer-events: none; }
+
+/* the ? is the quietest button in the bar */
+.help-btn { font-family: var(--f-display); font-weight: 600; opacity: .55; }
+.help-btn:hover { opacity: 1; }
+
+/* ---------- the overlay ---------- */
+.coach { position: fixed; inset: 0; z-index: 68; }
+.coach[hidden] { display: none; }
+.coach-veil { position: absolute; inset: 0; background: color-mix(in srgb, var(--ink) 55%, transparent); }
+/* the hole: a huge spread shadow paints the veil everywhere except here */
+.coach-ring {
+  position: absolute; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--ink) 55%, transparent),
+              0 0 0 2px var(--gold);
+  transition: top .2s ease, left .2s ease, width .2s ease, height .2s ease;
+}
+/* with the ring painting the veil, the veil itself only needs to catch clicks */
+.coach-veil { background: transparent; }
+.coach-card {
+  position: absolute; z-index: 1;
+  padding: .9rem 1rem 1rem; border-radius: 12px;
+  background: var(--sheet); border: 1px solid var(--rule);
+  box-shadow: var(--shadow-lift);
+  display: flex; flex-direction: column; gap: .5rem;
+}
+.ch-top { display: flex; align-items: center; gap: .5rem; }
+.ch-n {
+  width: 1.45rem; height: 1.45rem; border-radius: 50%; flex: none;
+  display: grid; place-items: center; background: var(--seal); color: var(--paper);
+  font-size: .76rem; font-weight: 600;
+}
+.ch-k { font-family: var(--f-han); font-size: 1.15rem; color: var(--seal); flex: none; }
+.ch-top b { font-size: .95rem; min-width: 0; }
+.ch-top .icon-btn { margin-left: auto; flex: none; }
+.coach-card p { margin: 0; font-size: .83rem; line-height: 1.6; color: var(--ink-2); }
+.ch-foot { display: flex; align-items: center; gap: .4rem; margin-top: .1rem; }
+.ch-dots { display: flex; gap: .25rem; margin-right: auto; }
+.ch-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--rule); }
+.ch-dots span.on { background: var(--seal); }
+
+/* the arrow keys, named on the buttons they drive */
+.flash-foot .fk { opacity: .55; font-size: .95em; }
