@@ -282,6 +282,25 @@ function tallyExtra() {
 }
 
 const extraToday = () => (state.days[dayKey()] || {}).extra || 0;
+
+/* ---------- studying ahead ----------
+
+   "Study ahead — 5 more characters" used to do `state.goalNew += 5`, which is
+   the setting, not the day. So one click on a Tuesday quietly rewrote "new
+   characters a day" from 5 to 10 and left it there: Wednesday dealt ten, the
+   settings stepper read 10, and clicking again made it 15. What the button
+   means is "give me more today", so the extra is kept on the day and is gone
+   with it. */
+const aheadToday = () => (state.days[dayKey()] || {}).ahead || 0;
+function studyAhead(n) {
+  const t = today();
+  t.ahead = (t.ahead || 0) + n;
+  save();
+}
+
+/* How many new characters today's session will deal: the standing setting,
+   plus anything asked for on top of it today. */
+const dayGoal = () => state.goalNew + aheadToday();
 const extraTotal = () => Object.values(state.days).reduce((a, d) => a + (d.extra || 0), 0);
 const extraBestDay = () => Object.values(state.days).reduce((a, d) => Math.max(a, d.extra || 0), 0);
 const extraDays = () => Object.values(state.days).filter(d => d.extra > 0).length;
@@ -312,6 +331,9 @@ function liveStreak() {
   return gap <= 1 ? s.cur : 0;
 }
 
+/* Deliberately the standing goal and not dayGoal(): asking for five more
+   characters is extra credit, and extra credit cannot take back a day you had
+   already finished — or the streak that came with it. */
 function goalMet() {
   const t = state.days[dayKey()];
   if (!t) return false;

@@ -1397,18 +1397,35 @@ button.todo:hover:not(:disabled) { background: var(--sunken); }
 .decks .deck { padding: .8rem .85rem; gap: .8rem; }
 .decks .deck-cards { width: 40px; height: 52px; }
 .decks .deck-cards .dc { font-size: 1.4rem; }
-.deck-all {
-  border-color: color-mix(in srgb, var(--jade) 32%, transparent);
-  background: linear-gradient(120deg, var(--jade-wash), transparent 70%), var(--sheet);
+/* The three decks used to be three hues — gold, jade, vermilion — which read
+   as three unrelated things. They are not unrelated: today's characters are a
+   handful, everything you know is more, and the words those characters make
+   is more again. So they are one hue at three depths, and the ramp is the
+   information: the deck gets darker as it gets bigger. */
+.decks .deck {
+  border-color: color-mix(in srgb, var(--jade) 22%, transparent);
+  background: color-mix(in srgb, var(--jade) 6%, var(--sheet));
 }
-.deck-all .dc1 { border-color: color-mix(in srgb, var(--jade) 50%, transparent); }
-.deck-all .deck-go { color: var(--jade); }
-.deck-words {
-  border-color: color-mix(in srgb, var(--seal) 30%, transparent);
-  background: linear-gradient(120deg, var(--seal-wash), transparent 70%), var(--sheet);
+.decks .deck .dc1 { border-color: color-mix(in srgb, var(--jade) 34%, transparent); }
+.decks .deck .deck-go { color: var(--jade); }
+/* The ramp costs the caption its contrast — --ink-3 on the deepest card is
+   2.5:1 in light and 2.2:1 in dark. One step up puts it back over 4.5:1 on
+   every rung, which is the price of the ramp and worth paying. */
+.decks .deck-text small { color: var(--ink-2); }
+
+.decks .deck-all {
+  border-color: color-mix(in srgb, var(--jade) 34%, transparent);
+  background: color-mix(in srgb, var(--jade) 15%, var(--sheet));
 }
-.deck-words .dc1 { border-color: color-mix(in srgb, var(--seal) 48%, transparent); }
-.deck-words .deck-go { color: var(--seal); }
+.decks .deck-all .dc1 { border-color: color-mix(in srgb, var(--jade) 48%, transparent); }
+
+.decks .deck-words {
+  border-color: color-mix(in srgb, var(--jade) 48%, transparent);
+  background: color-mix(in srgb, var(--jade) 24%, var(--sheet));
+}
+.decks .deck-words .dc1 { border-color: color-mix(in srgb, var(--jade) 62%, transparent); }
+/* the deepest card sits on the deepest ground, so its face needs lifting off it */
+.decks .deck-words .dc { background: var(--sheet); }
 
 /* a word on a flashcard face: two or three characters where one used to sit */
 .card-face .big.big-wide { font-size: 4.2rem; }
@@ -2202,20 +2219,9 @@ button.tier-head:hover { border-color: var(--ink-3); }
 }
 @media (min-width: 1180px) {
   .dash { grid-template-columns: minmax(0, 2.1fr) minmax(0, .95fr); }
-  .dash-today {
-    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-    gap: .55rem; align-items: stretch;
-    padding: .55rem; border-radius: 12px;
-    border: 1px solid var(--rule-2); background: var(--sunken);
-  }
+  .dash-today { display: grid; align-items: stretch; }
   /* the expanded day spans both columns, under them */
   .dash-today .today-all { grid-column: 1 / -1; }
-  /* The first card of the side rail starts on the same line as the first card
-     inside the enclosure. The enclosure contributes a border and its padding;
-     the rail had neither, and its first sheet carried a 14px top margin of its
-     own, which is where the 13px offset came from. */
-  .dash-side { padding-top: calc(.55rem + 1px); }
-  .dash-side > :first-child { margin-top: 0; }
 
   /* The hero had 96px of slack pooling under the day's characters. The three
      blocks share it instead, which is also what makes the card read as a page
@@ -2350,34 +2356,72 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .eyebrow .han-label [data-ch] { cursor: help; }
 
 /* ============================================================
-   The day, as a notebook page
+   The day, as an open notebook
 
-   The enclosure holding the day's characters and the day's practice reads as
-   one page rather than two cards, so it is given the furniture of one: a ruled
-   margin down the left, and paper rather than a panel.
+   The first pass put a ruled margin down the far left of the enclosure, which
+   made the whole thing read as one page — and a page with two columns on it,
+   which is not what these two blocks are. They are a spread: the day's
+   characters on the left leaf, the day's practice on the right, and the fold
+   between them. So the margin rule and the binder holes move into the gutter,
+   and the ruled lines become graph paper, which is the paper Chinese writing
+   practice actually happens on.
+
+   Both enclosures are colourless — the tint has come off. The texture alone
+   says "these belong together", and it lets the cards inside read as sheets
+   laid on paper rather than panels sunk into it.
    ============================================================ */
 
 .dash-today { position: relative; }
 @media (min-width: 1180px) {
-  .dash-today {
-    background:
-      linear-gradient(var(--rule-2) 1px, transparent 1px) 0 0 / 100% 1.9rem,
-      var(--sunken);
+  /* squared paper: the horizontal and vertical rules of a 田字格 workbook, at a
+     weight that stays behind the content rather than competing with it */
+  .dash-today, .dash-side {
+    padding: .55rem; border-radius: 12px;
+    border: 1px solid var(--rule-2); background-color: transparent;
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--rule) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--rule) 55%, transparent) 1px, transparent 1px);
+    background-size: 100% 1.15rem, 1.15rem 100%;
     background-clip: padding-box;
   }
-  .dash-today::before {
-    content: ""; position: absolute; top: .4rem; bottom: .4rem; left: 1.35rem;
-    width: 1px; background: var(--seal); opacity: .16; pointer-events: none;
-  }
+
+  /* a spread needs a gutter wide enough to put a fold in */
+  .dash-today { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: .9rem; }
   .dash-today > .dash-col { position: relative; }
-  /* the two holes a ring binder would punch */
-  .dash-today::after {
-    content: ""; position: absolute; left: .52rem; top: 22%; width: 7px; height: 7px;
-    border-radius: 50%; background: var(--paper);
-    box-shadow: 0 0 0 1px var(--rule-2), 0 11rem 0 var(--paper), 0 11rem 0 1px var(--rule-2);
+
+  /* the fold, down the middle of the gutter */
+  .dash-today > .dash-col:nth-child(2)::before {
+    content: ""; position: absolute; top: .15rem; bottom: .15rem;
+    left: calc(-.45rem - .5px); width: 1px;
+    background: var(--seal); opacity: .18; pointer-events: none;
+  }
+  /* and the two holes a ring binder would punch through it */
+  .dash-today > .dash-col:nth-child(2)::after {
+    content: ""; position: absolute; left: calc(-.45rem - 3px); top: 22%;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--paper);
+    box-shadow: 0 0 0 1px var(--rule), 0 11rem 0 var(--paper), 0 11rem 0 1px var(--rule);
     pointer-events: none;
   }
-  .dash-today > .dash-col:first-child { margin-left: .9rem; }
+
+  /* Paper you can't see isn't paper. With the cards left as opaque sheets the
+     graph only showed in the 9px of padding round them, which is a texture on
+     a frame and not a page. Inside these two enclosures the cards give up
+     their fill and their border: the paper is the ground, and the fold is
+     what separates the left leaf from the right. */
+  .dash-today > .dash-col > *, .dash-side > * {
+    background: transparent; border-color: transparent; box-shadow: none;
+  }
+  /* the things actually written on the paper keep their own ground — the
+     decks are left out on purpose, because their fill is the ramp */
+  .dash-today .lc, .dash-today .today-all, .dash-side .wotw-word {
+    background-color: var(--sheet);
+  }
+
+  /* The side rail is now an enclosure of its own, with the same border and
+     padding, so its first card starts on the line the enclosure's first card
+     starts on. That is what the old `padding-top: calc(.55rem + 1px)` was
+     faking; it is real geometry now. */
+  .dash-side > :first-child { margin-top: 0; }
 }
 
 /* ---------- the day's characters ---------- */

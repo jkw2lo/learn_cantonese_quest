@@ -10,6 +10,9 @@ This file is the list. Each entry says what changed, why it changed, and where
 it lives, with a note where Hanzi Quest needs it done differently.
 
 **Nothing here has been applied to Hanzi Quest.** It is untouched at `69a0039`.
+One entry — #14, "Study ahead" — is a **bug** and not a preference: the same
+line is live in Hanzi Quest at `js/app.js:2796`, where it is quietly rewriting
+the "new characters a day" setting every time someone clicks the button.
 
 ---
 
@@ -202,13 +205,69 @@ the `.today-all` panel inside `.dash-today`, and the arrow handlers;
 
 ---
 
-### 9 · The enclosure reads as a notebook page
+### 9 · The two blocks are an open notebook, not a page
 
-Ruled lines, a vermilion margin rule down the left, and two binder holes. Cheap
-— three CSS rules and no markup — and it is what makes the grouping read as one
-page rather than two cards that happen to share a border.
+The first attempt gave the enclosure ruled lines, a vermilion margin rule down
+the **far left**, and two binder holes beside it. That reads as one page with
+two columns printed on it — but they are not two columns, they are two facing
+leaves: the day's characters on the left, the day's practice on the right. So
+the margin rule and the holes move into the **gutter between them**, where the
+fold of a real spread is, and the horizontal rules become **squared paper** —
+the paper Chinese writing practice actually happens on.
 
-**Where:** `css/app.css` — `.dash-today` background, `::before`, `::after`.
+Three things had to be true together, and each was measured:
+
+1. **The side rail is an enclosure of its own** — same 1px border, same
+   `.55rem` of padding, same paper. That is what makes its first card start on
+   the line the enclosure's first card starts on, and it replaces the
+   `padding-top: calc(.55rem + 1px)` that was faking the same result. Measured
+   after: both enclosures `87→558`, all four inner blocks `97→548`.
+
+2. **Both enclosures are colourless.** The `--sunken` tint has come off. The
+   texture alone says "these belong together", and it lets the cards inside
+   read as sheets laid on paper rather than panels sunk into it.
+
+3. **The cards inside give up their fill and their border.** This is the one
+   that matters and the one that is easy to skip: with the cards left opaque,
+   the paper only showed in the 9px of padding around them, which is a texture
+   on a frame and not a page. Only `.lc`, `.today-all` and `.wotw-word` keep a
+   ground of their own, because they are the things *written on* the paper.
+
+**Where:** `css/app.css` — the `.dash-today, .dash-side` block, the two
+`.dash-col:nth-child(2)` pseudo-elements, and the transparency rule. The gutter
+widens from `.55rem` to `.9rem`, because a fold needs room; the fold sits at
+`calc(-.45rem - .5px)` and the holes at `calc(-.45rem - 3px)`, both measured
+against the real gutter centre rather than guessed.
+
+Nothing below 1180px changes — the enclosure only exists at that breakpoint, so
+the narrow layouts keep their ordinary cards.
+
+---
+
+### 9a · The flashcard decks are one hue at three depths
+
+Three decks in three unrelated hues — gold, jade, vermilion — said nothing.
+The decks are not unrelated: today's characters are a handful, everything you
+know is more, and the words those characters make is more again. One hue at
+three strengths makes the ramp itself the information — the deck gets darker as
+it gets bigger.
+
+    .decks .deck        jade  6% into --sheet
+    .decks .deck-all    jade 15%
+    .decks .deck-words  jade 24%
+
+**Watch the caption contrast.** The ramp costs `--ink-3` its legibility on the
+deepest rung: measured 2.5:1 in light and 2.2:1 in dark, both well under 4.5.
+Two changes fix it — `.decks .deck-text small` moves up to `--ink-2`, and the
+deepest rung eases from 27% to 24%. Measured after, dark mode: `6.58 / 5.49 /
+4.53`; light: `6.98 / 6.24 / 5.54`. Background luminance still ramps cleanly
+(`.023 → .038 → .057` dark, `.874 → .775 → .683` light), so the ramp survives
+the accessibility fix rather than being flattened by it.
+
+The deepest card face also needs `background: var(--sheet)` put back, or it
+disappears into the ground it sits on.
+
+**Where:** `css/app.css` — `.decks .deck`, `.deck-all`, `.deck-words`.
 
 ---
 
@@ -295,6 +354,38 @@ and fails the run. (`tools/check-jyutping.mjs`.)
 
 ---
 
+### 14 · "Study ahead" must not rewrite the setting
+
+A real bug, and Hanzi Quest has the same line.
+
+    $("#aheadBtn")...  state.goalNew += 5; save(); startSession();
+
+`goalNew` is the **standing setting** — "new characters a day", the one the
+settings stepper shows. So one click on a Tuesday quietly made every day after
+it a ten-character day; the stepper read 10 with nobody having touched it, and
+clicking again made it 15. What the button means is "give me more *today*".
+
+The fix keeps the extra on the day, where it dies with the day:
+
+    const aheadToday = () => (state.days[dayKey()] || {}).ahead || 0;
+    function studyAhead(n) { const t = today(); t.ahead = (t.ahead || 0) + n; save(); }
+    const dayGoal = () => state.goalNew + aheadToday();
+
+Then three call sites move from `state.goalNew` to `dayGoal()`: the session
+deal (`nextNew`), the `newLeft` the hero counts down, and the button handler.
+
+**`goalMet()` deliberately stays on `state.goalNew`.** Asking for five more
+characters is extra credit, and extra credit must not take back a day you had
+already finished — or the streak that came with it.
+
+**Where:** `js/srs.js` — after `extraToday`, and the comment on `goalMet()`;
+`js/app.js` — `buildSession()`, `renderToday()`, the `#aheadBtn` handler;
+`tools/smoke.mjs` — six checks under "studying ahead: today only", including
+one that the extra does not appear on tomorrow's record and one that a finished
+day is still finished after asking for more.
+
+---
+
 ## Do not port these
 
 Cantonese-specific, and wrong for Hanzi Quest:
@@ -321,6 +412,9 @@ Cantonese-specific, and wrong for Hanzi Quest:
 
 ## Suggested order
 
+0. **The "Study ahead" fix (#14)** — first, because it is the only entry
+   here that is a bug rather than a preference, and every day it is left in
+   place it corrupts a setting the user never touched.
 1. **Fraunces `WONK`** — one line, immediate, affects every heading.
 2. **Reference glosses** — self-contained, and the menu quest needs it most.
 3. **Heading convention** — mechanical, and the glosses have to land first so

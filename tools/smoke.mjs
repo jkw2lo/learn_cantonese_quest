@@ -22,6 +22,7 @@ const CONTRACT = [
   'dueList', 'dueCount', 'nextNew', 'remainingNew', 'stageProgress', 'currentStage',
   'skillStanding', 'passesIn', 'PASSES_FOR_SOLID', 'reviewedToday', 'resetProgress',
   'tallyExtra', 'extraToday', 'extraTotal', 'extraBestDay', 'dayReps',
+  'studyAhead', 'aheadToday', 'dayGoal', 'goalMet',
   'placeKnown', 'wasPlaced', 'PLACE_MISS_LIMIT', 'PLACED_REST',
   'wordOfWeek', 'weekKey', 'INTERESTS', 'INTEREST_KEYS', 'shownIn', 'shuffle',
   'FESTIVALS', 'festivalThisWeek', 'festivalDate', 'wotwEntry',
@@ -685,6 +686,44 @@ ok('no key outlives the reset', !strays.length, strays.join(' '));
 const stored = JSON.parse(globalThis.localStorage.getItem('cantonese-quest-v1'));
 ok('and the stored copy matches', !Object.keys(stored).some(k => !(k in api.blank())));
 ok('the tour is due again', fresh.tour === false);
+
+/* ---------- studying ahead ----------
+
+   The bug this pins: "Study ahead — 5 more characters" did `goalNew += 5`,
+   which is the standing setting. One click on a Tuesday made every day after
+   it a ten-character day, and the settings stepper read 10 with nobody having
+   touched it. */
+
+console.log('\nstudying ahead: today only');
+{
+  const a = new Function(
+    read('js/data.js') + '\n' + read('js/srs.js') + '\n' +
+    'return {state,load,blank,save,today,dayKey,studyAhead,aheadToday,dayGoal,goalMet,nextNew,introduce,tally,remainingNew};')();
+  globalThis.localStorage._d = {}; a.load();
+
+  const base = a.state.goalNew;
+  ok('the day starts on the standing goal', a.dayGoal() === base);
+  a.studyAhead(5);
+  ok('asking for more deals more today', a.dayGoal() === base + 5);
+  ok('but the setting is untouched', a.state.goalNew === base);
+  a.studyAhead(5);
+  ok('and twice is still the setting', a.state.goalNew === base && a.dayGoal() === base + 10);
+
+  /* tomorrow: the same record, read on a different day */
+  const d = a.dayKey();
+  const tomorrow = new Date(d + 'T12:00:00');
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const k2 = a.dayKey(tomorrow);
+  ok('the extra belongs to the day it was asked for',
+     !(a.state.days[k2] && a.state.days[k2].ahead));
+
+  /* and a finished day stays finished */
+  globalThis.localStorage._d = {}; a.load();
+  a.nextNew(a.state.goalNew).forEach(c => { a.introduce(c); a.tally('new'); });
+  const was = a.goalMet();
+  a.studyAhead(5);
+  ok('a day that was done is still done after asking for more', was && a.goalMet() === was);
+}
 
 /* ---------- sprint ----------
 

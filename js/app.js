@@ -1004,7 +1004,7 @@ function startRepair(chars) {
 
 function buildSession() {
   const due = dueList();
-  const fresh = nextNew(state.goalNew);
+  const fresh = nextNew(dayGoal());
   const items = [];
   const reviews = due.map(c => ({ t: "drill", c, kind: drillKind(c) }));
   let r = 0;
@@ -2673,7 +2673,7 @@ function renderToday() {
   const due = dueCount();
   const got = learnedToday();
   const revd = reviewedToday();
-  const newLeft = Math.max(0, Math.min(state.goalNew, remainingNew()) - t.new);
+  const newLeft = Math.max(0, Math.min(dayGoal(), remainingNew()) - t.new);
   /* Characters on both sides of this fraction. `newLeft` and `due` count
      characters, so measuring what's done in answers made the ring run ahead
      of the queue beside it — a character answered four times is one character
@@ -2997,7 +2997,8 @@ function renderToday() {
     renderToday();
   });
   $("#startBtn")?.addEventListener("click", startSession);
-  $("#aheadBtn")?.addEventListener("click", () => { state.goalNew += 5; save(); startSession(); });
+  /* today only — the setting is not the place to record "one more round" */
+  $("#aheadBtn")?.addEventListener("click", () => { studyAhead(5); startSession(); });
   $("#deckToday")?.addEventListener("click", () => openFlash(got, "Today's characters"));
   $("#deckAll")?.addEventListener("click", () => openFlash(all, "All characters"));
   $("#deckWords")?.addEventListener("click", () => openFlash(combos, "Words you can read"));
