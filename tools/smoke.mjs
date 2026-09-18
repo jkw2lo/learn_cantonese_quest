@@ -958,18 +958,48 @@ console.log('\nsprint: the record behind the sheets');
      is person(); CSS var(--seal) is var()) and cried wolf 132 times. This
      looks only at handler bodies, which is where a dead name actually hides,
      and is exact. */
-  const HANDLER = /(?:\.onclick\s*=|addEventListener\(\s*["'][a-z]+["']\s*,)\s*(?:async\s*)?(?:\(\s*[\w$,\s]*\)|[\w$]+)?\s*=>\s*\{?\s*([A-Za-z_$][\w$]*)\s*\(/g;
+  /* The whole handler body, not just its first call.
+
+     The first version of this matched one call per handler, which is fine for
+     `onclick = () => foo()` and blind to everything after the first line of a
+     braced body. capName() was deleted along with the page it had been
+     declared next to, and the only call left to it was on line three of the
+     introduction's Next handler — so Next silently threw and the button did
+     nothing, which is precisely the bug this check exists to catch. */
+  const OPEN = /(?:\.onclick\s*=|addEventListener\(\s*["'][a-z]+["']\s*,)\s*(?:async\s*)?(?:\(\s*[\w$,\s]*\)|[\w$]+)?\s*=>\s*/g;
   const DIRECT = /\.onclick\s*=\s*([A-Za-z_$][\w$]*)\s*;/g;
   const called = new Set();
-  for (const m of appSrc.matchAll(HANDLER)) called.add(m[1]);
   for (const m of appSrc.matchAll(DIRECT)) called.add(m[1]);
+  for (const m of appSrc.matchAll(OPEN)) {
+    let i = m.index + m[0].length;
+    let body;
+    if (appSrc[i] === "{") {
+      /* walk to the matching brace so the whole body is covered */
+      let depth = 0, j = i;
+      for (; j < appSrc.length; j++) {
+        if (appSrc[j] === "{") depth++;
+        else if (appSrc[j] === "}") { depth--; if (!depth) break; }
+      }
+      body = appSrc.slice(i, j + 1);
+    } else {
+      body = appSrc.slice(i, appSrc.indexOf("\n", i) + 1 || undefined);
+    }
+    for (const c of body.matchAll(/(^|[^\w$.])([A-Za-z_$][\w$]*)\s*\(/g)) called.add(c[2]);
+  }
   /* `if` and friends open a handler body and are not calls; the rest the
      browser supplies. A name declared in srs.js counts — app.js is loaded
      after it and shares the global scope. */
   const NOT_A_CALL = new Set(['if', 'for', 'while', 'switch', 'return', 'typeof', 'await', 'catch',
-                              'setTimeout', 'clearTimeout', 'confirm', 'alert', 'fetch',
-                              'requestAnimationFrame', 'Promise', 'Object', 'Array', 'Math', 'JSON']);
-  const bundle = appSrc + sprintSrc + read('js/srs.js');
+                              'function', 'else', 'do', 'new', 'delete', 'void', 'in', 'of', 'try', 'throw',
+                              'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'confirm',
+                              'alert', 'fetch', 'requestAnimationFrame', 'Promise', 'Object', 'Array',
+                              'Math', 'JSON', 'Set', 'Map', 'Date', 'Number', 'String', 'Boolean', 'Error',
+                              'RegExp', 'KeyboardEvent', 'CustomEvent', 'Event', 'IntersectionObserver',
+                              'getComputedStyle', 'addEventListener', 'removeEventListener', 'scrollTo',
+                              'SpeechSynthesisUtterance', 'matchMedia', 'structuredClone', 'queueMicrotask']);
+  /* data.js counts too: shuffle() lives there, and app.js is loaded after all
+     three and shares the global scope with them. */
+  const bundle = appSrc + sprintSrc + read('js/srs.js') + read('js/data.js');
   const isDeclared = n => new RegExp(
     `(?:const|let|var|function)\\s+${n.replace(/\$/g, '\\$')}(?![\\w$])`).test(bundle);
   const dead = [...called].filter(n => !NOT_A_CALL.has(n) && !isDeclared(n));

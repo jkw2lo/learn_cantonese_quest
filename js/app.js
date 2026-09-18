@@ -4254,6 +4254,17 @@ function renderCoach() {
   $("#chNext").onclick = () => { if (last) closeCoach(true); else { coachAt++; renderCoach(); } };
 }
 
+/* A name is a name, so it is capitalised however it was typed.
+
+   Each word, and after a hyphen or an apostrophe too — mary-jane is Mary-Jane
+   and o'brien is O'Brien. The rest of the word is left exactly as given,
+   because lowercasing it would break McRae, DeAndre and van der Berg in the
+   name of tidiness. */
+function capName(raw) {
+  return String(raw).trim().slice(0, 40)
+    .replace(/(^|[\s\-'\u2019])(\p{L})/gu, (m, sep, first) => sep + first.toLocaleUpperCase());
+}
+
 /* ---------- 聲調 — the six tones ----------
 
    The app had six tone contours drawn next to every reading from the start
