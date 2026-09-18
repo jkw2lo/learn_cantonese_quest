@@ -2389,6 +2389,14 @@ function buildWritePage() {
                 <option value="13">very broad</option>
               </select>
             </label>
+            <label class="wp-field">Square
+              <select id="wpSquare">
+                <option value="64">small</option>
+                <option value="84" selected>medium</option>
+                <option value="116">large</option>
+                <option value="160">extra large</option>
+              </select>
+            </label>
             <label class="wp-field wp-brush">
               <select id="wpNib">
                 <option value="brush" selected>毛筆 brush</option>
@@ -2423,6 +2431,13 @@ function buildWritePage() {
 
   $("#wpPen").onchange  = e => { wp.pen = +e.target.value; wpSetPen(); };
   $("#wpNib").onchange  = e => { wp.brush = e.target.value === "brush"; wpSetPen(); };
+  /* Bigger squares mean fewer of them, so the ink has to be repainted at the
+     new geometry rather than left where the old grid put it. */
+  $("#wpSquare").onchange = e => {
+    wp.cell = +e.target.value;
+    wpClear();
+    wpSizePage();
+  };
   $("#wpClear").onclick = () => wpClear();
   $("#wpSave").onclick  = () => wpSave();
   $("#wpPad").onclick   = () => wpPad();
@@ -2507,6 +2522,14 @@ function renderPicker() {
   $$("#wpPicker [data-pick]").forEach(b => b.onclick = () => {
     wp.guide = wp.guide === b.dataset.pick ? null : b.dataset.pick;
     wpDrawGrid(); renderPicker();
+    /* Choosing a character to trace and being shown how it is written are the
+       same intention: the grey outline says what to draw and says nothing at
+       all about the order to draw it in. */
+    if (wp.guide) showStrokeOrder(wp.guide);
+  });
+  $$("#wpPicker [data-order]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    showStrokeOrder(b.dataset.order);
   });
   $("#pickClear")?.addEventListener("click", () => { wp.guide = null; wpDrawGrid(); renderPicker(); });
   const f = $("#pickFind");
@@ -2690,6 +2713,61 @@ function wpPaint(strokes, ctx, scale) {
   });
   ctx.lineWidth = flat;
   ctx.restore();
+}
+
+/* ---------- 筆順 — how it is written, over the page ----------
+
+   Picking a character to trace draws a grey outline in the squares, which
+   says what to draw and nothing whatever about the order to draw it in —
+   which is most of what makes Chinese handwriting hard to start. The same
+   click now opens the animation over the page, where it can be replayed and
+   stepped without leaving the exercise book. */
+let soWriter = null;
+
+function showStrokeOrder(c) {
+  const ch = CHAR_INDEX[c];
+  if (!ch || !drawable(c)) return;
+  const host = $("#soCard");
+  const n = (window.STROKE_DATA[c] || {}).strokes?.length || 0;
+  host.innerHTML = `
+    <div class="so-head">
+      <span class="so-id">
+        <b class="han">${esc(c)}</b>
+        <span class="so-say">${esc(ch.p)} · ${esc(ch.m)}</span>
+      </span>
+      <span class="so-n">${n} stroke${n === 1 ? "" : "s"}</span>
+      <button class="icon-btn" id="soClose" aria-label="Close">✕</button>
+    </div>
+    <div class="so-stage"><div class="tian">${TIAN_SVG}<div class="tian-slot"><div id="soMount"></div></div></div></div>
+    <div class="so-tools">
+      <button class="btn btn-ghost btn-sm" id="soPlay">↻ Again</button>
+      <button class="btn btn-ghost btn-sm" id="soStep">Step</button>
+      <button class="btn btn-sm" id="soTrace">Trace it here</button>
+    </div>
+    <p class="note so-note">Watch it through, then write it in the squares. The grey guide stays on the page.</p>`;
+  $("#soCard").className = "so-card";
+  $("#strokeOrder").classList.add("on");
+
+  soWriter = makeWriter($("#soMount"), c, { width: 190, height: 190, showCharacter: false });
+  const play = () => { soWriter?.hideCharacter(); soWriter?.animateCharacter(); };
+  setTimeout(play, 180);
+  $("#soPlay").onclick = play;
+  /* one stroke at a time, for the ones that go past too fast */
+  let at = 0;
+  $("#soStep").onclick = () => {
+    if (at === 0) soWriter?.hideCharacter();
+    if (at >= n) { at = 0; soWriter?.hideCharacter(); return; }
+    soWriter?.animateStroke(at++);
+  };
+  $("#soTrace").onclick = () => { wp.guide = c; wpDrawGrid(); renderPicker(); closeStrokeOrder(); };
+  $("#soClose").onclick = closeStrokeOrder;
+}
+
+function closeStrokeOrder() {
+  $("#strokeOrder").classList.remove("on");
+  try { soWriter?.cancelQuiz(); } catch { /* nothing running */ }
+  soWriter = null;
+  $("#soCard").innerHTML = "";
 }
 
 function wpClear() {

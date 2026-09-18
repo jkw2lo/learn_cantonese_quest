@@ -732,6 +732,14 @@ code {
 .menu-item .en .pin { font-family: var(--f-pin); }
 
 .phrase-list { display: flex; flex-direction: column; gap: .1rem; }
+/* Five phrases in one narrow column left most of the menu tab empty beside
+   them. They are short, independent lines — exactly what columns are for. */
+@media (min-width: 720px) {
+  .menu-say .phrase-list {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .1rem .9rem; align-items: start;
+  }
+}
 .phrase {
   display: flex; flex-direction: column; gap: .1rem; padding: .55rem 0;
   border-bottom: 1px solid var(--rule-2); background: none; border-left: 0; border-right: 0; border-top: 0;
@@ -2798,3 +2806,72 @@ button.tier-head:hover { border-color: var(--ink-3); }
 
 /* the honest scope of the radicals page, said where the count is */
 .rad-scope { margin: 0 0 .2rem; font-size: .78rem; line-height: 1.55; max-width: 52rem; }
+
+/* ============================================================
+   A sheet answered with 1 2 3 4
+
+   The keys are laid out in a row and the options were laid out in a column,
+   so every answer was a small translation: "the third one down is 3". Four
+   across makes the mapping the same shape as the keyboard, and the number
+   sits above its own option rather than beside it.
+   ============================================================ */
+
+@media (min-width: 760px) {
+  /* the run needs the width before the options can have it */
+  .sp-inner { max-width: 54rem; }
+
+  .sp-opts, .sp-opts.grid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sp-opts .sp-opt {
+    flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; gap: .3rem; padding: .85rem .5rem .7rem;
+    min-height: 5.4rem; font-size: .88rem; line-height: 1.3;
+  }
+  /* the key number is the label of the option, so it sits over it, not in a
+     corner where it reads as a footnote */
+  .sp-opts .opt-n {
+    position: static; align-self: center;
+    font-size: .7rem; opacity: .75;
+  }
+  .sp-opts.grid2 .opt-n, .sp-opts.grid3 .opt-n { position: static; }
+  .sp-opts .sp-opt .big { font-size: 2.2rem; margin: 0; }
+
+  /* Spot-the-character deals six, not four, and 2 x 3 already matches the
+     way a hand finds 1-6 on the row. It keeps its own grid. */
+  .sp-opts.grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ============================================================
+   筆順 over the exercise book
+
+   A grey outline in the squares says what to draw and nothing about the order
+   to draw it in, which is most of what makes starting Chinese handwriting
+   hard. Picking a character now shows it being written, over the page rather
+   than instead of it.
+   ============================================================ */
+
+.stroke-order {
+  position: fixed; inset: 0; z-index: 62; display: none;
+  place-items: center; padding: 1rem;
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+}
+.stroke-order.on { display: grid; animation: rise .18s ease both; }
+.so-card {
+  width: min(22rem, 92vw); display: flex; flex-direction: column; gap: .75rem;
+  padding: 1rem 1.1rem 1.1rem; border-radius: 14px;
+  background: var(--sheet); border: 1px solid var(--rule);
+  box-shadow: var(--shadow-lift);
+}
+.so-head { display: flex; align-items: center; gap: .7rem; }
+.so-id { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
+.so-id .han { font-family: var(--f-han); font-size: 1.9rem; line-height: 1; }
+.so-say { font-size: .8rem; color: var(--ink-2); min-width: 0; }
+.so-n { margin-left: auto; font-size: .72rem; color: var(--ink-3); white-space: nowrap; }
+.so-head .icon-btn { flex: none; }
+.so-stage { display: grid; place-items: center; }
+.so-stage .tian { width: 190px; height: 190px; background: var(--paper); border-radius: 6px; }
+.so-tools { display: flex; gap: .45rem; }
+.so-tools .btn { flex: 1; }
+.so-note { margin: 0; font-size: .74rem; line-height: 1.5; }
+
+/* the square-size control sits with the nib */
+.wp-field select { min-width: 0; }

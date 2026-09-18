@@ -847,6 +847,13 @@ HQ.forEach(ch => {
    Keyed by the base form used in `comp`, and read in Cantonese.
    ============================================================ */
 
+/* `strokes` counts the FORM the card prints, not the dictionary key.
+
+   The card shows 忄 as its glyph, so "3 strokes" has to be 忄's three and not
+   心's four. Four of the seven entries whose form differs from the key already
+   did this; 食, 心 and 手 counted the key instead, so the page showed 忄 and
+   said four. `variants` carries the full form for anyone who wants it, and
+   tools/audit-strokes.mjs holds the convention from here. */
 const RADICALS = {
   "口": {form:"口", variants:"", name:"mouth", pin:"hau2", strokes:3,
     does:"Eating, drinking, speaking and shouting — and, in Cantonese above all, particles. 嘅, 咩, 呢, 嗰, 哋, 咗, 喺, 嘢 all carry it, because written Cantonese built its grammar words by putting a mouth beside a character that sounded right."},
@@ -860,7 +867,7 @@ const RADICALS = {
     does:"Anything made of wood, and the trees it came from — 杯, 茶, 閒."},
   "言": {form:"言", variants:"言 訁", name:"speech", pin:"jin4", strokes:7,
     does:"Said out loud, or written down: 講, 話, 請, 謝, 識, 該."},
-  "食": {form:"飠", variants:"食 飠", name:"food", pin:"sik6", strokes:9,
+  "食": {form:"飠", variants:"食 飠", name:"food", pin:"sik6", strokes:8,
     does:"Eating and drinking, and everything cooked — 飲, 飯."},
   "女": {form:"女", variants:"", name:"woman", pin:"neoi5", strokes:3,
     does:"Women, family relationships, and a long tail of characters that borrowed it early — 好, 媽, 姐, 妹, 婆, 安, 奶."},
@@ -870,9 +877,9 @@ const RADICALS = {
     does:"The sun, and every division of time it measures — 早, 晚, 晏, 星, 曬."},
   "月": {form:"月", variants:"", name:"moon; month", pin:"jyut6", strokes:4,
     does:"Months and moonlight. Be careful: the 月 in 有 and 朋 is really 肉 (flesh), a different part that collapsed into the same shape."},
-  "心": {form:"忄", variants:"心 忄 ⺗", name:"heart", pin:"sam1", strokes:4,
+  "心": {form:"忄", variants:"心 忄 ⺗", name:"heart", pin:"sam1", strokes:3,
     does:"Feeling and thinking, which Chinese has always put in the heart rather than the head — 快, 慢, 聽."},
-  "手": {form:"扌", variants:"手 扌", name:"hand", pin:"sau2", strokes:4,
+  "手": {form:"扌", variants:"手 扌", name:"hand", pin:"sau2", strokes:3,
     does:"Anything done with the hands. Hidden inside 我, which was once a hand holding a blade."},
   "門": {form:"門", variants:"門 门", name:"gate", pin:"mun4", strokes:8,
     does:"Doors, and what happens at them — 問, 閒."},
