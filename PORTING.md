@@ -445,6 +445,78 @@ below. It says `抄寫 Writing practice` now, and nothing else.
 
 ---
 
+### 9f · Two dead controls, and the checker that now catches them
+
+**`openMenuLesson()` never existed.** The Menu's "Learn 個" button called a
+name that appears exactly once in the repository — at the call site. Clicking
+it threw a ReferenceError and did nothing at all.
+
+**`data-speak` had no listener.** It was on the menu's five "Say it out loud"
+phrases from the start; nothing anywhere ever listened for it.
+
+Both are the same shape of bug — a control wired to nothing — and neither was
+catchable, because smoke can load `srs.js` and `data.js` (DOM-free) but not
+`app.js`. Smoke now checks that **every handler in app.js calls something that
+exists**, 34 of them.
+
+**A general "is every called name declared" scan was tried first and
+abandoned.** Scanning the raw text, prose inside string literals reads as
+calls: `o:"A person (人) with..."` is `person()`, CSS `var(--seal)` is `var()`.
+It reported 132 false positives. A version with a real string-aware scanner
+still ate code and lost declarations. Scoped to handler bodies the check is
+exact and has no false-positive surface — verify it by reverting the fix and
+watching it fail.
+
+---
+
+### 9g · The radicals page needed a way in, not more prose
+
+5222px of wall: twenty-seven cards of dense prose in one flat list, with
+nothing at the top to say what a radical *is*. Someone new to the writing
+system arrived at a reference work and was expected to know what to do with it.
+
+Three changes, none of them more text:
+
+1. **Show it.** 媽 is 女 + 馬 — the woman says what it means, the horse says how
+   it sounds, and the result is "mum", said maa1. Meaning part underlined in
+   jade, sound part in gold. That one worked example is the whole idea, and it
+   is built from the curriculum's own `comp` data rather than hand-written, so
+   it cannot drift out of step with the character it describes.
+2. **A map before the territory.** Every radical as one chip with a progress
+   bar, anchored to its card. The whole set visible at a glance, any of it one
+   click away.
+3. **Four themes instead of a flat list** — the body, people, the natural
+   world, things made and done. Hand-grouped on purpose: the traditional
+   214-radical ordering is by stroke count, which is for looking things up in a
+   paper dictionary and useless for learning what the parts mean. Anything not
+   hand-placed falls into a catch-all rather than vanishing off the page.
+
+Plus two compactions: cards go two and three across (eleven of the
+twenty-seven hold a single character, so a full-width row was mostly margin),
+with families over eight keeping the full width; and the "other shared parts"
+tail folds into a `<details>`.
+
+**5222px → 3407px**, a third shorter *while adding* the example and the map.
+
+---
+
+### 9h · Smaller things in the same pass
+
+| what | why | where |
+|---|---|---|
+| Space bar does three things in flashcards | Tap to hear, tap twice for next, hold to peek. Tap and hold cannot be told apart on keydown — keyup decides — and autorepeat must be ignored, not counted as a second press. Reset on close and on window blur or the card is stranded face-up | `flashKeyDown/Up`, `flashKeysReset`, `fkey` |
+| `5` reaches "Study the card" | It is free (`optionSet` caps at four) and only fires once the options are spent, which is when the verdict is up. It was the only button on that screen needing the mouse | `onKey`, the digit branch |
+| Tabs in four groups | Seven in a row is a list, not a structure. Hairlines on desktop; on a phone the divider is a gap, because seven tabs and three hairlines in 375px is a picket fence | `.nav-sep`, `.grp-end` |
+| A 毛筆 nib | Wide where pressed, narrow where moving — which is why 撇 and 捺 taper. No pressure to read (the trackpad synthesises coordinates, a mouse reports 0.5 forever) so speed stands in, as distance per event. Stroke points gain a third element for width; two-element points from older saved pages still replay flat | `wpWidth`, `wpDraw`, `wpPaint` |
+| The menu, whole | It was clamped to 22rem with a fade and a button that opened the same menu again in an overlay — a menu you had to ask twice to read. Columns, no clamp: 504px to 432 | `.menu-card { columns }` |
+
+**One self-inflicted bug worth recording:** the new menu-page class was named
+`.menu-head`, which already existed — the printed masthead of the standalone
+menu sheet — so the page's introduction came out centred under a 2px vermilion
+rule. Grep before naming.
+
+---
+
 ### 10 · The 正 tally has to stay in its corner
 
 `tallyRow(n, max)` draws complete marks up to `max` and then collapses to a
