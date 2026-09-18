@@ -889,6 +889,57 @@ things less well and made four dialogs into five. It stays in Settings.
 
 ---
 
+### 21a · A borrowed class name made the whole dashboard look stretched
+
+Day one looked padded out: the hero 769px tall for 340px of content, the
+practice list 679 for five short rows. It read as a layout problem and it was
+not one.
+
+`oneDeck()` marked a deck with no cards `.empty` — and `.empty` is a
+**general-purpose class elsewhere in the app**: `text-align: center;
+flex-direction: column; padding: 2.5rem 1rem`. So each of the three empty
+decks came out **159px instead of 60**, the side column was 789px of *natural*
+height, and every other block stretched to match it, because the columns are
+deliberately equal-height.
+
+Renaming the modifier to `.deck-bare` took the enclosure from **789px to
+513px** and the day-one dashboard from overflowing to fitting exactly.
+
+**This is the second class-name collision in this app** — `.menu-head` was the
+first. Grep before naming a class, and when a block looks mysteriously
+stretched, check what classes it is actually matching before adjusting the
+layout around it.
+
+---
+
+### 21b · The first run, second pass
+
+What changed after using it:
+
+- **The hello finishes.** It cut away 100ms after 好 landed. The timing is
+  taken from the real strokes now — hanzi-writer runs about 330ms a stroke —
+  so both characters finish and then there are two seconds to look at them. A
+  click skips it. It also has something to look at: the seal, two 田字格, the
+  jyutping and the gloss.
+- **The questionnaire moved inside the introduction**, straight after the
+  hello. Two questions after a greeting read as someone saying hello back; the
+  same two questions ahead of everything read as a form standing between you
+  and the app.
+- **Nothing chosen means everything.** The word of the week is purely a
+  reward, and nobody should ever meet the card that explains why it is empty.
+  Applied on save, on skip, and on load for records that already exist.
+- **The coach locks on the first run** — no ✕, the veil does not dismiss, and
+  `closeCoach()` refuses unless forced. Reopened from the `?` it closes
+  normally: someone checking one thing should not have to walk the set.
+- **The session button pulses** while the overlay points at it, with a
+  `prefers-reduced-motion` opt-out.
+- **The headline wraps rather than truncates.** `nowrap` + `text-overflow` was
+  keeping it to one line by cutting off the learner's name — "Ready when you
+  are, J…". A greeting that truncates the person it is greeting is worse than
+  one that takes two lines.
+
+---
+
 ### 22 · Three small ones
 
 | what | why | where |

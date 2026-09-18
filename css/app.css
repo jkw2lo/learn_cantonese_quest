@@ -906,7 +906,16 @@ code {
 .hero-top { display: flex; align-items: center; gap: .85rem; }
 .hero-head { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .3rem; }
 .hero-date { font-size: .74rem; color: var(--ink-3); letter-spacing: .04em; }
-.hero-title { font-family: var(--f-display); font-size: 1.45rem; line-height: 1.15; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* One line where it fits, two where it does not — never an ellipsis.
+
+   nowrap + text-overflow was keeping the headline to a line by cutting the
+   learner's name off: "Ready when you are, J…". A greeting that truncates the
+   person it is greeting is worse than one that wraps, and the longest of the
+   three greetings only needs a second line on the narrowest column. */
+.hero-title {
+  font-family: var(--f-display); font-size: 1.45rem; line-height: 1.18;
+  letter-spacing: -.02em; text-wrap: balance;
+}
 .hero-sub { font-size: .88rem; color: var(--ink-2); max-width: 30rem; line-height: 1.5; }
 
 .hero-ring { width: 74px; height: 74px; flex: none; position: relative; }
@@ -3174,3 +3183,64 @@ button.tier-head:hover { border-color: var(--ink-3); }
 /* the map says what it is: a sketch drawn to be recognised, not measured */
 .ix-map-wrap { display: flex; flex-direction: column; gap: .3rem; }
 .ix-map-cap { font-size: .68rem; color: var(--ink-3); text-align: center; }
+
+/* ---- the hello, with something to look at ---- */
+.ix-hello { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.ix-seal {
+  font-family: var(--f-han); font-size: 1.6rem; line-height: 1;
+  width: 2.6rem; height: 2.6rem; display: grid; place-items: center;
+  border-radius: 9px; background: var(--seal); color: var(--paper); margin-bottom: .9rem;
+}
+.ix-write { display: flex; gap: .6rem; }
+.ix-sq .tian { width: 104px; height: 104px; background: var(--paper); border-radius: 8px; border: 1px solid var(--rule-2); }
+.ix-say { font-family: var(--f-pin); font-size: 1.45rem; color: var(--jade); margin: .9rem 0 0; letter-spacing: .02em; }
+.ix-mean { margin: 0; font-size: .8rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .14em; }
+.ix-lede { margin: .8rem 0 0; font-size: .88rem; line-height: 1.6; color: var(--ink-2); }
+.ix-cta {
+  margin: 1rem 0 0; font-size: .82rem; color: var(--ink-3);
+  opacity: 0; transition: opacity .5s ease;
+}
+.ix-cta.on { opacity: 1; }
+.ix-cta span { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
+.intro-card.stage-0 { cursor: pointer; }
+
+/* ---- who you are ---- */
+.ix-me { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem; }
+@media (min-width: 780px) { .ix-me { grid-template-columns: 15rem minmax(0, 1fr); align-items: start; } }
+.ix-name { display: flex; flex-direction: column; gap: .35rem; }
+.ix-name input { width: 100%; }
+.ix-ints { display: flex; flex-direction: column; gap: .4rem; }
+.ix-int-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .4rem; }
+.ix-ints .note { margin: .1rem 0 0; }
+
+/* ---- the coach, when there is no way out but through ---- */
+.coach.locked .coach-veil { cursor: default; }
+
+/* the one button the overlay is pointing at asks to be pressed */
+.btn.pulse { position: relative; }
+.btn.pulse::after {
+  content: ""; position: absolute; inset: -3px; border-radius: inherit;
+  border: 2px solid var(--seal); opacity: 0;
+  animation: ring 2.1s ease-out infinite; pointer-events: none;
+}
+@keyframes ring {
+  0%   { transform: scale(1);    opacity: .55; }
+  70%  { transform: scale(1.06); opacity: 0; }
+  100% { transform: scale(1.06); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn.pulse::after { animation: none; opacity: .4; }
+  .ix-cta span { animation: none; }
+}
+
+/* An empty deck is a deck, not an empty-state panel.
+
+   oneDeck() marked these `.empty`, which is a general-purpose class elsewhere
+   in the app — text-align: center, flex-direction: column, and 2.5rem of
+   padding. So on day one each of the three decks came out 159px tall instead
+   of 60, the side column was 789px of natural height, and every other block
+   on the dashboard stretched to match it. The stretching was the symptom; a
+   borrowed class name was the cause. */
+.deck-bare { opacity: .55; }
+.deck-bare .deck-go { visibility: hidden; }

@@ -3138,7 +3138,7 @@ function renderToday() {
     </div>
     <div class="hero-cta">
       ${newLeft + due > 0
-        ? `<button class="btn btn-seal btn-lg btn-block" id="startBtn">${done > 0 ? "Continue today's session" : "Start today's session"}</button>`
+        ? `<button class="btn btn-seal btn-lg btn-block pulse" id="startBtn">${done > 0 ? "Continue today's session" : "Start today's session"}</button>`
         : (remainingNew()
             ? `<button class="btn btn-ghost btn-lg btn-block" id="aheadBtn">Study ahead — ${Math.min(5, remainingNew())} more characters</button>`
             : "")}
@@ -3170,7 +3170,7 @@ function renderToday() {
   /* ---- both decks, together ---- */
   const all = knownChars();
   const oneDeck = (id, deck, title, sub, tone, face, empty) => `
-    <button class="deck deck-${tone} ${deck.length ? "" : "empty"}" id="${id}" ${deck.length ? "" : "disabled"}>
+    <button class="deck deck-${tone} ${deck.length ? "" : "deck-bare"}" id="${id}" ${deck.length ? "" : "disabled"}>
       <span class="deck-cards" aria-hidden="true">
         <span class="dc dc3"></span>
         <span class="dc dc2"></span>
@@ -3904,7 +3904,7 @@ function closeIntro(thenCoach) {
   $("#intro").hidden = true;
   document.body.style.overflow = "";
   $("#introCard").innerHTML = "";
-  if (thenCoach) setTimeout(() => openCoach(0), 320);
+  if (thenCoach) setTimeout(() => openCoach(0, true), 320);
 }
 
 function renderIntro() {
@@ -3915,26 +3915,107 @@ function renderIntro() {
   if (introAt === 0) {
     card.innerHTML = `
       <div class="ix-hello">
-        <div class="ix-write"><div id="ixW1"></div><div id="ixW2"></div></div>
-        <h1>nei5 hou2</h1>
-        <p>Hello. You are about to learn to read a language that 85 million people speak
+        <div class="ix-seal han">粵</div>
+        <div class="ix-write">
+          <div class="ix-sq"><div class="tian">${TIAN_SVG}<div class="tian-slot"><div id="ixW1"></div></div></div></div>
+          <div class="ix-sq"><div class="tian">${TIAN_SVG}<div class="tian-slot"><div id="ixW2"></div></div></div></div>
+        </div>
+        <h1 class="ix-say">nei5 hou2</h1>
+        <p class="ix-mean">hello</p>
+        <p class="ix-lede">You are about to learn to read a language <b>85 million</b> people speak
            and almost no course teaches.</p>
+        <p class="ix-cta" id="ixOn">Let's begin <span>→</span></p>
       </div>`;
-    /* 你好 written out, which is both the greeting and the first thing the app
-       will teach — the animation is the product demonstrating itself */
+
+    /* 你好 written out — the greeting, and the first thing the app will teach.
+       The animation is the product demonstrating itself.
+
+       Timed off the real strokes rather than a guessed delay: hanzi-writer
+       runs about 320ms a stroke plus a pause between them, so a 7-stroke 你
+       and a 6-stroke 好 need a little over four seconds between them. The
+       first version cut to the next screen 100ms after 好 finished, which is
+       the one moment you actually want to sit and look at it. */
+    const pace = ch => ((window.STROKE_DATA[ch] || {}).strokes || []).length * 330 + 400;
     const mk = (id, ch, delay) => {
-      const w = makeWriter($("#" + id), ch, { width: 96, height: 96, showCharacter: false, showOutline: true });
+      const w = makeWriter($("#" + id), ch, { width: 104, height: 104, showCharacter: false, showOutline: true });
       setTimeout(() => w && w.animateCharacter(), delay);
       return w;
     };
-    mk("ixW1", "你", 260);
-    mk("ixW2", "好", 1500);
-    setTimeout(() => { if (introAt === 0 && !$("#intro").hidden) { introAt = 1; renderIntro(); } }, 3600);
+    const t1 = 420, t2 = t1 + pace("你");
+    mk("ixW1", "你", t1);
+    mk("ixW2", "好", t2);
+    const done = t2 + pace("好");
+    /* both finished, then two seconds to take it in */
+    setTimeout(() => { if (introAt === 0 && !$("#intro").hidden) $("#ixOn")?.classList.add("on"); }, done);
+    const on = () => { if (introAt === 0 && !$("#intro").hidden) { introAt = 1; renderIntro(); } };
+    setTimeout(on, done + 2100);
+    /* and a way past it for anyone who has seen it before */
+    card.onclick = () => { if (introAt === 0) on(); };
     return;
   }
 
-  /* ---- 1. what Cantonese is ---- */
+  /* ---- 1. who you are ----
+
+     Inside the introduction rather than as a sheet before it. Two questions
+     after a hello reads as someone saying hello back; the same two questions
+     ahead of everything read as a form standing between you and the app. */
   if (introAt === 1) {
+    const chosen = new Set(state.interests || []);
+    card.innerHTML = `
+      <div class="ix-top-text">
+        <span class="eyebrow">Before we start ${hanLabel("關於你")}</span>
+        <h2>Who are we talking to?</h2>
+        <p>Both optional. Your name is only ever used to say hello; what you pick below chooses the one
+          real word you get each week, and nothing else.</p>
+      </div>
+      <div class="ix-me">
+        <label class="ix-name">
+          <span class="eyebrow">Your name ${hanLabel("名字")}</span>
+          <input type="text" id="ixName" class="search" maxlength="40" placeholder="What should we call you?"
+            value="${esc(state.name || "")}" autocomplete="given-name">
+        </label>
+        <div class="ix-ints">
+          <span class="eyebrow">What are you into? ${hanLabel("興趣")}</span>
+          <div class="int-grid ix-int-grid">
+            ${INTEREST_KEYS.map(k => {
+              const it = INTERESTS[k];
+              return `<button class="int ${chosen.has(k) ? "on" : ""}" data-int="${esc(k)}" aria-pressed="${chosen.has(k)}">
+                <span class="int-icon">${esc(it.icon)}</span>
+                <span class="int-body"><b>${esc(it.name)}</b><span class="han">${esc(it.zh)}</span></span>
+              </button>`;
+            }).join("")}
+          </div>
+          <p class="note dim">Pick none and you get all of them, which is a perfectly good answer.</p>
+        </div>
+      </div>
+      <div class="ix-foot">
+        <span class="ix-dots">${[1, 2, 3].map(i => `<span class="${i === 1 ? "on" : ""}"></span>`).join("")}</span>
+        <button class="btn btn-seal btn-lg" id="ixNext">Next</button>
+      </div>`;
+    $$(".ix-int-grid .int", card).forEach(b => b.onclick = () => {
+      const k = b.dataset.int;
+      if (chosen.has(k)) chosen.delete(k); else chosen.add(k);
+      b.classList.toggle("on", chosen.has(k));
+      b.setAttribute("aria-pressed", chosen.has(k));
+    });
+    $("#ixNext").onclick = () => {
+      state.name = capName($("#ixName").value);
+      const next = [...chosen];
+      if ((state.interests || []).join() !== next.join()) state.wotw = null;
+      /* Nothing chosen means everything: the word of the week is the reward
+         for turning up and it must never be a box explaining why it is
+         empty. */
+      state.interests = next.length ? next : [...INTEREST_KEYS];
+      state.profiled = true;
+      save();
+      introAt = 2; renderIntro(); card.scrollTop = 0;
+    };
+    setTimeout(() => $("#ixName")?.focus(), 120);
+    return;
+  }
+
+  /* ---- 2. what Cantonese is ---- */
+  if (introAt === 2) {
     card.innerHTML = `
       <div class="ix-top">
         <div class="ix-top-text">
@@ -3981,14 +4062,14 @@ function renderIntro() {
       </div>
 
       <div class="ix-foot">
-        <span class="ix-dots">${[1, 2].map(i => `<span class="${i === 1 ? "on" : ""}"></span>`).join("")}</span>
+        <span class="ix-dots">${[1, 2, 3].map(i => `<span class="${i === 2 ? "on" : ""}"></span>`).join("")}</span>
         <button class="btn btn-seal btn-lg" id="ixNext">Next</button>
       </div>`;
-    $("#ixNext").onclick = () => { introAt = 2; renderIntro(); card.scrollTop = 0; };
+    $("#ixNext").onclick = () => { introAt = 3; renderIntro(); card.scrollTop = 0; };
     return;
   }
 
-  /* ---- 2. how the app teaches it ---- */
+  /* ---- 3. how the app teaches it ---- */
   const first = !state.started;
   card.innerHTML = `
     <div class="ix-top-text ix-method-head">
@@ -4026,7 +4107,7 @@ function renderIntro() {
     </div>
 
     <div class="ix-foot">
-      <span class="ix-dots"><span></span><span class="on"></span></span>
+      <span class="ix-dots"><span></span><span></span><span class="on"></span></span>
       <button class="btn btn-seal btn-lg" id="ixNext">${first ? "Show me the page" : "Done"}</button>
     </div>`;
   $("#ixNext").onclick = () => {
@@ -4067,17 +4148,26 @@ const COACH = [
 ];
 
 let coachAt = 0;
+/* On the first run there is no way out but through: Back and Next, and the
+   last Next finishes it. Reopened later from the ?, it closes like anything
+   else — someone checking one thing should not have to walk the whole set. */
+let coachLocked = false;
 
-function openCoach(i = 0) {
+function openCoach(i = 0, locked = false) {
   if (view !== "today") go("today");
   coachAt = i;
+  coachLocked = locked;
   $("#coach").hidden = false;
+  $("#coach").classList.toggle("locked", locked);
   document.body.style.overflow = "hidden";
   renderCoach();
 }
 
-function closeCoach() {
+function closeCoach(force) {
+  if (coachLocked && !force) return;
+  coachLocked = false;
   $("#coach").hidden = true;
+  $("#coach").classList.remove("locked");
   document.body.style.overflow = "";
 }
 
@@ -4090,7 +4180,7 @@ function renderCoach() {
   /* A step whose target is not on screen — the flashcards column is stacked
      away on a narrow layout — is skipped rather than pointed at nothing. */
   if (!el || !el.getBoundingClientRect().width) {
-    if (last) return closeCoach();
+    if (last) return closeCoach(true);
     coachAt++; return renderCoach();
   }
 
@@ -4103,7 +4193,7 @@ function renderCoach() {
       <span class="ch-n">${step.n}</span>
       <span class="ch-k han">${esc(step.k)}</span>
       <b>${esc(step.title)}</b>
-      <button class="icon-btn" id="chX" aria-label="Close">✕</button>
+      ${coachLocked ? "" : `<button class="icon-btn" id="chX" aria-label="Close">✕</button>`}
     </div>
     <p>${esc(step.body)}</p>
     <div class="ch-foot">
@@ -4122,9 +4212,9 @@ function renderCoach() {
   top = Math.max(12, Math.min(top, innerHeight - ch - 12));
   card.style.cssText = `left:${left}px; top:${top}px; width:${cw}px`;
 
-  $("#chX").onclick = closeCoach;
+  $("#chX")?.addEventListener("click", () => closeCoach());
   $("#chBack").onclick = () => { if (coachAt) { coachAt--; renderCoach(); } };
-  $("#chNext").onclick = () => { if (last) closeCoach(); else { coachAt++; renderCoach(); } };
+  $("#chNext").onclick = () => { if (last) closeCoach(true); else { coachAt++; renderCoach(); } };
 }
 
 /* ---------- 入門 — the getting-started page ----------
@@ -4204,7 +4294,7 @@ function renderStart() {
      the end of the nav now and is read when something stops making sense.
      The introduction overlay is what stands between a new learner and the
      app, and it gates by having nothing else to click. */
-  $("#stGo").onclick = () => openIntro(1);
+  $("#stGo").onclick = () => openIntro(2);
 }
 
 /* ---------- 聲調 — the six tones ----------
@@ -4651,7 +4741,7 @@ function openSettings() {
   $("#profileBtn").onclick = () => openProfile(false);
   $("#placeBtn").onclick = () => { closeSheet(); setTimeout(openPlacement, 250); };
   $("#tourBtn").onclick = () => { closeSheet(); setTimeout(() => startTour(true), 250); };
-  $("#introBtn").onclick = () => { closeSheet(); setTimeout(() => openIntro(1), 250); };
+  $("#introBtn").onclick = () => { closeSheet(); setTimeout(() => openIntro(2), 250); };
   $("#resetBtn").onclick = async () => {
     const pages = (await diaryAll()).length;
     if (!await askConfirm({
@@ -5116,13 +5206,13 @@ function openProfile(firstRun) {
     b.classList.toggle("on", chosen.has(k));
     b.setAttribute("aria-pressed", chosen.has(k));
   });
-  $("#pfSkip").onclick = () => { state.profiled = true; save(); closeSheet(); maybeOpenIntro(); };
+  $("#pfSkip").onclick = () => { state.profiled = true; ensureInterests(); closeSheet(); maybeOpenIntro(); };
   $("#pfSave").onclick = () => {
     state.name = capName($("#pfName").value);
     const next = [...chosen];
     /* a changed interest set invalidates a pick that may no longer be in it */
     if ((state.interests || []).join() !== next.join()) state.wotw = null;
-    state.interests = next;
+    state.interests = next.length ? next : [...INTEREST_KEYS];
     state.profiled = true;
     save();
     closeSheet();
@@ -5156,7 +5246,14 @@ function closePlacement() {
   $("#place").classList.remove("on");
   document.body.style.overflow = "";
   renderAll();
-  maybeOfferProfile();
+  afterPlacement();
+}
+
+/* On a first run the introduction takes it from here and asks the two
+   questions itself; afterwards the standalone sheet is still the way to
+   change them. */
+function afterPlacement() {
+  if (!state.started) maybeOpenIntro(); else maybeOfferProfile();
 }
 
 function placementOptions(c) {
@@ -5446,7 +5543,7 @@ async function maybeOfferPlacement() {
     yes: "Find my level", no: "Start from scratch"
   });
   if (yes) openPlacement();
-  else { state.placed = { at: 0, on: dayKey() }; save(); maybeOfferProfile(); }
+  else { state.placed = { at: 0, on: dayKey() }; save(); afterPlacement(); }
 }
 
 /* Asked once, after placement is settled, so the first run is two short
@@ -5466,6 +5563,18 @@ function maybeStartFirstRun() {
   state.tour = true;                     /* the tab tour is not part of this */
   save();
   maybeOfferPlacement();
+}
+
+/* Nobody should ever meet the word of the week's "tell the app what you're
+   interested in" placeholder. It is the one card that is purely a reward, and
+   a record that arrived without interests — an old save, or a skipped
+   question — gets all of them rather than an explanation of why it is
+   empty. */
+function ensureInterests() {
+  if (!state.interests || !state.interests.length) {
+    state.interests = [...INTEREST_KEYS];
+    save();
+  }
 }
 
 function maybeOpenIntro() {
@@ -5617,7 +5726,7 @@ function boot() {
     else if (session.active) $("#sesClose").click();
   });
   initTips();
-  $("#helpBtn").onclick = () => openCoach(0);
+  $("#helpBtn").onclick = () => openCoach(0, false);
   $("#coach").addEventListener("click", e => {
     /* the veil closes it; the card does not */
     if (e.target.classList.contains("coach-veil")) closeCoach();
@@ -5625,7 +5734,8 @@ function boot() {
   /* the overlay is anchored to real elements, so it has to follow them */
   addEventListener("resize", () => { if (!$("#coach").hidden) renderCoach(); });
   document.querySelector(".help-btn").hidden = !state.started;
-  $("#brandBtn").onclick = () => openIntro(1);
+  if (state.profiled) ensureInterests();
+  $("#brandBtn").onclick = () => openIntro(2);
   $("#intro").addEventListener("keydown", e => {
     /* nothing but Next: the stages are short and skipping them is what the
        wordmark is for, afterwards */
