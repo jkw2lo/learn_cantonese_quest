@@ -189,7 +189,7 @@ main { flex: 1; width: 100%; }
 /* mobile bottom bar */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
-  display: grid; grid-template-columns: repeat(6, 1fr);
+  display: grid; grid-template-columns: repeat(7, 1fr);
   background: color-mix(in srgb, var(--paper) 93%, transparent);
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--rule-2);
@@ -2160,3 +2160,79 @@ button.tier-head:hover { border-color: var(--ink-3); }
 }
 .wotw-copy:hover { color: var(--ink); border-color: var(--ink-3); background: var(--sunken); }
 .wotw-copy.copied { color: var(--jade); border-color: var(--jade); background: var(--jade-wash); }
+
+/* ============================================================
+   Today, as a dashboard
+
+   The page is a set of choices about what to do next, so the choices have to
+   be visible at once. On a 1280x720 laptop that is 629px below the bars; this
+   page wanted 1451, most of it the day's character strip, which grows by five
+   every day and never stopped.
+   ============================================================ */
+
+.dash { display: flex; flex-direction: column; gap: 1rem; }
+.dash-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+.dash-wide { min-width: 0; }
+
+@media (min-width: 900px) {
+  .dash { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  /* two columns: the third stacks under the second */
+  .dash-col:nth-child(3) { grid-column: 2; }
+  .dash-wide { grid-column: 1 / -1; }
+}
+@media (min-width: 1180px) {
+  .dash { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, .95fr); }
+  .dash-col:nth-child(3) { grid-column: 3; }
+  /* Go deeper is a band, not a block: it reads across the foot of the page in
+     one line rather than eating 283px of a column. */
+  .dash-wide .deeper { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; }
+  .dash-wide .deeper .note { margin: 0; }
+
+  /* The last pass of compaction, measured rather than guessed: the dashboard
+     came to 835px tall and a 1280x720 laptop has 720. Everything below is
+     padding and type scale that only the scrolling layout could afford. */
+  .dash { gap: .75rem; }
+  .dash-col { gap: .75rem; }
+  .dash .hero-top h1 { font-size: 1.45rem; line-height: 1.15; }
+  .dash .hero-cta { padding: .55rem .8rem; }
+  .dash .learned { gap: .35rem; }
+  .dash .learned-strip { max-height: 4.6rem; }
+  .dash .todo-block { padding-bottom: .5rem; }
+  .dash .todo { padding-top: .42rem; padding-bottom: .42rem; }
+  .dash .wotw { padding: .8rem .85rem .85rem; gap: .45rem; }
+  .dash .wotw .wotw-word { padding: .55rem .6rem; }
+  .dash .wotw-note { font-size: .74rem; line-height: 1.45; }
+  .dash .deeper { padding: .7rem .9rem; }
+
+  /* Column three was the tallest at 509px and the word of the week was most of
+     the slack in it — a big empty card round a two-character word, plus a hint
+     that repeats what the button already says. */
+  .dash .wotw-word { gap: .1rem; }
+  .dash .wotw-word .z { font-size: 2rem; }
+  .dash .wotw .note.dim { display: none; }
+  .dash .decks .deck-body b { font-size: .88rem; }
+  .dash .decks .deck-body small { font-size: .7rem; }
+  .dash .decks .deck { padding: .5rem .65rem; }
+  .dash-wide .deeper .pr-meter { max-width: 22rem; }
+  /* a dashboard is read, not scrolled — tighten what only padding was holding open */
+  .dash .today-card { padding: .95rem .95rem .95rem 2.6rem; gap: .75rem; }
+  .dash .decks { padding: .8rem .85rem .85rem; gap: .45rem; }
+  .dash .decks .deck { padding: .6rem .7rem; gap: .65rem; }
+  .dash .decks .deck-cards { width: 34px; height: 44px; }
+  .dash .deeper { padding-top: .2rem; }
+}
+
+/* The day's characters: two rows, then a way to see the rest. Without this one
+   clamp the block was 362px of the 629 available, on its own. */
+.learned-strip {
+  max-height: 5.2rem; overflow: hidden;
+  transition: max-height .25s ease;
+}
+.learned-strip.open { max-height: 40rem; overflow-y: auto; }
+.learned-more {
+  align-self: flex-start; margin-top: .1rem;
+  padding: .15rem .45rem; border-radius: 6px; font-size: .7rem;
+  border: 1px solid var(--rule); background: transparent; color: var(--ink-3);
+}
+.learned-more:hover { color: var(--ink); border-color: var(--ink-3); background: var(--sunken); }

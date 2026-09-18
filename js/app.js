@@ -1641,9 +1641,21 @@ function glyphs(str, target) {
 }
 
 /* How grown-up a menu you can cope with right now. */
+/* A level needs both its menu count and its overall total — see MENU_TIERS. */
 function menuTier() {
-  const k = menuProgress().known;
-  return MENU_TIERS.filter(t => k >= t.at).pop() || MENU_TIERS[0];
+  const k = menuProgress().known, all = knownChars().length;
+  return MENU_TIERS.filter(t => k >= t.at && all >= (t.by || 0)).pop() || MENU_TIERS[0];
+}
+
+/* What is actually standing between you and the next level, named. "9 more
+   characters and it gets harder" was wrong twice over when the gate was really
+   your overall total, and "harder" was the wrong word for it anyway. */
+function menuNext() {
+  const t = MENU_TIERS[menuTier().n];
+  if (!t) return null;
+  const needMenu = Math.max(0, t.at - menuProgress().known);
+  const needAll = Math.max(0, (t.by || 0) - knownChars().length);
+  return { tier: t, needMenu, needAll, more: Math.max(needMenu, needAll) };
 }
 
 function renderMenuCard(target, tall) {
@@ -2530,6 +2542,10 @@ function tallyRow(n, max = 6) {
 
 /* ---------- today ---------- */
 
+/* Whether the day's characters are showing in full. Deliberately not in the
+   record: it is a glance-state for this visit to the page, not a preference. */
+let todayOpen = false;
+
 /* Characters you actually sat down and learnt today.
 
    Placement credits happen today too — ensure() stamps `first` with today's
@@ -2679,11 +2695,13 @@ function renderToday() {
         <span class="dim" style="font-size:.76rem">${got.length} character${got.length === 1 ? "" : "s"}</span>
       </div>
       ${got.length
-        ? `<div class="learned-strip">${got.map(c => {
+        ? `<div class="learned-strip ${todayOpen ? "open" : ""}">${got.map(c => {
             const ch = CHAR_INDEX[c];
             return `<button class="lc" data-c="${esc(c)}" title="${esc(ch.m)}">
               <span class="z">${esc(c)}</span><span class="p">${esc(ch.p)}</span></button>`;
-          }).join("")}</div>`
+          }).join("")}</div>
+          ${got.length > 8 ? `<button class="learned-more" id="ltMore">${
+            todayOpen ? "Show fewer" : `Show all ${got.length}`}</button>` : ""}`
         : `<div class="learned-empty"><span class="z">空</span>
             <span>Nothing yet today. Characters you learn will collect here.</span></div>`}
     </div>
@@ -2898,23 +2916,103 @@ function renderToday() {
     </div>
   </section>`;
 
-  /* ---- the side quest ---- */
+  /* A dashboard rather than a scroll.
+
+     Everything on this page is something you glance at to decide what to do
+     next, and a page you have to scroll to see your options is a page that
+     hides half of them. On a 1280x720 laptop there are 629 pixels below the
+     bars, and this used to want 1451 — so the session button, the day's list
+     and the flashcards were never on screen together.
+
+     Three columns, and the one block that grows without bound is clamped. */
+  $("#viewToday").innerHTML = `<div class="wrap">
+    <div class="dash">
+      <div class="dash-col">${hero}</div>
+      <div class="dash-col">${todoBlock}</div>
+      <div class="dash-col">${decks}${wotw}</div>
+      <div class="dash-wide">${deeper}</div>
+    </div>
+  </div>`;
+
+  /* both answers are already computed above; latch and fire */
+  checkCheers(ready.length > 0 && stepsDone === ready.length, deepAllSolid);
+
+  $("#wotwSetup")?.addEventListener("click", () => openProfile(false));
+  $("#wotwSay")?.addEventListener("click", () => {
+    const e = wotwEntry(wk);
+    if (e) sayPhrase(e.word[0], true);
+  });
+  $("#wotwCopy")?.addEventListener("click", function () { copyText(this.dataset.copy, this); });
+  $("#wotwReveal")?.addEventListener("click", () => {
+    state.wotwShown = wk.week;
+    save();
+    const e = wotwEntry(wk);
+    if (e) sayPhrase(e.word[0], true);
+    renderToday();
+  });
+  $("#startBtn")?.addEventListener("click", startSession);
+  $("#aheadBtn")?.addEventListener("click", () => { state.goalNew += 5; save(); startSession(); });
+  $("#deckToday")?.addEventListener("click", () => openFlash(got, "Today's characters"));
+  $("#deckAll")?.addEventListener("click", () => openFlash(all, "All characters"));
+  $("#deckWords")?.addEventListener("click", () => openFlash(combos, "Words you can read"));
+  $("#ltMore")?.addEventListener("click", () => { todayOpen = !todayOpen; renderToday(); });
+  $$("#viewToday .lc").forEach(b => b.onclick = () => openChar(b.dataset.c));
+  $$("#viewToday [data-practice]").forEach(b => b.onclick = () => startPractice(b.dataset.practice));
+  $$("#viewToday [data-todo]").forEach(b => b.onclick = () => {
+    const id = b.dataset.todo;
+    if (id === "learn") return startSession();
+    const task = TODAY_TASKS.find(x => x.id === id);
+    if (!task) return;
+    if (task.copy) { openNotebook(); return; }
+    startTodayDrill(task);
+  });
+}
+
+/* The streak calendar. Each day is a practice square that fills with ink. */
+function calendar(days) {
+  const cells = [];
+  const start = new Date(); start.setDate(start.getDate() - days + 1);
+  for (let i = 0, pad = (start.getDay() + 6) % 7; i < pad; i++) cells.push(`<div class="day blank"></div>`);
+  for (let i = 0; i < days; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const k = dayKey(d), r = state.days[k], n = dayReps(r);
+    const lvl = n === 0 ? "" : n < 5 ? "f1" : n < 12 ? "f2" : n < 25 ? "f3" : "f4";
+    cells.push(`<div class="day ${lvl} ${k === dayKey() ? "today" : ""}" title="${k}: ${n} card${n === 1 ? "" : "s"}"></div>`);
+  }
+  return `<div class="cal">${cells.join("")}</div>`;
+}
+
+/* ============================================================
+   睇餐牌 — the side quest, in a tab of its own
+
+   It lived on Today, under the day's practice, where it was the fourth thing
+   on a page you already had to scroll. That is the wrong place for the part of
+   the app that is meant to be the reward: a menu you are slowly able to read
+   is something to go and look at, not something to scroll past on the way to
+   the session button.
+   ============================================================ */
+
+function renderQuest() {
   const mp = menuProgress();
   const pick2 = menuToday();
   const pch = pick2.c ? CHAR_INDEX[pick2.c] : null;
   const learnedIt = pick2.c ? isKnown(pick2.c) : true;
 
-  const sideQuest = `<div class="sheet sq">
+  const card = `<div class="sheet sq">
     <div class="sq-top">
       <span class="sq-icon">🍜</span>
       <span class="sq-name"><b>Read a Cha Chaan Teng</b><span class="zh">睇餐牌</span></span>
       <span class="sq-frac">${mp.known}/${mp.total}</span>
     </div>
     <div class="bar ${mp.done ? "gold" : ""}"><i style="width:${(mp.pct * 100).toFixed(1)}%"></i></div>
-    <p class="note">Menu level ${menuTier().n} of ${MENU_TIERS.length} — ${esc(menuTier().label.toLowerCase())}.${
-      menuTier().n < MENU_TIERS.length
-        ? ` ${MENU_TIERS[menuTier().n].at - mp.known} more character${MENU_TIERS[menuTier().n].at - mp.known === 1 ? "" : "s"} and it gets harder.`
-        : " This is a menu you could be handed in Chengdu."}</p>
+    <p class="note">Menu level ${menuTier().n} of ${MENU_TIERS.length} — ${esc(menuTier().label.toLowerCase())}.${(() => {
+      const nx = menuNext();
+      if (!nx) return " This is a menu you could be handed in Mong Kok.";
+      const bits = [];
+      if (nx.needMenu) bits.push(`${nx.needMenu} more menu character${nx.needMenu === 1 ? "" : "s"}`);
+      if (nx.needAll) bits.push(`${nx.needAll} more character${nx.needAll === 1 ? "" : "s"} overall`);
+      return ` It grows to <b>${esc(nx.tier.label.toLowerCase())}</b> after ${bits.join(" and ")}.`;
+    })()}</p>
 
     ${pch ? `<div class="sq-target ${learnedIt ? "done" : ""}">
       <span class="sq-glyph">${esc(pch.c)}</span>
@@ -2944,60 +3042,19 @@ function renderToday() {
     </div>
   </div>`;
 
-  $("#viewToday").innerHTML = `<div class="wrap">
-    <div class="cols">
-      <div class="section">${hero}${todoBlock}${deeper}${sideQuest}</div>
-      <div class="col-side">${decks}${wotw}</div>
+
+  $("#viewMenu").innerHTML = `<div class="wrap">
+    <div class="today-head">
+      <h1>The menu</h1>
+      <p class="note">A real cha chaan teng menu — a Hong Kong diner, written in the shorthand they actually use.
+        One character a day, and the ones you know ink themselves in. Nothing here is a drill and nothing here
+        is scheduled; it is what the characters are <em>for</em>.</p>
     </div>
+    ${card}
   </div>`;
 
-  /* both answers are already computed above; latch and fire */
-  checkCheers(ready.length > 0 && stepsDone === ready.length, deepAllSolid);
-
-  $("#wotwSetup")?.addEventListener("click", () => openProfile(false));
-  $("#wotwSay")?.addEventListener("click", () => {
-    const e = wotwEntry(wk);
-    if (e) sayPhrase(e.word[0], true);
-  });
-  $("#wotwCopy")?.addEventListener("click", function () { copyText(this.dataset.copy, this); });
-  $("#wotwReveal")?.addEventListener("click", () => {
-    state.wotwShown = wk.week;
-    save();
-    const e = wotwEntry(wk);
-    if (e) sayPhrase(e.word[0], true);
-    renderToday();
-  });
-  $("#startBtn")?.addEventListener("click", startSession);
-  $("#aheadBtn")?.addEventListener("click", () => { state.goalNew += 5; save(); startSession(); });
-  $("#deckToday")?.addEventListener("click", () => openFlash(got, "Today's characters"));
-  $("#deckAll")?.addEventListener("click", () => openFlash(all, "All characters"));
-  $("#deckWords")?.addEventListener("click", () => openFlash(combos, "Words you can read"));
   $("#openMenuFull")?.addEventListener("click", () => openQuest("menu"));
   $("#learnMenu")?.addEventListener("click", () => openMenuLesson(pick2.c));
-  $$("#viewToday .lc").forEach(b => b.onclick = () => openChar(b.dataset.c));
-  $$("#viewToday [data-practice]").forEach(b => b.onclick = () => startPractice(b.dataset.practice));
-  $$("#viewToday [data-todo]").forEach(b => b.onclick = () => {
-    const id = b.dataset.todo;
-    if (id === "learn") return startSession();
-    const task = TODAY_TASKS.find(x => x.id === id);
-    if (!task) return;
-    if (task.copy) { openNotebook(); return; }
-    startTodayDrill(task);
-  });
-}
-
-/* The streak calendar. Each day is a practice square that fills with ink. */
-function calendar(days) {
-  const cells = [];
-  const start = new Date(); start.setDate(start.getDate() - days + 1);
-  for (let i = 0, pad = (start.getDay() + 6) % 7; i < pad; i++) cells.push(`<div class="day blank"></div>`);
-  for (let i = 0; i < days; i++) {
-    const d = new Date(start); d.setDate(start.getDate() + i);
-    const k = dayKey(d), r = state.days[k], n = dayReps(r);
-    const lvl = n === 0 ? "" : n < 5 ? "f1" : n < 12 ? "f2" : n < 25 ? "f3" : "f4";
-    cells.push(`<div class="day ${lvl} ${k === dayKey() ? "today" : ""}" title="${k}: ${n} card${n === 1 ? "" : "s"}"></div>`);
-  }
-  return `<div class="cal">${cells.join("")}</div>`;
 }
 
 /* ---------- library ---------- */
@@ -4194,7 +4251,7 @@ function renderTour() {
    ============================================================ */
 
 let view = "today";
-const RENDER = { today: renderToday, sprint: renderSprint, library: renderLibrary,
+const RENDER = { today: renderToday, sprint: renderSprint, menu: renderQuest, library: renderLibrary,
                  write: renderWrite, radicals: renderRadicals, record: renderRecord };
 
 function go(v) {

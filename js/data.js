@@ -992,10 +992,23 @@ const MENU_CHARS = (() => {
            .map(x => x.c);
 })();
 
+/* How grown-up a menu you get handed, and when.
+
+   The first version gated on menu characters alone, and menu characters are
+   not spread evenly through the curriculum — they bunch in the Eating stage,
+   where you learn eight of them in two days. So level 2 arrived on day 8 and
+   level 3 on day 11: the whole menu went from dish names to descriptions to
+   set lunches inside a week, while the learner was fifty characters in and
+   could read thirteen of the forty-four glyphs on it. It got denser without
+   getting more readable, which is the opposite of a reward.
+
+   Each level now needs menu progress AND a total, whichever comes later. The
+   total is the part that guarantees the pacing, because it advances at exactly
+   the rate you study — five a day — and cannot bunch. */
 const MENU_TIERS = [
-  { n: 1, at: 0,  label: "Dish names only" },
-  { n: 2, at: 12, label: "With what the waiter says" },
-  { n: 3, at: 24, label: "Full menu, set lunches and all" }
+  { n: 1, at: 0,  by: 0,   label: "Dish names only" },
+  { n: 2, at: 20, by: 70,  label: "With what the waiter says" },
+  { n: 3, at: 34, by: 115, label: "Full menu, set lunches and all" }
 ];
 
 const QUESTS = [

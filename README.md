@@ -307,6 +307,49 @@ gloss — it returned 牛 as "stubborn and unreasonable" when the character on t
 menu means cow. So Unihan's `kDefinition` is the primary source and CC-Canto the
 fallback, with both put through the same trimming.
 
+## Today is a dashboard, and the menu has a tab
+
+**Today was a scroll.** Everything on it is something you glance at to decide
+what to do next, and a page you have to scroll to see your options is a page
+that hides half of them. Measured on a 1280×720 laptop: 629 pixels below the
+bars, and the page wanted **1451**. The session button, the day's list and the
+flashcards were never on screen together.
+
+It is three columns now with Go deeper as a band across the foot — it was
+described in its own code comment as a band and then given a column, where it
+ate 283px. The one block that grew without bound, the day's character strip, is
+clamped to two rows with a **Show all** underneath: at sixty characters it was
+362px on its own, more than half the screen.
+
+**766px**, down from 1451. That fits a 13" MacBook and a 1440×900; a 1280×720
+still scrolls a little, and closing that last 46px would start costing
+legibility rather than padding.
+
+## 睇餐牌 The menu, and its pacing
+
+The menu quest lived on Today, fourth on a page you already had to scroll —
+the wrong place for the part of the app that is meant to be the reward. A menu
+you are slowly able to read is something to go and look at, not something to
+scroll past on the way to the session button. It has a tab.
+
+**Its pacing was wrong, and measurably so.** Menu characters are not spread
+evenly through the curriculum — they bunch in the Eating stage, where you learn
+eight of them in two days. Gating the levels on menu progress alone meant level
+2 arrived on **day 8** and level 3 on **day 11**: dish names, then descriptions,
+then set lunches, all inside a week, while the learner was fifty characters in
+and could read thirteen of the menu's forty-four glyphs. It got denser without
+getting more readable, which is the opposite of a reward.
+
+Each level now needs menu progress **and** an overall total, whichever comes
+later. The total is what guarantees the pacing, because it advances at exactly
+the rate you study and cannot bunch:
+
+| level | needs | arrives |
+|---|---|---|
+| 1 · dish names only | — | day 1 |
+| 2 · with what the waiter says | 20 menu characters and 70 overall | day 14 |
+| 3 · full menu, set lunches | 34 menu characters and 115 overall | day 23 |
+
 ## 示範 Demo mode
 
 A toggle in **Settings** that opens every tier at once, so the Library lists all
