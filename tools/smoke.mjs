@@ -712,6 +712,38 @@ const stored = JSON.parse(globalThis.localStorage.getItem('cantonese-quest-v1'))
 ok('and the stored copy matches', !Object.keys(stored).some(k => !(k in api.blank())));
 ok('the tour is due again', fresh.tour === false);
 
+/* ---------- tones ----------
+
+   The 聲調 page states as fact that a stopped syllable — one ending p, t or k
+   — only ever carries tone 1, 3 or 6. That is a real rule of Cantonese
+   phonology (入聲 takes only the level pitches), and the page says it is true
+   of this library with no exceptions. If a word list ever contradicts it,
+   either the reading is wrong or the page is lying. */
+
+console.log('\ntones: what the 聲調 page claims');
+{
+  const toneOfP = p => +((String(p).match(/([1-6])\s*$/) || [])[1] || 0);
+  const checked = HQ.filter(c => /[ptk][1-6]\s*$/.test(c.p));
+  const tones = [...new Set(checked.map(c => toneOfP(c.p)))].sort();
+  ok('there are stopped syllables to talk about', checked.length > 10, checked.length + '');
+  ok('and every one carries tone 1, 3 or 6',
+     tones.every(t => [1, 3, 6].includes(t)),
+     checked.filter(c => ![1, 3, 6].includes(toneOfP(c.p))).map(c => c.c + ' ' + c.p).join(' '));
+
+  /* the two demonstration sets have to keep existing, with their audio */
+  const bare = p => String(p).replace(/[1-6]/g, '').trim();
+  for (const [syl, want] of [['go', [1, 2, 3]], ['maai', [4, 5, 6]]]) {
+    const got = HQ.filter(c => bare(c.p) === syl).map(c => toneOfP(c.p));
+    ok(`${syl} still covers tones ${want.join('')}`,
+       want.every(t => got.includes(t)), 'has ' + [...new Set(got)].sort().join(''));
+  }
+  const demo = ['哥', '嗰', '個', '埋', '買', '賣'];
+  ok('all six demonstration characters are taught', demo.every(c => CHAR_INDEX[c]),
+     demo.filter(c => !CHAR_INDEX[c]).join(' '));
+  const app = read('js/app.js');
+  ok('and the page is wired into the nav', /tones:\s*renderTones/.test(app));
+}
+
 /* ---------- studying ahead ----------
 
    The bug this pins: "Study ahead — 5 more characters" did `goalNew += 5`,

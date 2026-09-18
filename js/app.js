@@ -1017,11 +1017,12 @@ const REPAIR_MODE = { r: "r", d: "r", p: "l", l: "l", c: "w", s: "w", a: "w", w:
    written — the click threw a ReferenceError and the button did nothing at
    all. What it means is what the daily session does for a new character: show
    the card, then ask for it back. */
-function teachOne(c) {
+function teachOne(c, opts = {}) {
   if (!CHAR_INDEX[c]) return;
+  const menu = !!opts.menu;
   session.queue = isKnown(c)
-    ? [{ t: "intro", c }, { t: "drill", c, kind: "r" }]
-    : [{ t: "intro", c }, { t: "drill", c, kind: "r", fresh: true }];
+    ? [{ t: "intro", c, menu }, { t: "drill", c, kind: "r" }]
+    : [{ t: "intro", c, menu }, { t: "drill", c, kind: "r", fresh: true }];
   session.idx = 0;
   session.right = session.wrong = session.learned = session.reviewed = 0;
   session.combo = session.bestCombo = 0;
@@ -1189,7 +1190,13 @@ function renderStep() {
     bindCard(body, ch, wid);
     foot.innerHTML = `<button class="btn btn-block" id="gotIt">Got it — keep going</button>`;
     $("#gotIt").onclick = () => {
-      if (!isKnown(item.c)) { introduce(item.c); tally("new"); session.learned++; }
+      if (!isKnown(item.c)) {
+        introduce(item.c);
+        /* marked where it came from, and not counted against the day's goal:
+           going to the menu for a character should not shorten the session */
+        if (item.menu) rec(item.c).viaMenu = true; else { tally("new"); session.learned++; }
+        save();
+      }
       next();
     };
     setTimeout(() => say(ch.c), 340);
@@ -2389,18 +2396,18 @@ function buildWritePage() {
                 <option value="13">very broad</option>
               </select>
             </label>
+            <label class="wp-field wp-brush">
+              <select id="wpNib">
+                <option value="brush" selected>毛筆 brush</option>
+                <option value="pen">原子筆 even</option>
+              </select>
+            </label>
             <label class="wp-field">Square
               <select id="wpSquare">
                 <option value="64">small</option>
                 <option value="84" selected>medium</option>
                 <option value="116">large</option>
                 <option value="160">extra large</option>
-              </select>
-            </label>
-            <label class="wp-field wp-brush">
-              <select id="wpNib">
-                <option value="brush" selected>毛筆 brush</option>
-                <option value="pen">原子筆 even</option>
               </select>
             </label>
             <button class="btn btn-ghost btn-sm" id="wpPad">觸控 Trackpad <kbd class="opt-n">T</kbd></button>
@@ -2505,6 +2512,7 @@ function renderPicker() {
       <span class="eyebrow">Trace a character ${hanLabel("描紅")}</span>
       ${wp.guide ? `<button class="link-btn" id="pickClear">Clear <span class="han">${esc(wp.guide)}</span></button>` : ""}
     </div>
+    <div class="pick-stage" id="pickStage"></div>
     <input class="search pick-find" id="pickFind" type="search" placeholder="Find a character…" value="${esc(wp.find)}">
     <div class="pick-sorts">
       ${WP_SORTS.map(o => `<button class="filt ${wp.sort === o.id ? "on" : ""}" data-sort="${o.id}">${esc(o.label)}</button>`).join("")}
@@ -2525,11 +2533,6 @@ function renderPicker() {
     /* Choosing a character to trace and being shown how it is written are the
        same intention: the grey outline says what to draw and says nothing at
        all about the order to draw it in. */
-    if (wp.guide) showStrokeOrder(wp.guide);
-  });
-  $$("#wpPicker [data-order]").forEach(b => b.onclick = e => {
-    e.stopPropagation();
-    showStrokeOrder(b.dataset.order);
   });
   $("#pickClear")?.addEventListener("click", () => { wp.guide = null; wpDrawGrid(); renderPicker(); });
   const f = $("#pickFind");
@@ -2539,6 +2542,7 @@ function renderPicker() {
     renderPicker();
     const n = $("#pickFind"); n.focus(); n.setSelectionRange(pos, pos);
   };
+  renderPickStage();
 }
 
 function wpSizePage() {
@@ -2715,59 +2719,65 @@ function wpPaint(strokes, ctx, scale) {
   ctx.restore();
 }
 
-/* ---------- 筆順 — how it is written, over the page ----------
+/* ---------- 筆順, docked under the picker ----------
 
-   Picking a character to trace draws a grey outline in the squares, which
-   says what to draw and nothing whatever about the order to draw it in —
-   which is most of what makes Chinese handwriting hard to start. The same
-   click now opens the animation over the page, where it can be replayed and
-   stepped without leaving the exercise book. */
+   This began as a modal over the page, which is the wrong shape for it: you
+   watch the animation in order to write the character, and a dialog makes you
+   dismiss the thing you are copying before you can copy it. It lives under
+   the picker now, in one fixed place, so choosing a character fills it and it
+   stays filled while you write. */
 let soWriter = null;
 
-function showStrokeOrder(c) {
-  const ch = CHAR_INDEX[c];
-  if (!ch || !drawable(c)) return;
-  const host = $("#soCard");
-  const n = (window.STROKE_DATA[c] || {}).strokes?.length || 0;
-  host.innerHTML = `
-    <div class="so-head">
-      <span class="so-id">
-        <b class="han">${esc(c)}</b>
-        <span class="so-say">${esc(ch.p)} · ${esc(ch.m)}</span>
-      </span>
-      <span class="so-n">${n} stroke${n === 1 ? "" : "s"}</span>
-      <button class="icon-btn" id="soClose" aria-label="Close">✕</button>
-    </div>
-    <div class="so-stage"><div class="tian">${TIAN_SVG}<div class="tian-slot"><div id="soMount"></div></div></div></div>
-    <div class="so-tools">
-      <button class="btn btn-ghost btn-sm" id="soPlay">↻ Again</button>
-      <button class="btn btn-ghost btn-sm" id="soStep">Step</button>
-      <button class="btn btn-sm" id="soTrace">Trace it here</button>
-    </div>
-    <p class="note so-note">Watch it through, then write it in the squares. The grey guide stays on the page.</p>`;
-  $("#soCard").className = "so-card";
-  $("#strokeOrder").classList.add("on");
-
-  soWriter = makeWriter($("#soMount"), c, { width: 190, height: 190, showCharacter: false });
-  const play = () => { soWriter?.hideCharacter(); soWriter?.animateCharacter(); };
-  setTimeout(play, 180);
-  $("#soPlay").onclick = play;
-  /* one stroke at a time, for the ones that go past too fast */
-  let at = 0;
-  $("#soStep").onclick = () => {
-    if (at === 0) soWriter?.hideCharacter();
-    if (at >= n) { at = 0; soWriter?.hideCharacter(); return; }
-    soWriter?.animateStroke(at++);
-  };
-  $("#soTrace").onclick = () => { wp.guide = c; wpDrawGrid(); renderPicker(); closeStrokeOrder(); };
-  $("#soClose").onclick = closeStrokeOrder;
-}
-
-function closeStrokeOrder() {
-  $("#strokeOrder").classList.remove("on");
-  try { soWriter?.cancelQuiz(); } catch { /* nothing running */ }
+function renderPickStage() {
+  const host = $("#pickStage");
+  if (!host) return;
+  const c = wp.guide;
   soWriter = null;
-  $("#soCard").innerHTML = "";
+
+  if (!c) {
+    host.innerHTML = `<div class="pick-stage-empty">
+      <span class="z han">筆</span>
+      <span>Pick a character below and its stroke order plays here.</span>
+    </div>`;
+    return;
+  }
+  const ch = CHAR_INDEX[c];
+  const n = (window.STROKE_DATA[c] || {}).strokes?.length || 0;
+  if (!drawable(c)) {
+    host.innerHTML = `<div class="pick-stage-empty">
+      <span class="z han">${esc(c)}</span>
+      <span>No stroke-order data exists for this one — it was invented for Cantonese.
+        You can still trace the outline on the page.</span>
+    </div>`;
+    return;
+  }
+
+  host.innerHTML = `
+    <div class="ps-top">
+      <span class="ps-id"><b class="han">${esc(c)}</b><span>${esc(ch.p)} · ${esc(ch.m)}</span></span>
+      <span class="ps-n">${n} stroke${n === 1 ? "" : "s"}</span>
+    </div>
+    <div class="ps-box"><div class="tian">${TIAN_SVG}<div class="tian-slot"><div id="psMount"></div></div></div></div>
+    <div class="ps-tools">
+      <button class="btn btn-ghost btn-sm" id="psPlay">↻ Again</button>
+      <button class="btn btn-ghost btn-sm" id="psStep">Step <span id="psAt"></span></button>
+      <button class="btn btn-ghost btn-sm" id="psShow">Show</button>
+    </div>`;
+
+  soWriter = makeWriter($("#psMount"), c, { width: 168, height: 168, showCharacter: false });
+  const play = () => { at = 0; paint(); soWriter?.hideCharacter(); soWriter?.animateCharacter(); };
+  let at = 0;
+  const paint = () => { const el = $("#psAt"); if (el) el.textContent = at ? `${at}/${n}` : ""; };
+  setTimeout(play, 160);
+  $("#psPlay").onclick = play;
+  /* one stroke at a time, for the ones that go past too fast to copy */
+  $("#psStep").onclick = () => {
+    if (at >= n) { at = 0; soWriter?.hideCharacter(); paint(); return; }
+    if (at === 0) soWriter?.hideCharacter();
+    soWriter?.animateStroke(at++);
+    paint();
+  };
+  $("#psShow").onclick = () => { at = n; soWriter?.showCharacter(); paint(); };
 }
 
 function wpClear() {
@@ -2958,11 +2968,26 @@ const charTile = c => {
    and a practice list that wanted you to write out and pronounce every one of
    them. Being placed is not the same as having learnt them this morning, and
    `placed` is exactly the flag that tells the two apart. */
+/* The day's list is the day's *session* — the characters the schedule dealt
+   you. A menu character is a separate errand, taken on because you went and
+   asked for it, so it lands in the library and the review queue like any
+   other but stays out of today's count, today's rail and today's goal.
+   Mixing them made "5 learned" mean six, and the ring jump when you had not
+   touched the session. */
 function learnedToday() {
   const k = dayKey();
   return HQ.filter(ch => {
     const r = state.chars[ch.c];
-    return r && r.first === k && !r.placed;
+    return r && r.first === k && !r.placed && !r.viaMenu;
+  }).map(ch => ch.c);
+}
+
+/* the same day, counted the other way: what the menu quest taught */
+function menuLearnedToday() {
+  const k = dayKey();
+  return HQ.filter(ch => {
+    const r = state.chars[ch.c];
+    return r && r.first === k && r.viaMenu;
   }).map(ch => ch.c);
 }
 
@@ -3444,7 +3469,10 @@ function renderQuest() {
         <span class="t">${learnedIt ? "Today's menu character — learned" : "Today's menu character"}</span>
         <span class="m">${learnedIt ? `${esc(pch.p)} · ${esc(pch.m)}`
           : `One character a day. Find it ${onPrintedMenu(pch.c) ? "on the menu below" : "in the phrases under the menu"}.`}</span>
-        ${learnedIt ? `<span class="p">Next one tomorrow.</span>` : `<span class="p">${esc(pch.words[0][0])} · ${esc(pch.words[0][2])}</span>`}
+        ${learnedIt ? `<span class="p">Next one tomorrow. ${menuLearnedToday().length
+            ? "It sits in your reviews, not in today's list."
+            : ""}</span>`
+          : `<span class="p">${esc(pch.words[0][0])} · ${esc(pch.words[0][2])}</span>`}
       </span>
       ${!learnedIt ? `<button class="btn btn-seal sq-learn" id="learnMenu">Learn ${esc(pch.c)}</button>` : ""}
     </div>` : `<div class="sq-target done">
@@ -3487,7 +3515,7 @@ function renderQuest() {
     ${card}
   </div>`;
 
-  $("#learnMenu")?.addEventListener("click", () => teachOne(pick2.c));
+  $("#learnMenu")?.addEventListener("click", () => teachOne(pick2.c, { menu: true }));
 }
 
 /* ---------- library ---------- */
@@ -3906,7 +3934,9 @@ function renderTones() {
     <div class="sheet tn-ladder">
       <span class="eyebrow">All six in a row ${hanLabel("由高到低")}</span>
       <p class="note">Played top to bottom this is the shape of the whole system: three that start high,
-        three that start low, and within each three one level, one rising, one falling.</p>
+        three that start low, and within each three one level, one rising, one falling. Note what the two
+        halves are — <b>go</b> for 1–3 and <b>maai</b> for 4–6. Inside each trio the syllable does not change
+        at all; only the pitch does. That is the demonstration.</p>
       <div class="tn-ladder-row">
         ${TONES.map(t => {
           const ch = demo.find(c => toneOf(c.p) === t.n);
@@ -3919,6 +3949,43 @@ function renderTones() {
       </div>
       <button class="btn btn-ghost btn-sm" id="tnAll">▶ Play all six</button>
     </div>
+
+    ${(() => {
+      /* 九聲六調 — "nine sounds, six tones". A syllable that ends in p, t or k
+         is stopped short, and traditional Chinese phonology counts those as
+         tones of their own: 6 open + 3 checked = 9. They are not extra
+         pitches, which is why the modern count is six.
+
+         The three examples are numbers on purpose — 一 八 六 are taught early,
+         are easy to remember as a set, and are the three checked tones in
+         order. The claim that checked syllables only ever take 1, 3 or 6 is
+         measured from the library rather than asserted. */
+      const checked = HQ.filter(c => /[ptk][1-6]\s*$/.test(c.p));
+      const tones = [...new Set(checked.map(c => toneOf(c.p)))].sort();
+      const eg = ["一", "八", "六"].map(c => CHAR_INDEX[c]).filter(Boolean);
+      const pairA = CHAR_INDEX["識"], pairB = CHAR_INDEX["食"];
+      return `<div class="sheet tn-nine">
+        <span class="eyebrow">You will hear people say nine ${hanLabel("九聲六調")}</span>
+        <p class="note">Both counts are right, about different things. A syllable ending in <b>p</b>, <b>t</b>
+          or <b>k</b> stops dead instead of ringing on — 一 <i>jat1</i>, 八 <i>baat3</i>, 六 <i>luk6</i> — and
+          classical Chinese phonology counts those short ones separately: six open plus three stopped makes
+          <b>nine</b>. They are not three more pitches, though. They are three of the same six pitches on a
+          shorter syllable, which is why the modern count is six.</p>
+        <div class="tn-nine-row">
+          ${eg.map(c => `<button class="tn-rung" data-speak="${esc(c.c)}">
+              ${toneCurve(toneOf(c.p), 40)}
+              <span class="n">${toneOf(c.p)} · stopped</span>
+              <span class="z han">${esc(c.c)}</span><span class="p">${esc(c.p)}</span>
+            </button>`).join("")}
+        </div>
+        <p class="note dim">In this library every stopped syllable carries tone ${tones.join(", ")} and never
+          ${[1, 2, 3, 4, 5, 6].filter(t => !tones.includes(t)).join(", ")} — ${checked.length} of them, and no
+          exceptions. That is the rule, not a coincidence of the word list.</p>
+        ${pairA && pairB ? `<p class="note">The same pair trick works here too: <b class="han">${esc(pairA.c)}</b>
+          ${esc(pairA.p)} is <i>${esc(pairA.m)}</i> and <b class="han">${esc(pairB.c)}</b> ${esc(pairB.p)} is
+          <i>${esc(pairB.m)}</i> — one short syllable, two pitches, two words.</p>` : ""}
+      </div>`;
+    })()}
 
     <div class="sheet tn-more">
       <span class="eyebrow">Two things that trip people up ${hanLabel("注意")}</span>

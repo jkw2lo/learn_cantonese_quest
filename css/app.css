@@ -2841,37 +2841,34 @@ button.tier-head:hover { border-color: var(--ink-3); }
 }
 
 /* ============================================================
-   筆順 over the exercise book
+   筆順, docked under the picker
 
-   A grey outline in the squares says what to draw and nothing about the order
-   to draw it in, which is most of what makes starting Chinese handwriting
-   hard. Picking a character now shows it being written, over the page rather
-   than instead of it.
+   It began as a modal over the page, which is the wrong shape: you watch the
+   animation in order to write the character, and a dialog makes you dismiss
+   the thing you are copying before you can copy it. One fixed place under the
+   picker, filled by whatever is selected, still there while you write.
    ============================================================ */
 
-.stroke-order {
-  position: fixed; inset: 0; z-index: 62; display: none;
-  place-items: center; padding: 1rem;
-  background: color-mix(in srgb, var(--ink) 38%, transparent);
+.pick-stage {
+  border: 1px solid var(--rule-2); border-radius: 10px;
+  background: var(--sunken); padding: .6rem .65rem .65rem;
+  display: flex; flex-direction: column; gap: .5rem;
 }
-.stroke-order.on { display: grid; animation: rise .18s ease both; }
-.so-card {
-  width: min(22rem, 92vw); display: flex; flex-direction: column; gap: .75rem;
-  padding: 1rem 1.1rem 1.1rem; border-radius: 14px;
-  background: var(--sheet); border: 1px solid var(--rule);
-  box-shadow: var(--shadow-lift);
+.pick-stage-empty {
+  display: flex; align-items: center; gap: .6rem;
+  font-size: .74rem; line-height: 1.45; color: var(--ink-3);
 }
-.so-head { display: flex; align-items: center; gap: .7rem; }
-.so-id { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
-.so-id .han { font-family: var(--f-han); font-size: 1.9rem; line-height: 1; }
-.so-say { font-size: .8rem; color: var(--ink-2); min-width: 0; }
-.so-n { margin-left: auto; font-size: .72rem; color: var(--ink-3); white-space: nowrap; }
-.so-head .icon-btn { flex: none; }
-.so-stage { display: grid; place-items: center; }
-.so-stage .tian { width: 190px; height: 190px; background: var(--paper); border-radius: 6px; }
-.so-tools { display: flex; gap: .45rem; }
-.so-tools .btn { flex: 1; }
-.so-note { margin: 0; font-size: .74rem; line-height: 1.5; }
+.pick-stage-empty .z { font-family: var(--f-han); font-size: 1.8rem; color: var(--rule); flex: none; }
+.ps-top { display: flex; align-items: baseline; gap: .5rem; }
+.ps-id { display: flex; align-items: baseline; gap: .45rem; min-width: 0; }
+.ps-id .han { font-family: var(--f-han); font-size: 1.5rem; line-height: 1; }
+.ps-id span { font-size: .74rem; color: var(--ink-2); min-width: 0; }
+.ps-n { margin-left: auto; font-size: .68rem; color: var(--ink-3); white-space: nowrap; }
+.ps-box { display: grid; place-items: center; }
+.ps-box .tian { width: 168px; height: 168px; background: var(--sheet); border-radius: 6px; }
+.ps-tools { display: flex; gap: .35rem; }
+.ps-tools .btn { flex: 1; padding-left: .3rem; padding-right: .3rem; }
+.ps-tools .btn span { font-variant-numeric: tabular-nums; opacity: .7; }
 
 /* the square-size control sits with the nib */
 .wp-field select { min-width: 0; }
@@ -2954,3 +2951,9 @@ button.tier-head:hover { border-color: var(--ink-3); }
 @media (min-width: 860px) { .tn-more-grid { grid-template-columns: 1fr 1fr; } }
 .tn-more-grid b { font-size: .88rem; }
 .tn-more-grid .note { margin: .25rem 0 .5rem; }
+
+/* 九聲六調 — the nine-tone count, and why it is the same six */
+.tn-nine { margin-top: 1rem; padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .55rem; align-items: flex-start; }
+.tn-nine .note { margin: 0; max-width: 52rem; }
+.tn-nine-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; width: min(26rem, 100%); }
+.tn-nine .tn-rung .n { font-size: .64rem; }

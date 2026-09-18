@@ -786,6 +786,42 @@ generalised.
 
 ---
 
+### 18 · A character learned on an errand is not part of the day's list
+
+The menu quest's "Learn 個" ran the ordinary intro, which calls `introduce()`
+and `tally("new")` — so a menu character landed in today's rail, counted
+against the day's new-character goal, and moved the ring, all without the
+learner having opened a session. "5 learned" meant six.
+
+A record learned that way is marked `viaMenu`, and `learnedToday()` excludes
+it. It still enters the library and the review queue like anything else — it
+is only the *day's list* it stays out of, because that list is the day's
+session and the menu is a separate errand you went and asked for.
+
+    if (item.menu) rec(item.c).viaMenu = true; else { tally("new"); … }
+
+Verified on a fresh record: after the menu character, `learned` 0 and the
+goal still 5; after a session character, `learned` 1 and the goal 4. The menu
+character is known and scheduled throughout.
+
+**Where:** `js/app.js` — `learnedToday()`, `menuLearnedToday()`, `teachOne(c,
+{menu})`, the `#gotIt` handler.
+
+---
+
+### 19 · The stroke player belongs under the picker, not over the page
+
+It shipped as a modal, which is the wrong shape for it: you watch the
+animation *in order to* write the character, and a dialog makes you dismiss
+the thing you are copying before you can copy it. It is a docked panel under
+"Trace a character" now — one fixed place, filled by whatever is selected, and
+still there while you write. Again / Step (with a stroke counter) / Show.
+
+**Where:** `js/app.js` — `renderPickStage()` replaces `showStrokeOrder()`;
+`.pick-stage` in the CSS; the `#strokeOrder` dialog comes out of index.html.
+
+---
+
 ## Do not port these
 
 Cantonese-specific, and wrong for Hanzi Quest:
