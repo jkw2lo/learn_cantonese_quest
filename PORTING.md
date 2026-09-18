@@ -368,6 +368,48 @@ wider than a phone".
 
 ---
 
+### 9d · A sentence does not fit in 1.4 seconds
+
+Read them in context plays the line back when you answer it, and a flat
+`AUTO_ADVANCE_MS = 1400` then moved to the next card — where `renderStep()`
+calls `stopPhrase()`. So the advance was what silenced the audio. Timed in the
+app: 請問，洗手間喺邊度？ is **6140ms** of clips, so 1400ms cut it off after
+about **1.8 characters of eight**.
+
+There is no way to know the length up front — a line is played as one clip per
+character and the clips load lazily — so `sayPhrase()` gains a completion
+callback, `onPhraseEnd()` attaches to a chain already in flight (settle() runs
+after the audio has started, so it cannot pass one in), and `armAdvance()`
+waits:
+
+    const PHRASE_TAIL_MS = 650;   // not the full 1400: you have already had
+                                  // six seconds of sentence to take it in
+
+Three details that matter:
+
+- **`clearAdvance()` bumps a generation counter** and the queued callback
+  checks it, so an advance waiting behind a sentence cannot fire after you
+  have already pressed Next yourself.
+- **`stopPhrase()` drops the callback.** A chain cut short does not owe anyone
+  the call — otherwise skipping a card advances the next one early.
+- **The button's countdown is only armed for the part that is a countdown.**
+  While the line plays it reads as a plain Next, which is true: nothing is
+  ticking, and pressing it still works.
+
+Measured after: the card holds at `idx=0` through 5000ms and moves between
+6500 and 7400ms. Recognition drills still advance between 1300 and 1700ms —
+unchanged.
+
+**A second bug found while in there.** The verdict's 🔊 ran `say(ch.c)` — one
+character of a sentence you had just been shown whole. The line that was read
+is kept on `item.said` and replayed properly.
+
+**Where:** `js/app.js` — `stopPhrase`/`sayPhrase`/`onPhraseEnd`, `clearAdvance`
+and `armAdvance`, the `d` branch of `renderDrill`, and the `#replay` handler in
+`settle()`.
+
+---
+
 ### 10 · The 正 tally has to stay in its corner
 
 `tallyRow(n, max)` draws complete marks up to `max` and then collapses to a

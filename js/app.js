@@ -273,6 +273,20 @@ function playClip(text) {
 }
 
 let phraseTimer = null;
+/* Whether a chain is mid-flight, and what to run when it reaches the end. A
+   caller that wants to wait for the last character — Read them in context does
+   — has no other way to know: the clips are played one at a time and the total
+   length is not knowable before they load. */
+let phraseActive = false, phraseEnd = null;
+const phraseRunning = () => phraseActive;
+
+/* Attach to a chain already in flight: settle() runs after sayPhrase() has
+   started, so it cannot pass its callback in. If nothing is playing the
+   caller is not made to wait for a chain that will never end. */
+function onPhraseEnd(fn) {
+  if (!phraseActive) return fn();
+  phraseEnd = fn;
+}
 
 /* Only single characters have bundled clips, and the system voice can't be
    relied on here — so a word or sentence is read one character at a time from
@@ -280,15 +294,19 @@ let phraseTimer = null;
 function stopPhrase() {
   clearTimeout(phraseTimer);
   phraseTimer = null;
+  phraseActive = false;
+  phraseEnd = null;                /* cut short: whoever was waiting is not owed the call */
   if (audioEl) audioEl.onended = null;
 }
 
-function sayPhrase(text, force) {
+function sayPhrase(text, force, onDone) {
   if ((!state.audio && !force) || !text) return;
   const chars = [...text].filter(c => /[\u4e00-\u9fff]/.test(c));
   if (!chars.length) return;
   stopPhrase();
   if (chars.length === 1) return say(chars[0], force);
+  phraseActive = true;
+  phraseEnd = onDone || null;
 
   /* One missing clip used to abandon the whole word to the system voice, which
      on a machine without a Cantonese voice meant silence: 叉燒 said nothing
@@ -302,7 +320,13 @@ function sayPhrase(text, force) {
   const a = ensureAudioEl();
   let i = 0;
   const step = () => {
-    if (i >= chars.length) { a.onended = null; return; }
+    if (i >= chars.length) {
+      a.onended = null;
+      phraseActive = false;
+      const done = phraseEnd; phraseEnd = null;
+      if (done) done();
+      return;
+    }
     const c = chars[i++];
     if (!clipFor(c)) {           /* nothing recorded for this one — carry on */
       a.onended = null;
@@ -1154,7 +1178,42 @@ function renderStep() {
    one time you actually need to read what's on screen. */
 const AUTO_ADVANCE_MS = 1400;
 let advanceTimer = null;
-function clearAdvance() { clearTimeout(advanceTimer); advanceTimer = null; }
+/* Bumped by every clearAdvance, so an advance queued behind a sentence that
+   is still playing cannot fire after you have already moved on. */
+let advanceGen = 0;
+function clearAdvance() { clearTimeout(advanceTimer); advanceTimer = null; advanceGen++; }
+
+/* A sentence does not fit in 1.4 seconds.
+
+   Read them in context plays the line back when you answer, and the flat
+   AUTO_ADVANCE_MS cut it off after about two characters — next() calls
+   stopPhrase() on its way out, so the advance itself was what silenced it. A
+   ten-character line is ten clips end to end, and how long that takes is not
+   knowable until they have loaded.
+
+   So when audio is still running the card waits for it, and then gives a
+   shorter beat than the usual one: you have already had the length of the
+   sentence to take it in, and the full 1.4s on top of six seconds of speech
+   is just a pause. The button's countdown is only armed for the part that is
+   actually a countdown; while the line plays it reads as a plain Next, which
+   is true — nothing is ticking, and pressing it still works. */
+const PHRASE_TAIL_MS = 650;
+function armAdvance(btn) {
+  if (!phraseRunning()) {
+    advanceTimer = setTimeout(next, AUTO_ADVANCE_MS);
+    return;
+  }
+  btn?.classList.remove("btn-timed");
+  const gen = advanceGen;
+  onPhraseEnd(() => {
+    if (gen !== advanceGen) return;          /* already moved on by hand */
+    if (btn) {
+      btn.style.setProperty("--wait", PHRASE_TAIL_MS + "ms");
+      btn.classList.add("btn-timed");
+    }
+    advanceTimer = setTimeout(next, PHRASE_TAIL_MS);
+  });
+}
 
 const next = () => { clearAdvance(); session.idx++; renderStep(); };
 
@@ -1418,7 +1477,9 @@ function renderDrill(item, ch, body, foot) {
       if (b.dataset.v === correct) { b.classList.add("right"); b.insertAdjacentHTML("beforeend", `<span class="mk">✓</span>`); }
     });
     if (!ok) { btn.classList.remove("right"); btn.classList.add("wrong"); btn.querySelector(".mk")?.remove(); btn.insertAdjacentHTML("beforeend", `<span class="mk">✗</span>`); }
-    if (kind === "d") sayPhrase(spoken || ch.c);          /* the whole phrase shown */
+    /* the whole phrase shown — and remembered, so the verdict's 🔊 replays the
+       line rather than a single character of it */
+    if (kind === "d") { item.said = spoken || ch.c; sayPhrase(item.said); }
     else if (["p","r","l"].includes(kind)) say(ch.c);
     settle(item, ch, ok, foot);
   });
@@ -1481,13 +1542,16 @@ function settle(item, ch, ok, foot, extra, slips) {
       <button class="btn ${ok ? "btn-timed" : ""}" id="cont" style="--wait:${AUTO_ADVANCE_MS}ms">${ok ? "Next" : "Continue"}</button>
     </div>`;
   /* listening again means you want to stay on this card */
+  /* item.said is the line that was actually read out. Without it this replayed
+     say(ch.c) — one character of a sentence you had just been shown whole. */
   $("#replay")?.addEventListener("click", () => {
     clearAdvance();
     $("#cont")?.classList.remove("btn-timed");
-    say(ch.c, true);
+    if (item.said && [...item.said].length > 1) sayPhrase(item.said, true);
+    else say(ch.c, true);
   });
   $("#cont").onclick = next;
-  if (ok) advanceTimer = setTimeout(next, AUTO_ADVANCE_MS);
+  if (ok) armAdvance($("#cont"));
   const rv = $("#review");
   if (rv) rv.onclick = () => { session.queue.splice(session.idx, 0, { t: "intro", c: ch.c }); renderStep(); };
   $("#cont").focus();
