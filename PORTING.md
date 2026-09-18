@@ -354,35 +354,80 @@ and fails the run. (`tools/check-jyutping.mjs`.)
 
 ---
 
-### 14 · "Study ahead" must not rewrite the setting
+### 14 · "Study ahead" ran away in two separate places
 
-A real bug, and Hanzi Quest has the same line.
+A real bug, reported twice, and Hanzi Quest has both halves of it.
+
+**Half one — the setting.**
 
     $("#aheadBtn")...  state.goalNew += 5; save(); startSession();
 
 `goalNew` is the **standing setting** — "new characters a day", the one the
 settings stepper shows. So one click on a Tuesday quietly made every day after
 it a ten-character day; the stepper read 10 with nobody having touched it, and
-clicking again made it 15. What the button means is "give me more *today*".
-
-The fix keeps the extra on the day, where it dies with the day:
+clicking again made it 15. What the button means is "give me more *today*", so
+the extra now lives on the day and dies with it:
 
     const aheadToday = () => (state.days[dayKey()] || {}).ahead || 0;
     function studyAhead(n) { const t = today(); t.ahead = (t.ahead || 0) + n; save(); }
     const dayGoal = () => state.goalNew + aheadToday();
 
-Then three call sites move from `state.goalNew` to `dayGoal()`: the session
-deal (`nextNew`), the `newLeft` the hero counts down, and the button handler.
+**Half two — the dealing, which survived the first fix.** This is the one that
+made the day visibly run away, and it is easy to call the job done before
+reaching it.
+
+`nextNew(n)` returns the next n characters you have **never seen**. It has no
+idea what today already taught you. So `nextNew(dayGoal())` on a finished day
+of five hands out *ten more*, not five — and the hero, which was computing
+`dayGoal() - t.new` by hand, counted down a completely different number from
+the one the session dealt. Measured in the live app, click-and-finish five
+times over with the setting at 5:
+
+    before   session 1 dealt  5 | learned  5
+             session 2 dealt 10 | learned 15
+             session 3 dealt 15 | learned 30
+             session 4 dealt 20 | learned 50
+             session 5 dealt 25 | learned 75
+
+    after    every session dealt 5 | learned 5, 10, 15, 20, 25
+
+The fix is one function, and the point of it is that **one function answers
+both questions** — the number the session deals and the number the hero counts
+down had drifted apart, which is what let one of them run away:
+
+    const newLeftToday = () =>
+      Math.max(0, Math.min(dayGoal(), remainingNew()) - today().new);
+
+`buildSession()` deals `nextNew(newLeftToday())`; `renderToday()` sets
+`newLeft = newLeftToday()`. Neither computes it itself any more.
 
 **`goalMet()` deliberately stays on `state.goalNew`.** Asking for five more
 characters is extra credit, and extra credit must not take back a day you had
 already finished — or the streak that came with it.
 
-**Where:** `js/srs.js` — after `extraToday`, and the comment on `goalMet()`;
-`js/app.js` — `buildSession()`, `renderToday()`, the `#aheadBtn` handler;
-`tools/smoke.mjs` — six checks under "studying ahead: today only", including
-one that the extra does not appear on tomorrow's record and one that a finished
-day is still finished after asking for more.
+**Half three — the wreckage already in storage.** Fixing the code does not fix
+the records it already wrote. A `goalNew` outside the stepper's own 1–30 range
+cannot have come from a person, so `load()` puts it back to the default:
+
+    const GOAL_MIN = 1, GOAL_MAX = 30;
+    if (!(state.goalNew >= GOAL_MIN && state.goalNew <= GOAL_MAX))
+      state.goalNew = blank().goalNew;
+
+Note the limit of this: a bugged value that landed *inside* the range — 10, 15,
+20, 25, 30 — is indistinguishable from one somebody chose, and is left alone.
+Anyone who used the button before the fix should check Settings once.
+
+**Where:** `js/srs.js` — `aheadToday`/`studyAhead`/`dayGoal`/`newLeftToday`
+after `extraToday`, `GOAL_MIN`/`GOAL_MAX`, the guard in `load()`, and the
+comment on `goalMet()`; `js/app.js` — `buildSession()`, `renderToday()`, the
+`#aheadBtn` handler, and the stepper's clamp (which hard-coded `1` and `30`);
+`tools/smoke.mjs` — fifteen checks under "studying ahead: today only" and "the
+setting repairs itself".
+
+**One trap in testing this.** `load()` *reassigns* the module-level `state`, so
+a harness that captured `state` once is reading a stale object from then on —
+the first version of these tests passed against the wrong record. Read what
+`load()` returns.
 
 ---
 

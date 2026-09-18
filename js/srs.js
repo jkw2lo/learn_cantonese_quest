@@ -77,6 +77,7 @@ function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) state = Object.assign(blank(), JSON.parse(raw));
+    if (!(state.goalNew >= GOAL_MIN && state.goalNew <= GOAL_MAX)) state.goalNew = blank().goalNew;
   } catch { /* private mode, cleared storage — carry on with a fresh record */ }
   return state;
 }
@@ -298,9 +299,28 @@ function studyAhead(n) {
   save();
 }
 
-/* How many new characters today's session will deal: the standing setting,
-   plus anything asked for on top of it today. */
+/* Today's target: the standing setting, plus anything asked for on top of it
+   today. This is a *target*, not a batch size — see newLeftToday(). */
 const dayGoal = () => state.goalNew + aheadToday();
+
+/* How many new characters are still owed today, and the only number allowed to
+   decide how many a session deals.
+
+   Getting this wrong is what made "Study ahead" run away even after the extra
+   stopped touching the setting. nextNew(n) returns the next n characters you
+   have *never seen*, so it has no idea what today already taught you: dealing
+   nextNew(dayGoal()) after a finished day of five handed out ten more, not
+   five. Click, finish, click, finish and the day went 5 → 15 → 30 → 50, with
+   the hero counting down a different number from the one the session dealt.
+   One function now answers both. */
+const newLeftToday = () =>
+  Math.max(0, Math.min(dayGoal(), remainingNew()) - today().new);
+
+/* The stepper's own range. A stored goalNew outside it cannot have come from a
+   person — it is wreckage from the version that did `goalNew += 5` — so it
+   goes back to the default on load rather than sitting at a number nobody
+   chose and the stepper cannot walk back down to. */
+const GOAL_MIN = 1, GOAL_MAX = 30;
 const extraTotal = () => Object.values(state.days).reduce((a, d) => a + (d.extra || 0), 0);
 const extraBestDay = () => Object.values(state.days).reduce((a, d) => Math.max(a, d.extra || 0), 0);
 const extraDays = () => Object.values(state.days).filter(d => d.extra > 0).length;
