@@ -1011,8 +1011,30 @@ const MENU_PRINTED = (() => {
   const on = new Set();
   const add = str => [...String(str)].forEach(c => { if (/[一-鿿]/.test(c)) on.add(c); });
   add(MENU.title); add(MENU.name);
-  MENU.sections.forEach(s => { add(s.head); s.items.forEach(i => add(i[0])); });
+  MENU.sections.forEach(s => { add(s.head); s.items.forEach(i => { add(i[0]); if (i[4]) add(i[4][0]); }); });
+  add(MENU.specials.head); add(MENU.specials.note[0]);
+  MENU.specials.items.forEach(i => add(i[0]));
   return MENU_CHARS.filter(c => on.has(c));
+})();
+
+/* The same characters in the order you meet them reading the menu — top left
+   to bottom right — rather than in curriculum order.
+
+   The quest used to walk MENU_PRINTED, which is curriculum order, so its daily
+   character marched in step with the Today tab and jumped forward every time
+   the library learned something. This is the menu's own order, and it belongs
+   to the menu. */
+const MENU_ORDER = (() => {
+  const seen = [], add = str => [...String(str)].forEach(c => {
+    if (/[一-鿿]/.test(c) && !seen.includes(c)) seen.push(c);
+  });
+  add(MENU.title); add(MENU.name);
+  add(MENU.specials.head);
+  MENU.specials.items.forEach(i => add(i[0]));
+  add(MENU.specials.note[0]);
+  MENU.sections.forEach(s => { add(s.head); s.items.forEach(i => { add(i[0]); if (i[4]) add(i[4][0]); }); });
+  const printed = new Set(MENU_PRINTED);
+  return seen.filter(c => printed.has(c));
 })();
 
 /* How grown-up a menu you get handed, and when.

@@ -16,7 +16,7 @@ const CONTRACT = [
   'HQ', 'STAGES', 'CHAR_INDEX', 'FAMILIES', 'RADICALS', 'QUESTS',
   'TIERS', 'TIER_UNLOCK', 'tierOf', 'tierChars', 'tierFrom', 'tierProgress',
   'tierUnlocked', 'tierNeeds', 'unlockedCeiling', 'isLocked',
-  'POS_LABEL', 'MENU', 'MENU_CHARS', 'MENU_PRINTED',
+  'POS_LABEL', 'MENU', 'MENU_CHARS', 'MENU_PRINTED', 'MENU_ORDER',
   'state', 'blank', 'load', 'save', 'dayKey', 'toneOf', 'connectRemote',
   'rec', 'isKnown', 'strength', 'grade', 'introduce', 'today', 'tally', 'liveStreak',
   'dueList', 'dueCount', 'nextNew', 'remainingNew', 'stageProgress', 'currentStage',
@@ -26,7 +26,7 @@ const CONTRACT = [
   'placeKnown', 'wasPlaced', 'PLACE_MISS_LIMIT', 'PLACED_REST',
   'wordOfWeek', 'weekKey', 'INTERESTS', 'INTEREST_KEYS', 'shownIn', 'shuffle',
   'FESTIVALS', 'festivalThisWeek', 'festivalDate', 'wotwEntry',
-  'menuProgress', 'menuToday', 'menuLearned', 'menuKnown',
+  'menuProgress', 'menuToday', 'menuLearn', 'menuKnown', 'menuOwn', 'menuCanRead',
   'MENU_TIERS', 'practicePool', 'knownChars', 'daysStudied',
   'sprintState', 'sprintMark', 'sprintMarkOf', 'sprintHits', 'sprintMisses', 'sprintByMode',
   'sprintTrouble', 'sprintFluent', 'sprintForget', 'rightRun', 'troubleScore',
@@ -124,15 +124,18 @@ ok('the quest targets only characters it teaches', MENU_CHARS.every(c => CHAR_IN
   ok('and the ones only in the phrases are known to be', phraseOnly.length === 8, phraseOnly.join(' '));
 
   /* The card tells you to go and find today's character on the menu, so the
-     pick has to come from what is printed there. */
-  const stray = api.MENU_PRINTED.filter(c => !onMenu.has(c));
-  ok('every character the quest can pick is printed on the menu', !stray.length, stray.join(' '));
-  /* not just the phrases: the set-lunch board and the small print under a dish
-     are on the page too, and neither is where you go looking for a character */
-  const notInADishName = MENU_CHARS.filter(c => !onMenu.has(c));
-  ok('and nothing off the dish list can be picked',
-     notInADishName.every(c => !api.MENU_PRINTED.includes(c)),
-     notInADishName.filter(c => api.MENU_PRINTED.includes(c)).join(' '));
+     pick has to come from what is printed on the card — dish names, headings,
+     the small print under a dish and the set-lunch board — and never from the
+     phrases underneath it, which are things you say rather than read. */
+  const stray = api.MENU_PRINTED.filter(c => !printed.has(c));
+  ok('every character the quest can pick is printed on the menu card', !stray.length, stray.join(' '));
+  ok('and nothing that is only ever spoken can be picked',
+     phraseOnly.every(c => !api.MENU_PRINTED.includes(c)),
+     phraseOnly.filter(c => api.MENU_PRINTED.includes(c)).join(' '));
+  ok('the quest walks the menu in reading order, not the curriculum\'s',
+     api.MENU_ORDER.length === api.MENU_PRINTED.length &&
+     api.MENU_ORDER.join('') !== api.MENU_PRINTED.join(''),
+     api.MENU_ORDER.slice(0, 6).join(''));
 
   const app = read('js/app.js');
   ok('so the Menu tab still renders the phrases', /MENU\.phrases\.map/.test(app.split('renderQuest')[1] || ''));
@@ -175,11 +178,32 @@ console.log('\nside quest');
 const pick = api.menuToday();
 ok('picks a character', !!pick.c);
 ok('the pick is stable within the day', api.menuToday().c === pick.c);
-ok('the pick is printed on the menu', onMenu.has(pick.c), pick.c);
+ok('the pick is printed on the menu card', api.MENU_PRINTED.includes(pick.c), pick.c);
+
+/* ---- and the quest keeps its own books ----
+
+   It used to run on the main library: what you could read was isKnown(), the
+   pick was the next unknown in curriculum order, and learning one called
+   introduce(). So a good placement could march the quest to the end and have
+   it announce "you can read every character on this menu" to somebody who had
+   never opened the tab. Cross-reference in, progression out. */
 const before = api.menuProgress().known;
-api.menuLearned();
+const charsBefore = Object.keys(api.state.chars).length;
+const dayBefore = JSON.stringify(api.state.days[api.dayKey()] || {});
+api.menuLearn(pick.c);
 ok('learning it advances the quest', api.menuProgress().known === before + 1);
 ok('and it joins the flashcard deck', api.menuKnown().includes(pick.c));
+ok('and the quest counts it as its own', api.menuOwn().taught === 1);
+ok('but it does not enter the library', Object.keys(api.state.chars).length === charsBefore);
+ok('and has no review date', !api.rec(pick.c));
+ok('and does not touch the day', JSON.stringify(api.state.days[api.dayKey()] || {}) === dayBefore);
+
+/* a character learned in the ordinary way still inks the menu in */
+const other = api.MENU_PRINTED.find(c => c !== pick.c && !api.menuCanRead(c));
+api.introduce(other);
+ok('a character learned anywhere still reads on the menu', api.menuCanRead(other));
+ok('and the quest moves past it', api.menuToday.length >= 0 &&
+   !api.MENU_ORDER.filter(c => !api.menuCanRead(c)).includes(other));
 
 console.log('\npractice');
 const someone = api.knownChars();

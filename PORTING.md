@@ -932,6 +932,55 @@ decision, not a silent one); and `renderQuest` still renders the phrase list.
 
 ---
 
+### The side quest keeps its own books
+
+Reported as: *"ive just started and it is saying i can read every character on
+the menu — but that's definitely not true."*
+
+It ran entirely on the main library. What you could read was `isKnown()`, the
+daily character was the next unknown **in curriculum order**, and learning one
+called `introduce()`. Three consequences, all wrong for what the tab is for:
+
+- It **marched in step with Today**. A good placement or a few sessions moved
+  the quest forward without the learner having opened the tab — which is how a
+  new learner got told they could read the lot.
+- Learning a character here **fed the same schedule as everything else**, so a
+  thing meant as an aside became another obligation.
+- Finishing a menu lesson **ticked off "Learn today's characters"** — a task
+  about the day's five, completed by looking at a character from another tab.
+
+**Cross-reference in, progression out.** The tab now has:
+
+| | |
+|---|---|
+| `state.menuTaught` | what the menu itself has taught — its own book |
+| `menuCanRead(c)` | `isKnown(c) \|\| taughtHere(c)` — a character learned *anywhere* still inks in, which is the whole point of the page |
+| `MENU_ORDER` | the order you meet characters reading the menu, top left to bottom right, instead of curriculum order |
+| `menuOwn()` | "N of 35 learned here" — the only number the tab controls |
+| `menuLearn(c)` | records it and nothing else: no `introduce`, no review date, no day count |
+| `session.menu` | set by `teachOne(c, {menu:true})`; suppresses every `markDone` at session end |
+
+The menu lesson is **the card and no drill** — a drill would grade it, and
+grading is the schedule.
+
+**The trade-off, stated plainly:** a character met on the menu is not scheduled
+for review. It is recognition and immersion, not retention. That is acceptable
+here because every menu character is in the curriculum and will be taught
+properly in its own time.
+
+**Two follow-on bugs from the same change**, both from code still asking the
+library: the card's `learnedIt` used `isKnown`, so today's character never
+looked done and would be offered again; and `glyphs()` — the menu's ink — used
+`isKnown`, so a character the tab had just taught stayed grey. Both take
+`menuCanRead`. **When you decouple a store, grep for every reader of the old
+one.**
+
+Smoke covers the lot: learning on the menu advances the quest, joins the
+flashcard deck, and leaves `state.chars`, the review queue and the day record
+untouched — while a character learned the ordinary way still inks the menu in.
+
+---
+
 ### A character learned on an errand is not part of the day's list
 
 The menu quest's "Learn 個" ran the ordinary intro, which calls `introduce()`

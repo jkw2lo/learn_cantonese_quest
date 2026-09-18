@@ -69,6 +69,7 @@ const blank = () => ({
   padAuto: false,
   demo: false,
   sprint: { marks: {}, runs: [], best: {}, pick: {} },
+  menuTaught: {},       /* the side quest's own books — see menuCanRead */
   name: "",
   interests: [],
   profiled: false,
@@ -707,10 +708,43 @@ const daysStudied = () => Object.values(state.days).filter(d => dayReps(d) > 0).
 
 function menuQuest() { return QUESTS.find(q => q.id === "menu"); }
 
+/* ---------- the menu keeps its own books ----------
+
+   The side quest used to run entirely on the main library: what you could
+   read was isKnown(), the daily character was the next unknown in curriculum
+   order, and learning one introduced it into the review queue. Three
+   consequences, all wrong for what this tab is meant to be.
+
+   It marched in step with Today, so a good placement or a few sessions moved
+   the quest forward without the learner having opened this tab. It could
+   announce "you can read every character on this menu" to somebody who had
+   never looked at it, because placement had credited the characters. And
+   learning a character here fed the same schedule as everything else, which
+   made a thing meant to be an aside into another obligation.
+
+   So the menu now has its own record of what it has taught — `menuTaught` —
+   and its own order. What it does NOT have is its own idea of what you can
+   read: a character learned anywhere still inks in here, because the whole
+   point of the page is watching it fill up. Cross-reference in, progression
+   out. */
+
+const menuTaught = () => (state.menuTaught = state.menuTaught || {});
+const taughtHere = c => !!menuTaught()[c];
+
+/* Can the learner read this character on the menu? Anything the library knows
+   counts, and so does anything this tab has shown them. */
+const menuCanRead = c => isKnown(c) || taughtHere(c);
+
 function menuProgress() {
-  const known = MENU_CHARS.filter(isKnown).length;
+  const known = MENU_CHARS.filter(menuCanRead).length;
   return { known, total: MENU_CHARS.length, pct: known / MENU_CHARS.length,
            done: known === MENU_CHARS.length };
+}
+
+/* What this tab itself has taught, which is the only number it controls. */
+function menuOwn() {
+  const mine = Object.keys(menuTaught()).filter(c => MENU_PRINTED.includes(c));
+  return { taught: mine.length, total: MENU_PRINTED.length };
 }
 
 /* Today's menu character, fixed once chosen so it can't shift underfoot. */
@@ -720,23 +754,31 @@ function menuToday() {
   /* MENU_PRINTED, not MENU_CHARS: eight of the menu's characters appear only
      in the phrases you say to a waiter, and the card sends you to look for
      today's character on the menu. */
-  const next = MENU_PRINTED.find(c => !isKnown(c)) || null;
+  /* MENU_ORDER, not the curriculum's: the character you meet next is the next
+     one you cannot read as you read down the menu, which has nothing to do
+     with where the Today tab has got to. */
+  const next = MENU_ORDER.find(c => !menuCanRead(c)) || null;
   state.menuPick = { d: k, c: next, done: !next };
   save();
   return state.menuPick;
 }
 
-function menuLearned() {
+/* Learning a character here is recorded here and nowhere else.
+
+   Deliberately not introduce(): no review date, no day count, nothing in the
+   main schedule. The curriculum will teach this character properly in its own
+   time — every one of them is in it — and until then the menu has shown it to
+   you, which is what this tab is for. */
+function menuLearn(c) {
+  if (!c) return;
+  menuTaught()[c] = dayKey();
   const p = menuToday();
-  if (!p.c) return;
-  introduce(p.c);
-  tally("new");
-  p.done = true;
+  if (p.c === c) p.done = true;
   save();
 }
 
 /* The menu characters you can already read — the flashcard deck. */
-const menuKnown = () => MENU_CHARS.filter(isKnown);
+const menuKnown = () => MENU_CHARS.filter(menuCanRead);
 
 function stageProgress(stageNo) {
   const inStage = HQ.filter(c => c.stage === stageNo);
