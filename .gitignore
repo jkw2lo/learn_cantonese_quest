@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Cached upstream data for the check tools (tens of MB, re-fetched on demand)
+tools/.mmah-dictionary.txt
+tools/.mmah-graphics.txt
+tools/.unihan-cantonese.txt
+tools/.cccanto.txt
+tools/.cccanto-readings.txt
+tools/.unihan-variants.txt

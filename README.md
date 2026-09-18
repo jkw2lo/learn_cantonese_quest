@@ -1,0 +1,263 @@
+# Cantonese Quest
+
+A practice notebook for learning to speak and read Cantonese. 145 characters
+across ten stages, taught in the order that gets you through a day in Hong Kong
+rather than the order a frequency list would give you.
+
+Built from [Hanzi Quest](../Hanzi%20Quest), which teaches Mandarin and
+simplified characters. The app — the scheduler, the session, the sprints, the
+notebook, the design system — is the same code. The curriculum, the tone
+system, the quest and the fonts are not, and this file is mostly about why.
+
+## Running it
+
+No build step, no dependencies.
+
+    node tools/server.mjs         # open http://localhost:8732
+
+## Before you ship a change
+
+    node tools/smoke.mjs
+    node tools/check-jyutping.mjs
+    node tools/check-components.mjs
+    node tools/check-strokes.mjs
+    node tools/version.mjs patch
+
+Four checks rather than three. The extra one is the reason the readings can be
+trusted — see **The readings** below.
+
+## What's different from Hanzi Quest, and why
+
+### Sound leads
+
+Hanzi Quest opens the day with recognition, which is right for a language most
+people meet on a page. Cantonese is the other way round. You meet it spoken —
+in a kitchen, on a phone, in a film — and written Cantonese is a niche skill
+even in Hong Kong, where formal writing is Standard Chinese and reads nothing
+like what anybody says out loud.
+
+So the day opens with 聽力, hearing it. `TODAY_TASKS` puts listening first,
+`PRACTICE` does the same, the Sprint tab leads with its listening panel, and
+`drillKind` puts `l` in the bag twice from the first review rather than once
+from the third. A character you can hear and say is half learnt before you ever
+have to recognise the shape.
+
+The skills bar in **Record** was reordered to match: 聽 Hear it, 認 Recognise,
+寫 Recall the form, 筆 Write from memory. Same four skills, different order of
+importance.
+
+### Traditional characters, with the simplified form shown
+
+Cantonese is written in traditional script across Hong Kong, Macau and most
+overseas Cantonese communities. It was never really a choice: the characters
+Cantonese needs most — 佢, 哋, 咗, 喺, 冇, 嘅, 唔, 嘢 — only exist in
+traditional, so a simplified curriculum would have been half traditional
+anyway.
+
+Thirty-seven of the 145 look different on the mainland, and the card shows that
+form as a quiet footnote under the meaning. It is a cross-reference and nothing
+more: the simplified form is never drilled, never counted, and never what the
+app asks you for.
+
+That mapping is **generated**, by `tools/fetch-simplified.mjs`, from Unihan's
+`kSimplifiedVariant`. The first version was hand-written and seven of its forty
+claims were wrong — five characters given a "simplified form" identical to
+themselves, 嚟 given 来 (which simplifies 來, a different character entirely),
+and 閒 given 闲 where Unihan says otherwise. None of that is knowable by eye,
+which is the whole argument for generating it. `check-jyutping.mjs` now fails if
+anyone hand-edits the block back.
+
+Only mappings inside the Basic Multilingual Plane are kept: Unihan's simplified
+form for 瞓 is an extension-B character almost no phone can draw, and a
+cross-reference nobody can see is worse than none.
+
+### Six tones, written as digits
+
+Jyutping puts the tone on the end of the syllable as a number — `ngo5`, `hai6`,
+`jat1` — instead of over a vowel. Everything downstream gets easier: it is
+plain ASCII, so it sorts, it searches, and it can be typed on any keyboard.
+`toneOf` reads the trailing digit, `toneless` strips it, and the Sprint's typing
+mode needs none of pinyin's diacritic-stripping.
+
+There is no neutral tone. Every Cantonese syllable carries one of the six, so a
+syllable without a digit is an error rather than a shorthand, and
+`check-jyutping.mjs` refuses one.
+
+The contours are drawn rather than named, because three of the six are level
+tones that differ only in height — "mid level" and "low level" tell you nothing
+about how far apart they are, and two lines at different heights tell you
+exactly. The y values are the standard five-point pitch scale: 55, 25, 33, 21,
+23, 22.
+
+### The readings, and why there is a fourth checker
+
+Cantonese gives hand-written romanisation far more room to drift than Mandarin
+does, because most characters carry a **literary** reading and a **spoken** one,
+and the spoken one is usually what you want. Unihan lists 行 as `hang4`; the
+street says `haang4`. The same goes for 坐 `zo6`/`co5`, 平 `ping4`/`peng4`, 返
+`faan2`/`faan1`, 呢 `nai4`/`ni1`.
+
+So `tools/check-jyutping.mjs` does not simply demand that the file match a
+dictionary. It fails on what is unambiguously wrong — a malformed syllable, a
+word that does not contain its own character, jyutping whose syllable count
+disagrees with the characters it transcribes, the same word read two ways in two
+places — and then **prints every divergence from Unihan as a list to read**, so
+each one is a choice somebody made rather than a typo nobody caught.
+
+Ten characters deliberately differ from Unihan. Twenty-one words deliberately
+differ from CC-Canto, and almost all of them are 變調, the tone changes Cantonese
+makes in compounds: 爸爸 is `baa4 baa1` and not `baa1 baa1`, 靚女 is `leng3
+neoi2` and not `neoi5`. Both lists print on every run.
+
+Sources, both cached beside the tool and both in `.gitignore`:
+
+- **Unihan** `kCantonese` — one preferred reading for every CJK character.
+  Covers all 145 taught characters and all 209 with their components, with no
+  gaps.
+- **CC-Canto** (CC BY-SA 3.0) — 34,335 entries, and the only open source with
+  real Cantonese vocabulary in it. Its glosses are uneven — it defines 睇 as "to
+  catch" — so it is a source to check against, never to copy from.
+
+### Ten characters have no stroke data
+
+hanzi-writer's data comes from Make Me a Hanzi, which is built from fonts that
+predate written Cantonese being taken seriously as something to typeset. It has
+nothing for 佢, 哋, 冇, 喺, 嚟, 嗰, 攰, 咗, 喎 or 啱 — which are, between them,
+among the most frequent characters in written Cantonese.
+
+The app already degrades correctly: no stroke data means no stroke-order
+animation and no writing drills for that character, and `practiceChars("write")`
+excludes them so the 筆順 bar isn't permanently short of full. `check-strokes.mjs`
+carries them in a `KNOWN_GAP` list and reports them rather than failing — so a
+*new* character with no data still fails the check.
+
+### 茶餐廳 instead of a restaurant menu
+
+The side quest is a cha chaan teng: Hong Kong's own invention, a diner serving
+Western food reimagined through a Cantonese kitchen, at speed, on a laminated
+menu nobody has time to explain to you. It is a genuine test, because the menu
+is written in Cantonese shorthand rather than Standard Chinese — 凍 for iced, 少
+甜 for less sugar, 走 for hold the.
+
+Hanzi Quest could require that **every** glyph on its menu was a taught
+character, because it has 763 of them. Here that would have meant inventing
+dishes nobody sells. 菠蘿包, 乾炒牛河 and 羅宋湯 all need characters this library
+does not teach, and they are what is actually on the wall.
+
+So the menu stays real, the quest targets only the characters it teaches (25 of
+them), and the smoke test asks a different question: is enough of the menu
+within reach for the promise to mean anything? The floor is a fifth of the
+printed glyphs and at least one readable dish in every section. Inflating that
+number by inventing dishes would be measuring the test rather than the learner.
+
+### Two tiers, not three
+
+Hanzi Quest's tiers are the literacy milestones — 200, 500, 1,000. This library
+is 145 characters, so it has one door to walk through (過日辰, at 76) and one to
+see ahead of you (傾得, at 145). A third would be a locked door with nothing
+behind it.
+
+## The curriculum
+
+Ordered by what gets you through a day, not by frequency. A frequency list for
+written Cantonese would put 的 and 是 near the top — because most writing in Hong
+Kong is Standard Chinese — and you would learn to read a newspaper without being
+able to order a coffee.
+
+| | stage | ends | what it covers |
+|---|---|---|---|
+| 👋 | 你我佢 Who | 16 | Pronouns, to-be, negation, and the particles that make a sentence sound human |
+| 🔢 | 一二三 Numbers | 30 | Counting, and the 二 / 兩 distinction that catches everyone |
+| 🙏 | 唔該 Getting by | 43 | Please, thank you, sorry, and 有 / 冇 |
+| 🍜 | 飲食 Eating | 60 | Ordering: hot or iced, more or less sugar |
+| 🗺️ | 去邊度 Places | 76 | Here, there, where — and getting on and off things |
+| 🕐 | 幾點 Time | 89 | Clock and calendar, including the words Mandarin doesn't have |
+| 👨‍👩‍👧 | 屋企人 Family | 100 | The people around you, and the prefix 老 that isn't about age |
+| 🏃 | 做乜嘢 Doing | 116 | The verbs a day is made of |
+| 📏 | 點形容 Describing | 131 | Big, small, cheap, tired — and the tone pairs that mean opposite things |
+| 💬 | 語氣 Particles | 145 | The little words that carry everything English puts in the voice |
+
+The last stage is where Cantonese stops looking like Mandarin with different
+sounds. English carries attitude in intonation; Cantonese can't, because pitch
+is already spoken for by the tones. So it carries attitude in a set of little
+words hung on the end of a sentence — and leaving them off doesn't make you
+sound neutral, it makes you sound abrupt.
+
+### What the checks found while it was being written
+
+Every one of these was caught by tooling rather than by reading it back:
+
+- **Six characters had no pairing a learner could ever read** — 早, 肉, 車, 睇,
+  瞓, 寫 — so none of them could have driven a gap-fill or build-the-word drill.
+- **Six pairings didn't contain their own character.** 哥 was teaching 大佬, 弟
+  was teaching 細佬, and 肉 was teaching 叉燒.
+- **Eight words were glossed two different ways** under two different characters.
+- **Nine component claims were wrong.** 四 claimed 口 where the glyph has 囗; 見
+  claimed 人 where it has 儿; 新 claimed 木 where the modern form has 亲; 閒
+  claimed a bar across the gate where it has the moon. Three characters claimed
+  辵 where every one of them has 辶.
+- **Two meanings contained Chinese**, which hands the answer over in a recall
+  drill: 該 was glossed "ought to; (in 唔該) please".
+- **Two characters were given the wrong reading for the sense being taught** —
+  糖 as `tong2`, which is a sweet you can hold rather than sugar.
+- **Seven of forty hand-written simplified forms were wrong**, which is what
+  moved that block to being generated.
+
+## Files
+
+    index.html        page shell
+    css/app.css       the whole design system
+    js/data.js        curriculum, radicals, the cha chaan teng, interests — all the content
+    js/strokes.js     bundled stroke-order data (generated, do not hand-edit)
+    js/audio.js       bundled Cantonese speech (generated, do not hand-edit)
+    js/srs.js         scheduling, streaks, sprint records, storage
+    js/sprint.js      the 速練 tab: timed sheets, the boards, the 錯字本
+    js/app.js         views, the study session, flashcards, repair rounds
+    tools/jyut.mjs            look a character or word up while writing data.js
+    tools/check-jyutping.mjs  audit every reading against Unihan and CC-Canto
+    tools/fetch-simplified.mjs  regenerate the simplified cross-reference
+    tools/fetch-strokes.mjs   regenerate js/strokes.js
+    tools/make-audio.mjs      regenerate js/audio.js — `node tools/make-audio.mjs Sinji`
+    tools/server.mjs          dev server (UTF-8)
+    tools/smoke.mjs           run this after touching js/
+    tools/version.mjs         bump the version and re-stamp every asset URL
+
+## The audio
+
+Generated on macOS with **Sinji**, the system `zh_HK` voice, by
+`node tools/make-audio.mjs Sinji`. 370 clips, 2.0 MB of speech, bundled as
+base64 in `js/audio.js` and fetched after the first render rather than ahead of
+it.
+
+**This has not been checked by ear.** The generator rejects a clip shorter than
+0.15 seconds, which catches a mute voice, and every taught character has a clip
+of real length — but nothing here verifies that Sinji is reading these
+characters *correctly in Cantonese*, and it is being handed traditional forms
+including ones invented for Cantonese. Before this is used in anger, someone who
+speaks Cantonese should listen to a sample, starting with 佢, 哋, 咗, 喺, 冇, 嘅
+and 嘢.
+
+## What this doesn't do
+
+- **It teaches characters, not conversation.** There is no grammar explanation
+  beyond what fits in a mnemonic, and no dialogue practice.
+- **The sentences are Cantonese, but they are one sentence long.** Nothing here
+  builds toward a paragraph.
+- **145 characters is a beginning.** The structure — stages, tiers, the gate at
+  76 — is built to extend, and `check-jyutping.mjs` will hold new entries to the
+  same standard as the existing ones.
+
+## Licensing
+
+The code and curriculum are original. Two upstream datasets are used at build
+time and neither is redistributed in raw form:
+
+- **Unihan** (Unicode, Inc.) — character readings and variant mappings.
+- **CC-Canto** (CC BY-SA 3.0, Pleco Software) — used to check readings, never
+  copied into the curriculum.
+- **hanzi-writer-data** — stroke paths, bundled into `js/strokes.js`.
+
+`js/audio.js` is macOS speech output. The same caveat Hanzi Quest carries
+applies: redistributing Apple's synthesised voice is a grey area, and if you'd
+rather it weren't in the repo, add it back to `.gitignore` and regenerate it
+locally.

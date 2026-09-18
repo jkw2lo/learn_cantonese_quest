@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cantonese-quest",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/server.mjs"
+      ],
+      "port": 8732
+    }
+  ]
+}
