@@ -717,7 +717,10 @@ function menuProgress() {
 function menuToday() {
   const k = dayKey();
   if (state.menuPick && state.menuPick.d === k) return state.menuPick;
-  const next = MENU_CHARS.find(c => !isKnown(c)) || null;
+  /* MENU_PRINTED, not MENU_CHARS: eight of the menu's characters appear only
+     in the phrases you say to a waiter, and the card sends you to look for
+     today's character on the menu. */
+  const next = MENU_PRINTED.find(c => !isKnown(c)) || null;
   state.menuPick = { d: k, c: next, done: !next };
   save();
   return state.menuPick;

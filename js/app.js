@@ -3498,7 +3498,7 @@ function renderQuest() {
       <span class="sq-info">
         <span class="t">${learnedIt ? "Today's menu character — learned" : "Today's menu character"}</span>
         <span class="m">${learnedIt ? `${esc(pch.p)} · ${esc(pch.m)}`
-          : `One character a day. Find it ${onPrintedMenu(pch.c) ? "on the menu below" : "in the phrases under the menu"}.`}</span>
+          : "One character a day. Find it on the menu below."}</span>
         ${learnedIt ? `<span class="p">Next one tomorrow. ${menuLearnedToday().length
             ? "It sits in your reviews, not in today's list."
             : ""}</span>`
@@ -3921,7 +3921,7 @@ function closeIntro(thenCoach) {
   $("#intro").hidden = true;
   document.body.style.overflow = "";
   $("#introCard").innerHTML = "";
-  if (thenCoach) setTimeout(() => openCoach(0, true), 320);
+  if (thenCoach) setTimeout(() => { go("today"); openCoach(0, true); }, 320);
 }
 
 function renderIntro() {
@@ -4061,7 +4061,6 @@ function renderIntro() {
           <p>It is its own language — different sounds, different grammar, its own characters. Spoken in
              Hong Kong, Macau and Guangdong, and by Chinatowns everywhere: Vancouver, San Francisco,
              Sydney, London.</p>
-          <p class="ix-big"><b>85 million</b> speakers</p>
         </div>
         <div class="ix-map-wrap">
           ${DELTA_MAP}
@@ -4163,26 +4162,88 @@ function renderIntro() {
    after the first time, and the ? that reopens it is the quietest button in
    the top bar — a guide you cannot escape is worse than no guide at all. */
 
-const COACH = [
-  { sel: ".hero-cta .btn, .hero-cta", n: 1, k: "學",
-    title: "Start here",
-    body: "One button, once a day. It introduces the day's new characters and then asks for them back. " +
-          "Five minutes, and it is the only thing you have to do." },
-  { sel: ".todo-block", n: 2, k: "練",
-    title: "Then work down this list",
-    body: "Four ways to practise what you just met — recognising, hearing, reading in a sentence, writing " +
-          "it out. It is scoped to today's characters, so it finishes." },
-  { sel: ".learned", n: 3, k: "字",
-    title: "What you learned today",
-    body: "Every character you meet collects here, and stays in the library for good. Tap one to see its " +
-          "card again." },
-  { sel: ".dash-side .decks", n: 4, k: "卡",
-    title: "Flashcards, when you want them",
-    body: "Not part of the list and never required — a deck of what you know, for the bus." },
-  { sel: ".deeper", n: 5, k: "加",
-    title: "And extra reps, if you want them",
-    body: "Unbounded practice past today's list. Never required, never finished; it just counts what you do." }
-];
+/* A guide per tab, because "how do I use this" has a different answer on each
+   one. The ? in the top bar opens the guide for wherever you are standing; a
+   tab with no guide gets the button hidden rather than an empty overlay. */
+const COACH = {
+  today: [
+    { sel: ".hero-cta .btn, .hero-cta", n: 1, k: "學", title: "Start here",
+      body: "One button, once a day. It introduces the day's new characters and then asks for them back. " +
+            "Five minutes, and it is the only thing you have to do." },
+    { sel: ".todo-block", n: 2, k: "練", title: "Then work down this list",
+      body: "Four ways to practise what you just met — recognising, hearing, reading in a sentence, writing " +
+            "it out. It is scoped to today's characters, so it finishes." },
+    { sel: ".learned", n: 3, k: "字", title: "What you learned today",
+      body: "Every character you meet collects here, and stays in the library for good. Tap one to see its " +
+            "card again." },
+    { sel: ".dash-side .decks", n: 4, k: "卡", title: "Flashcards, when you want them",
+      body: "Not part of the list and never required — a deck of what you know, for the bus." },
+    { sel: ".deeper", n: 5, k: "加", title: "And extra reps, if you want them",
+      body: "Unbounded practice past today's list. Never required, never finished; it just counts what you do." }
+  ],
+  menu: [
+    { sel: ".sq-target", n: 1, k: "字", title: "One character a day",
+      body: "The quest teaches you a single character from this menu each day, and it is always one printed " +
+            "on it. Learn it here and it joins your reviews without touching today's list." },
+    { sel: ".menu-card", n: 2, k: "餐牌", title: "A real menu, inking itself in",
+      body: "Black is what you can read; grey is what you cannot yet. Hover any character for its meaning, " +
+            "and tap a dish to hear it said." },
+    { sel: ".menu-say", n: 3, k: "講嘢", title: "What you say to the waiter",
+      body: "Five phrases you would actually use. Tap to hear them. Some characters live only here, which is " +
+            "why the daily pick never comes from them." }
+  ],
+  sprint: [
+    { sel: "#viewSprint .sp-panels", n: 1, k: "揀", title: "Pick a mode",
+      body: "Reading, listening or writing. Each opens a row of sheet sizes — more questions in less time is " +
+            "the difficulty dial." },
+    { sel: "#viewSprint .col-side .sheet", n: 2, k: "記錄", title: "Your best on each sheet",
+      body: "A sheet is its mode, its length and its clock, so forty in two minutes and a hundred in two " +
+            "minutes are different records." },
+    { sel: ".sp-book", n: 3, k: "錯", title: "The mistake notebook",
+      body: "Characters you keep missing under time collect here. A repair round takes the five worst slowly " +
+            "and from every side; three right in a row and one leaves." }
+  ],
+  write: [
+    { sel: ".wp-tools", n: 1, k: "筆", title: "Nib, brush and square",
+      body: "Six nib widths, a 毛筆 that thins as you speed up, and four square sizes. T grabs the trackpad " +
+            "so you can write with it." },
+    { sel: ".pick-stage", n: 2, k: "筆順", title: "How it is written",
+      body: "Pick a character below and its stroke order plays here — again, one stroke at a time, or the " +
+            "finished thing. The grey guide lands in the squares at the same time." },
+    { sel: ".wp-page", n: 3, k: "練", title: "Nothing here is marked",
+      body: "It is a blank page. Fill it, scrawl on it, clear it and go again. Save a page and it joins the " +
+            "diary underneath." }
+  ],
+  library: [
+    { sel: "#viewLibrary .search", n: 1, k: "揾", title: "Every character, searchable",
+      body: "Type a character, its jyutping or its meaning. The filters narrow by how well you know it." },
+    { sel: "#viewLibrary .tier", n: 2, k: "關", title: "Opened in order",
+      body: "A tier unlocks when the one before it is mostly learned, so there is no way to get ahead of " +
+            "yourself by accident." }
+  ],
+  radicals: [
+    { sel: ".rx", n: 1, k: "睇", title: "Start with the worked example",
+      body: "媽 is 女 + 馬: one part says what it means, the other how it sounds. That is nearly every " +
+            "character in the language." },
+    { sel: ".rad-map", n: 2, k: "表", title: "The whole set, and where you are",
+      body: "Every radical this library uses, with how far through each one you are. Click any to jump to it." }
+  ],
+  tones: [
+    { sel: ".tn-hero", n: 1, k: "聽", title: "Why the line matters",
+      body: "買 and 賣 — buy and sell — are one tone apart. Tap them both. That is the argument for the rest " +
+            "of this page." },
+    { sel: ".tn-ladder", n: 2, k: "六", title: "All six, in order",
+      body: "Play them top to bottom and the shape of the system comes out: three starting high, three low." }
+  ],
+  record: [
+    { sel: "#viewRecord .stats", n: 1, k: "記", title: "Where each skill stands",
+      body: "Recognising a character and being able to write it are different skills, counted separately. " +
+            "Nothing here is a target." },
+    { sel: "#viewRecord .cal-wrap", n: 2, k: "月曆", title: "The shape of your weeks",
+      body: "One square a day, inked by how much you did. Gaps are not failures; the streak is the only " +
+            "thing that minds them." }
+  ]
+};
 
 let coachAt = 0;
 /* On the first run there is no way out but through: Back and Next, and the
@@ -4191,7 +4252,7 @@ let coachAt = 0;
 let coachLocked = false;
 
 function openCoach(i = 0, locked = false) {
-  if (view !== "today") go("today");
+  if (!COACH[view] || !COACH[view].length) return;
   coachAt = i;
   coachLocked = locked;
   $("#coach").hidden = false;
@@ -4208,9 +4269,28 @@ function closeCoach(force) {
   document.body.style.overflow = "";
 }
 
+function coachSteps() { return COACH[view] || []; }
+
+/* The ? belongs to the tab it is standing on. A tab with no guide hides it
+   rather than opening an empty overlay, and the tooltip names the page so it
+   does not read as general help. */
+function syncHelp(v) {
+  const b = document.querySelector(".help-btn");
+  if (!b) return;
+  const has = !!(COACH[v] && COACH[v].length) && !!state.started;
+  b.hidden = !has;
+  if (has) {
+    const name = document.querySelector(`.top-nav [data-nav="${v}"]`)?.textContent.trim().split(/\s+/).pop() || "this page";
+    b.title = `How ${name} works`;
+    b.setAttribute("aria-label", `How ${name} works`);
+  }
+}
+
 function renderCoach() {
-  const step = COACH[coachAt];
-  const last = coachAt === COACH.length - 1;
+  const steps = coachSteps();
+  const step = steps[coachAt];
+  if (!step) return closeCoach(true);
+  const last = coachAt === steps.length - 1;
   const el = document.querySelector(step.sel);
   const ring = $("#coachRing"), card = $("#coachCard");
 
@@ -4234,7 +4314,7 @@ function renderCoach() {
     </div>
     <p>${esc(step.body)}</p>
     <div class="ch-foot">
-      <span class="ch-dots">${COACH.map((_, i) => `<span class="${i === coachAt ? "on" : ""}"></span>`).join("")}</span>
+      <span class="ch-dots">${steps.map((_, i) => `<span class="${i === coachAt ? "on" : ""}"></span>`).join("")}</span>
       <button class="btn btn-ghost btn-sm" id="chBack" ${coachAt ? "" : "disabled"}>Back</button>
       <button class="btn btn-sm" id="chNext">${last ? "Got it" : "Next"}</button>
     </div>`;
@@ -5626,6 +5706,7 @@ const RENDER = { today: renderToday, sprint: renderSprint, menu: renderQuest,
 
 function go(v) {
   view = v;
+  syncHelp(v);
   const id = "view" + v[0].toUpperCase() + v.slice(1);
   $$(".view").forEach(el => el.classList.toggle("on", el.id === id));
   $$("[data-nav]").forEach(b => b.classList.toggle("on", b.dataset.nav === v));
@@ -5753,7 +5834,7 @@ function boot() {
   });
   /* the overlay is anchored to real elements, so it has to follow them */
   addEventListener("resize", () => { if (!$("#coach").hidden) renderCoach(); });
-  document.querySelector(".help-btn").hidden = !state.started;
+  syncHelp(view);
   if (state.profiled) ensureInterests();
   $("#brandBtn").onclick = () => openIntro(2);
   $("#intro").addEventListener("keydown", e => {

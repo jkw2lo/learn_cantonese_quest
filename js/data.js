@@ -999,6 +999,22 @@ const MENU_CHARS = (() => {
            .map(x => x.c);
 })();
 
+/* The characters the daily pick may choose from: the ones in a dish name or a
+   section heading — the part of the menu you read in order to order.
+
+   Deliberately narrower than MENU_CHARS, which also counts the phrases you
+   say to a waiter, the set-lunch board and the small print under a dish. All
+   of those are on the page and all of them count towards reading it; none of
+   them is a thing the card can send you to "find on the menu below" and
+   expect you to find. */
+const MENU_PRINTED = (() => {
+  const on = new Set();
+  const add = str => [...String(str)].forEach(c => { if (/[一-鿿]/.test(c)) on.add(c); });
+  add(MENU.title); add(MENU.name);
+  MENU.sections.forEach(s => { add(s.head); s.items.forEach(i => add(i[0])); });
+  return MENU_CHARS.filter(c => on.has(c));
+})();
+
 /* How grown-up a menu you get handed, and when.
 
    The first version gated on menu characters alone, and menu characters are

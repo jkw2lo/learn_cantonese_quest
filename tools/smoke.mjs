@@ -16,7 +16,7 @@ const CONTRACT = [
   'HQ', 'STAGES', 'CHAR_INDEX', 'FAMILIES', 'RADICALS', 'QUESTS',
   'TIERS', 'TIER_UNLOCK', 'tierOf', 'tierChars', 'tierFrom', 'tierProgress',
   'tierUnlocked', 'tierNeeds', 'unlockedCeiling', 'isLocked',
-  'POS_LABEL', 'MENU', 'MENU_CHARS',
+  'POS_LABEL', 'MENU', 'MENU_CHARS', 'MENU_PRINTED',
   'state', 'blank', 'load', 'save', 'dayKey', 'toneOf', 'connectRemote',
   'rec', 'isKnown', 'strength', 'grade', 'introduce', 'today', 'tally', 'liveStreak',
   'dueList', 'dueCount', 'nextNew', 'remainingNew', 'stageProgress', 'currentStage',
@@ -122,6 +122,17 @@ ok('the quest targets only characters it teaches', MENU_CHARS.every(c => CHAR_IN
 
   const phraseOnly = MENU_CHARS.filter(c => !printed.has(c));
   ok('and the ones only in the phrases are known to be', phraseOnly.length === 8, phraseOnly.join(' '));
+
+  /* The card tells you to go and find today's character on the menu, so the
+     pick has to come from what is printed there. */
+  const stray = api.MENU_PRINTED.filter(c => !onMenu.has(c));
+  ok('every character the quest can pick is printed on the menu', !stray.length, stray.join(' '));
+  /* not just the phrases: the set-lunch board and the small print under a dish
+     are on the page too, and neither is where you go looking for a character */
+  const notInADishName = MENU_CHARS.filter(c => !onMenu.has(c));
+  ok('and nothing off the dish list can be picked',
+     notInADishName.every(c => !api.MENU_PRINTED.includes(c)),
+     notInADishName.filter(c => api.MENU_PRINTED.includes(c)).join(' '));
 
   const app = read('js/app.js');
   ok('so the Menu tab still renders the phrases', /MENU\.phrases\.map/.test(app.split('renderQuest')[1] || ''));
