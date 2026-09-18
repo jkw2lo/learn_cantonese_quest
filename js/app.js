@@ -33,7 +33,12 @@ const RADICAL_GLOSS = {
   "辶":["coek3","walking; movement"],
   "月":["jyut6","moon; month"]
 };
-const gloss = c => CHAR_INDEX[c] ? [CHAR_INDEX[c].p, CHAR_INDEX[c].m] : (RADICAL_GLOSS[c] || ["", ""]);
+/* A reading and a meaning for any character the app can put on screen: the
+   curriculum first, then the components, then the generated reference glosses
+   for everything printed but not taught — most of the cha chaan teng menu,
+   every example word, every word of the week. */
+const gloss = c => CHAR_INDEX[c] ? [CHAR_INDEX[c].p, CHAR_INDEX[c].m]
+                 : (RADICAL_GLOSS[c] || EXTRA_GLOSS[c] || ["", ""]);
 
 /* ---------- tiny helpers ---------- */
 
@@ -62,6 +67,43 @@ const matches = (ch, q) => {
                          || w[2].toLowerCase().includes(q.toLowerCase()));
 };
 
+
+/* Put a word on the clipboard, and say so on the button that did it.
+
+   navigator.clipboard is unavailable on an insecure origin and can be refused
+   outright, so the old execCommand path stays as the fallback — this app is
+   meant to run from a file:// clone as readily as from a server, and a copy
+   button that silently does nothing is worse than no copy button. */
+function copyText(text, btn) {
+  const done = ok => {
+    if (!btn) return;
+    const had = btn.textContent;
+    btn.textContent = ok ? "✓" : "✕";
+    btn.classList.toggle("copied", ok);
+    setTimeout(() => { btn.textContent = had; btn.classList.remove("copied"); }, 1200);
+  };
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => done(true), () => done(legacyCopy(text)));
+      return;
+    }
+  } catch { /* fall through */ }
+  done(legacyCopy(text));
+}
+
+function legacyCopy(text) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:-100px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch { return false; }
+}
 
 /* Tone contour — the shape your voice makes.
 
@@ -1609,7 +1651,7 @@ function renderMenuCard(target, tall) {
   const row = it => `<div class="mrow">
       <span class="dish">${glyphs(it[0], target)}</span>
       <span class="dots"></span>
-      <span class="price">¥${it[3]}</span>
+      <span class="price">$${it[3]}</span>
     </div>${tier >= 2 && it[4] ? `<div class="mdesc">${glyphs(it[4][0], target)}</div>` : ""}`;
 
   return `<div class="menu-card ${tall ? "tall" : ""}">
@@ -1641,13 +1683,24 @@ function initTips() {
   document.addEventListener("mouseover", e => {
     const g = e.target.closest("[data-ch]");
     if (!g) return;
-    const ch = CHAR_INDEX[g.dataset.ch];
-    if (!ch) return;
-    const known = isKnown(ch.c);
-    tipEl.innerHTML = `<div class="z">${esc(ch.c)}</div>
-      <div class="p">${esc(ch.p)}</div>
-      <div class="m">${esc(ch.m)}</div>
-      <div class="s">${known ? "You know this one" : "Not learned yet"} · ${esc(ch.words[0][0])} ${esc(ch.words[0][2])}</div>`;
+    const c = g.dataset.ch;
+    const ch = CHAR_INDEX[c];
+    /* Not every character on screen is one this app teaches. The menu alone
+       prints 44 and teaches 13, and bailing out here meant hovering 菠蘿包 and
+       being told nothing at all — which reads as broken rather than as out of
+       scope. Anything with a reference gloss gets a tooltip that says what it
+       is and that it isn't part of the curriculum. */
+    const [p, m] = gloss(c);
+    if (!ch && !p && !m) return;
+    tipEl.innerHTML = ch
+      ? `<div class="z">${esc(ch.c)}</div>
+         <div class="p">${esc(ch.p)}</div>
+         <div class="m">${esc(ch.m)}</div>
+         <div class="s">${isKnown(ch.c) ? "You know this one" : "Not learned yet"} · ${esc(ch.words[0][0])} ${esc(ch.words[0][2])}</div>`
+      : `<div class="z">${esc(c)}</div>
+         <div class="p">${esc(p)}</div>
+         <div class="m">${esc(m)}</div>
+         <div class="s">Not in the curriculum — here for reference</div>`;
     tipEl.classList.add("on");
     place(g);
   });
@@ -1852,10 +1905,16 @@ function renderNotebook() {
       : `today's characters · round ${nb.round}`}</span>`;
 
   $("#nbStage").innerHTML = `
-    <div class="nb-modes">
-      <button class="filt ${!byWord ? "on" : ""}" data-nbsrc="today" ${today.length ? "" : "disabled"}>今日 Today's</button>
-      <button class="filt ${byWord ? "on" : ""}" data-nbsrc="word" ${writableWords().length ? "" : "disabled"}>詞語 A word</button>
-      <button class="filt" id="nbNew">${byWord ? "Another word" : "Shuffle"}</button>
+    <div class="nb-switch">
+      <div class="nb-seg" role="tablist">
+        <button role="tab" class="nb-seg-b ${!byWord ? "on" : ""}" data-nbsrc="today" aria-selected="${!byWord}"
+          ${today.length ? "" : "disabled"}><span class="han">今日</span> Today's characters
+          <small>${today.length}</small></button>
+        <button role="tab" class="nb-seg-b ${byWord ? "on" : ""}" data-nbsrc="word" aria-selected="${byWord}"
+          ${writableWords().length ? "" : "disabled"}><span class="han">詞語</span> Whole words
+          <small>${writableWords().length}</small></button>
+      </div>
+      <button class="btn btn-ghost btn-sm nb-next" id="nbNew">${byWord ? "↻ Another word" : "↻ Shuffle"}</button>
     </div>
 
     <div class="nb-progress">
@@ -1874,6 +1933,17 @@ function renderNotebook() {
     <div class="nb-tools">
       <button class="btn btn-ghost btn-sm" id="nbPad">觸控 Trackpad <kbd class="opt-n">T</kbd></button>
     </div>
+
+    ${(() => {
+      /* Characters with no stroke data cannot be quizzed, so they are dropped
+         from the deck — and dropping them silently is how five characters
+         learned today turn into four squares with no explanation. */
+      const off = byWord ? [] : learnedToday().filter(c => !window.STROKE_DATA[c]);
+      return off.length ? `<p class="note nb-missing">${off.map(c => `<b class="han">${esc(c)}</b>`).join(" ")}
+        ${off.length === 1 ? "isn't" : "aren't"} here — nobody has published stroke-order data for
+        ${off.length === 1 ? "it" : "them"}, so ${off.length === 1 ? "it" : "they"} can't be traced.
+        You have still learned ${off.length === 1 ? "it" : "them"}.</p>` : "";
+    })()}
 
     <p class="note nb-hint">Write each character in order — the strokes are checked as you go.
       For a blank page to scribble on, use the <span class="han">練字</span> tab.</p>`;
@@ -1941,9 +2011,15 @@ function startSquare(i) {
         nbFollow();
         return;
       }
+      /* Nothing left to write, so nothing left to write with. Holding the
+         pointer lock through the finishing card captured the cursor over two
+         buttons the learner now has to press — which is the moment the
+         trackpad stops being a brush and starts being a trap. */
+      padStop();
       nb.idx = -1;
       markDone("copy");
       renderNotebook();
+      renderNotebookPadState();
       const more = TODAY_TASKS.filter(t => !t.copy && taskAvailable(t) && !didToday(t.id)).length;
       $("#nbStage").insertAdjacentHTML("beforeend",
         `<div class="nb-finish">
@@ -1969,6 +2045,7 @@ const byWordLabel = () => nb.word ? esc(nb.word[0]) : "Today's characters";
 /* The notebook moves between squares without tearing the lock down, so this
    only ever has to fire for the first square of an exercise. */
 function nbAutoPad() {
+  if (nb.idx < 0) return;                  /* the line is finished — see startSquare */
   const sq = $(`#nbStage .nb-sq[data-sq="${nb.idx}"]`);
   const mount = $("#nbw" + nb.idx);
   if (!sq || !mount || !mount.querySelector("svg")) return;
@@ -1979,6 +2056,7 @@ function nbAutoPad() {
 
 function nbPad() {
   if (pad.active) { padStop(); renderNotebookPadState(); return; }
+  if (nb.idx < 0) return;
   const sq = $(`#nbStage .nb-sq[data-sq="${nb.idx}"]`);
   const mount = $("#nbw" + nb.idx);
   if (!sq || !mount || !mount.querySelector("svg")) return;
@@ -2661,11 +2739,15 @@ function renderToday() {
           entry.festival ? ` <span class="han">${esc(cat.zh)}</span>` : ""}</span>
       </div>
       ${entry.festival ? `<p class="wotw-when">It's ${esc(cat.name)} this week.</p>` : ""}
-      <button class="wotw-word" id="wotwSay" title="Hear it">
-        <span class="z">${renderZh(word)}</span>
-        <span class="p">${esc(pin)}</span>
-        ${open ? `<span class="m">${esc(mean)}</span>` : ""}
-      </button>
+      <div class="wotw-row">
+        <button class="wotw-word" id="wotwSay" title="Hear it">
+          <span class="z">${renderZh(word)}</span>
+          <span class="p">${esc(pin)}</span>
+          ${open ? `<span class="m">${esc(mean)}</span>` : ""}
+        </button>
+        <button class="wotw-copy" id="wotwCopy" data-copy="${esc(word)}"
+          title="Copy ${esc(word)}" aria-label="Copy ${esc(word)} to the clipboard">⧉</button>
+      </div>
       ${open
         ? `<p class="wotw-note">${esc(note)}</p>
            <p class="note dim">${known === glyphs.length
@@ -2877,6 +2959,7 @@ function renderToday() {
     const e = wotwEntry(wk);
     if (e) sayPhrase(e.word[0], true);
   });
+  $("#wotwCopy")?.addEventListener("click", function () { copyText(this.dataset.copy, this); });
   $("#wotwReveal")?.addEventListener("click", () => {
     state.wotwShown = wk.week;
     save();

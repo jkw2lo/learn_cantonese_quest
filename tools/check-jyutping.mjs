@@ -156,9 +156,22 @@ console.log('\nagainst Unihan');
 
 console.log('\nagainst CC-Canto');
 {
+  /* Everything with a reading attached, not just the curriculum.
+
+     This used to check the curriculum words and the menu and stop there — so
+     打冷 sat in the interests list reading daa2 laang5 for as long as it took
+     somebody to notice by ear. CC-Canto has it as daa2 laang1, and it was
+     right: the 冷 there is a Teochew loan, not the Cantonese word for cold.
+     Anything the app will say out loud gets checked. */
   const words = new Map();
   HQ.forEach(ch => ch.words.forEach(w => words.set(w[0], w[1])));
-  MENU.sections.forEach(s => s.items.forEach(i => { if (cjk(i[0]).length > 1) words.set(i[0], i[1]); }));
+  MENU.sections.forEach(s => s.items.forEach(i => {
+    if (cjk(i[0]).length > 1) words.set(i[0], i[1]);
+    if (i[4] && cjk(i[4][0]).length > 1) words.set(i[4][0], i[4][1]);
+  }));
+  MENU.phrases.forEach(p => words.set(p[0], p[1]));
+  Object.values(INTERESTS).forEach(c => c.words.forEach(w => words.set(w[0], w[1])));
+  FESTIVALS.forEach(f => f.words.forEach(w => words.set(w[0], w[1])));
   let checked = 0, agreed = 0;
   const differ = [];
   for (const [w, jyut] of words) {
@@ -167,13 +180,54 @@ console.log('\nagainst CC-Canto');
     checked++;
     const all = new Set(hits.map(h => h.jyut));
     if (all.has(jyut)) agreed++;
-    else differ.push(`${w}  file ${jyut}   cc-canto ${[...all].slice(0, 3).join(' / ')}`);
+    else differ.push({ word: w, line: `${w}  file ${jyut}   cc-canto ${[...all].slice(0, 3).join(' / ')}` });
   }
   console.log(`  ${agreed} of ${checked} words CC-Canto knows agree exactly (${words.size - checked} it has never heard of)`);
-  if (differ.length) {
-    console.log(`  ${differ.length} differ — check each is a tone change Cantonese actually makes:`);
-    differ.forEach(d => note(d));
+  /* Divergences that have been looked at and kept, with the reason. Anything
+     not on this list is new and prints loudly.
+
+     The list exists because 打冷 hid for weeks inside a run of twenty-nine
+     unexplained notes, all of which looked alike. Twenty-eight were 變調 — the
+     tone changes Cantonese makes in compounds — and one was simply wrong. A
+     note nobody can triage is a note nobody reads. */
+  const REVIEWED = {
+    "男人": "變調 — jan4 raises to jan2 in this compound",
+    "女人": "變調 — jan4 raises to jan2 in this compound",
+    "靚女": "變調 — neoi5 raises to neoi2",
+    "宵夜": "變調 — je6 raises to je2",
+    "出面": "min6 is the 'outside' sense; min2 belongs to another",
+    "西多士": "士 is si2 in the Hong Kong 多士, not the literary si6",
+    "乾炒牛河": "河 takes the changed tone ho2 in the dish name",
+    "凍檸茶": "檸 is ning4; ling4 is the n/l merger, common but not the standard",
+    "青菜": "cing1 is the character's own reading; ceng1 is the colloquial variant",
+    "屋企人": "企 is kei2 inside 屋企, not its standalone kei5",
+    "過嚟": "嚟 is lai4 throughout this file", "返嚟": "嚟 is lai4; and 返 is faan1, not the literary faan2",
+    "入嚟": "嚟 is lai4 throughout this file", "就嚟": "嚟 is lai4 throughout this file",
+    "爸爸": "reduplicated kin terms take a low-falling first syllable",
+    "媽媽": "reduplicated kin terms take a low-falling first syllable",
+    "哥哥": "reduplicated kin terms take a low-falling first syllable",
+    "姐姐": "reduplicated kin terms take a low-falling first syllable",
+    "弟弟": "reduplicated kin terms take a low-falling first syllable",
+    "妹妹": "reduplicated kin terms take a low-falling first syllable",
+    "行路": "haang4 is the spoken reading; hang4 is literary",
+    "坐低": "co5 is the spoken reading; zo5 is literary",
+    "劏房": "變調 — 房 takes fong2 here, as it does in 廚房",
+    "唔好意思": "意思 is ji3 si1; si3 is not a reading 思 takes here",
+    "粵語殘片": "片 is pin2 in the film sense",
+    "利是": "利是 is lai6 si6 in Hong Kong; lei6 is the literary reading of 利"
+  };
+  const fresh = differ.filter(d => !REVIEWED[d.word]);
+  const seen = differ.filter(d => REVIEWED[d.word]);
+  console.log(`  ${seen.length} differ for reasons already reviewed (see REVIEWED in this file)`);
+  if (fresh.length) {
+    bad(`${fresh.length} unreviewed divergence(s)`,
+        'each is either a tone change to record in REVIEWED, or a mistake');
+    fresh.forEach(d => note(d.line));
+  } else {
+    console.log('  ✓ no unreviewed divergences');
   }
+  const stale = Object.keys(REVIEWED).filter(w => !differ.some(d => d.word === w));
+  if (stale.length) note(`REVIEWED lists ${stale.length} word(s) that no longer differ: ${stale.join(' ')}`);
 }
 
 console.log('\nthe simplified cross-reference');

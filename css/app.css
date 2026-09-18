@@ -2121,3 +2121,42 @@ button.tier-head:hover { border-color: var(--ink-3); }
 }
 .demo-off:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
 @media (min-width: 860px) { .demo-bar { padding: .45rem 1.5rem; } }
+
+/* ---------- the notebook's source switcher ----------
+   Three chips in a row made "which set am I writing" and "give me a different
+   one" look like the same kind of control, when one picks the source and the
+   other reshuffles it. The pair is a segmented control now, and the reshuffle
+   stands apart from it. */
+.nb-switch { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.nb-seg {
+  display: flex; flex: 1; min-width: 0;
+  border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; background: var(--sheet);
+}
+.nb-seg-b {
+  flex: 1; min-width: 0; padding: .4rem .6rem; border: 0; background: transparent;
+  color: var(--ink-2); font-size: .8rem; white-space: nowrap;
+  display: flex; align-items: baseline; justify-content: center; gap: .35rem;
+  border-right: 1px solid var(--rule-2);
+}
+.nb-seg-b:last-child { border-right: 0; }
+.nb-seg-b .han { font-family: var(--f-han-ui); font-size: .92rem; color: var(--seal); }
+.nb-seg-b small { font-size: .68rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.nb-seg-b:hover:not(.on):not([disabled]) { background: var(--sunken); color: var(--ink); }
+.nb-seg-b.on { background: var(--ink); color: var(--paper); }
+.nb-seg-b.on .han, .nb-seg-b.on small { color: var(--paper); opacity: .85; }
+.nb-seg-b[disabled] { opacity: .35; pointer-events: none; }
+.nb-next { flex: none; }
+.nb-missing { text-align: center; }
+.nb-missing .han { font-family: var(--f-han-ui); color: var(--ink-2); font-weight: 500; }
+
+/* the word of the week, with a way to take it with you */
+.wotw-row { display: flex; align-items: stretch; gap: .4rem; }
+.wotw-row .wotw-word { flex: 1; min-width: 0; }
+.wotw-copy {
+  flex: none; align-self: center; width: 2rem; height: 2rem; border-radius: 7px;
+  border: 1px solid var(--rule); background: transparent; color: var(--ink-3);
+  font-size: .9rem; line-height: 1; display: grid; place-items: center;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.wotw-copy:hover { color: var(--ink); border-color: var(--ink-3); background: var(--sunken); }
+.wotw-copy.copied { color: var(--jade); border-color: var(--jade); background: var(--jade-wash); }

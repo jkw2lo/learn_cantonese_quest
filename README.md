@@ -109,6 +109,20 @@ differ from CC-Canto, and almost all of them are 變調, the tone changes Canton
 makes in compounds: 爸爸 is `baa4 baa1` and not `baa1 baa1`, 靚女 is `leng3
 neoi2` and not `neoi5`. Both lists print on every run.
 
+**It only checked what it was pointed at.** The first version cross-checked the
+curriculum words and the menu and stopped there, so 打冷 sat in the interests
+list reading `daa2 laang5` until somebody noticed by ear. CC-Canto had it as
+`daa2 laang1` and was right — the 冷 there is a Teochew loan, not the Cantonese
+word for cold. It now checks everything the app will ever say aloud, which
+caught two more: 加油 as `gaa1 jau2` (油 is `jau4`) and 倒數 as `dou2 sou2`.
+
+**And a list of notes nobody can triage is a list nobody reads.** 打冷 hid inside
+a run of twenty-nine unexplained divergences that all looked alike; twenty-eight
+were 變調 and one was wrong. Reviewed divergences are now recorded in a
+`REVIEWED` map with the reason for each — "reduplicated kin terms take a
+low-falling first syllable", "企 is kei2 inside 屋企" — so anything new prints on
+its own and fails the run.
+
 Sources, both cached beside the tool and both in `.gitignore`:
 
 - **Unihan** `kCantonese` — one preferred reading for every CJK character.
@@ -256,12 +270,42 @@ Every one of these was caught by tooling rather than by reading it back:
 - **Two of the first four characters rendered as an empty box**, because
   hanzi-writer has no data for 佢 or 哋 and nothing fell back to simply drawing
   them. Found by using the app, not by a checker — which is its own lesson.
+- **五 characters learned today showed four squares** in the writing practice.
+  `todaysWritable()` drops anything without stroke data, which was right, but it
+  dropped them silently — so a day containing 佢 or 哋 quietly lost a square. The
+  notebook now names what is missing and why.
+- **The trackpad kept the pointer lock after the last character was written**,
+  capturing the cursor over the two buttons the finishing card had just put on
+  screen. It lets go when there is nothing left to write.
+- **The menu priced its food in ¥.** It is a Hong Kong diner.
 - **The "does this character arrive with a readable pairing" check was asking a
   yes/no question** it could not answer usefully: it could not tell a wait of one
   character from a wait of sixteen, and a wait of one is not a problem — 你 and
   好 cannot both be first. It measures the wait now, which made it stricter:
   characters waiting eleven used to hide inside the same tolerance as 朋 waiting
   for 友.
+
+## Reference glosses
+
+Every Chinese character on screen is hoverable. The tooltip used to come only
+from the curriculum, so the **224 characters that appear without being taught**
+— in menus, example words, sentences, the word of the week — had no tooltip at
+all. On the cha chaan teng menu that is most of it: 44 distinct characters
+printed, 13 taught. Hovering 菠蘿包 and being told nothing reads as broken rather
+than as out of scope.
+
+`tools/fetch-glosses.mjs` generates a reading and a short sense for all of them.
+They are reference only: never drilled, never counted, never scheduled, and the
+tooltip says so.
+
+Getting the *sense* right took some care, because both sources write for
+lexicographers. CC-Canto numbers its senses and CC-CEDICT appends measure words
+and cross-references, so 雞 arrives as "fowl; chicken M: 隻zhī [隻]" and 錢 leads
+with "a surname". CC-Canto's single-character entries also lean hard toward the
+Cantonese-specific colloquial sense, which is exactly wrong for a reference
+gloss — it returned 牛 as "stubborn and unreasonable" when the character on the
+menu means cow. So Unihan's `kDefinition` is the primary source and CC-Canto the
+fallback, with both put through the same trimming.
 
 ## 示範 Demo mode
 
@@ -298,6 +342,7 @@ record that had it switched on is unaffected; the flag just sits there ignored.
     js/sprint.js      the 速練 tab: timed sheets, the boards, the 錯字本
     js/app.js         views, the study session, flashcards, repair rounds
     tools/jyut.mjs            look a character or word up while writing data.js
+    tools/fetch-glosses.mjs   regenerate the reference glosses for untaught characters
     tools/check-jyutping.mjs  audit every reading against Unihan and CC-Canto
     tools/fetch-simplified.mjs  regenerate the simplified cross-reference
     tools/fetch-strokes.mjs   regenerate js/strokes.js

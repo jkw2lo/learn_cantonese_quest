@@ -14,16 +14,24 @@ import { fileURLToPath } from 'url';
 
 const here = p => fileURLToPath(new URL(p, import.meta.url));
 
-export const UNIHAN = (() => {
-  const m = {};
+const unihanFields = (() => {
+  const reading = {}, define = {};
   for (const line of readFileSync(here('.unihan-cantonese.txt'), 'utf8').split('\n')) {
     if (!line.startsWith('U+')) continue;
     const [cp, field, ...rest] = line.split('\t');
-    if (field !== 'kCantonese') continue;
-    m[String.fromCodePoint(parseInt(cp.slice(2), 16))] = rest.join('\t').trim();
+    const ch = String.fromCodePoint(parseInt(cp.slice(2), 16));
+    if (field === 'kCantonese') reading[ch] = rest.join('\t').trim();
+    if (field === 'kDefinition') define[ch] = rest.join('\t').trim();
   }
-  return m;
+  return { reading, define };
 })();
+
+export const UNIHAN = unihanFields.reading;
+
+/* Unihan's own English gloss. Terse, consistent and present for essentially
+   every character — which CC-Canto is not: a third of the characters this app
+   prints have a CC-Canto entry carrying a reading and no definition at all. */
+export const UNIHAN_DEF = unihanFields.define;
 
 /* traditional simplified [pinyin] {jyutping} /gloss/gloss/ */
 const LINE = /^(\S+) (\S+) \[([^\]]*)\] \{([^}]*)\}\s*(?:\/(.*)\/)?/;
