@@ -550,7 +550,7 @@ decision, not a silent one); and `renderQuest` still renders the phrase list.
 | 生字 shrinks on the deck face | The dashboard's card front is 34px wide; `.82rem` put the two characters edge to edge with no card showing round them. Now `.6rem` | `.decks .dc1.dc-word` |
 | "Solid" is defined where it is counted | Three modes each count separately and the word appeared five times on the band without ever being explained | `.deeper-sub`, `.solid-def` |
 | Six nibs, and `T` in the exercise book | Finest was 5px. Now 1.5–13. `T` already toggled the trackpad in the notebook and nothing said it worked here — note `wpControls` must use `innerHTML`, since `textContent` wiped the key hint on the first repaint | `#wpPen`, `onKey`, `wpControls` |
-| Flashcard faces stop repeating the footer | The three space-bar behaviours are listed under the card; the face only needs to say which way it turns | `renderFlash` |
+| Flashcard faces carry no hint at all | First they repeated the footer, then they said "Tap to flip" on a face whose main gesture is now *hear it* — the label was wrong as often as it was right. The three behaviours are listed under the card and the face is a card; it needs no caption | `renderFlash`, `.card-face .hint` deleted |
 | The radicals page says what it is not | "Is this all of them?" is the right question: 27 of the traditional 214, and the answer belongs on the page rather than in a commit message | `.rad-scope` |
 
 ---

@@ -1966,14 +1966,12 @@ function renderFlash() {
       <div class="card3d-inner">
         <div class="card-face">
           <span class="big ${f.wide ? "big-wide" : ""}">${esc(f.front)}</span>
-          <span class="hint">Tap to flip</span>
         </div>
         <div class="card-face card-back">
           <span class="sm">${esc(f.front)}</span>
           <span class="pin">${esc(f.pin)}${f.tone ? " " + toneMark(f.pin) : ""}</span>
           <span class="mean">${esc(f.mean)}</span>
           <span class="word">${esc(f.foot)}</span>
-          <span class="hint">Tap to turn over</span>
         </div>
       </div>
     </button>`;

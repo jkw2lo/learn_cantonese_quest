@@ -1060,7 +1060,6 @@ code {
   padding: 1.2rem;
 }
 .card-face .big { font-family: var(--f-han); font-size: 7rem; line-height: 1; color: var(--ink); text-align: center; }
-.card-face .hint { font-size: .72rem; color: var(--ink-3); position: absolute; bottom: 1rem; }
 .card-back { transform: rotateY(180deg); }
 .card-back .pin { font-family: var(--f-pin); font-size: 1.7rem; font-weight: 500; }
 .card-back .mean { font-size: 1rem; color: var(--ink-2); text-align: center; }
