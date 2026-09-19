@@ -96,14 +96,16 @@ radical frames had been averaged from the wrong donors.
 | **§9** | Per-tab quick-start guides |
 | **§10** | Smaller fixes |
 | **§11** | [Growing the curriculum, and milestones](#11--growing-the-curriculum-and-milestones) |
+| **§12** | [The phone, and the promise it made to the desktop](#12--the-phone-and-the-promise-it-made-to-the-desktop) — has its own §0 in it |
+| **§13** | [Signing in, so a record follows you between devices](#13--signing-in-so-a-record-follows-you-between-devices) |
 | | **Do not port these** — Cantonese-specific |
 
 ---
 
 ## §0 · Bugs that are live in Hanzi Quest right now
 
-All five verified against Hanzi Quest's working tree at the time of writing —
-these are not "might apply", they are there:
+All verified against Hanzi Quest's working tree at the time of writing — these
+are not "might apply", they are there:
 
 | bug | where in Hanzi Quest | one-line summary |
 |---|---|---|
@@ -113,6 +115,12 @@ these are not "might apply", they are there:
 | `data-speak` has no listener | `js/app.js:1484` emits it; `dataset.speak` appears nowhere | those buttons do nothing at all |
 | The 正 tally overflows its corner | `js/app.js:2684` — `tallyRow(exToday)` with no `max` | 31 reps draws seven glyphs and pushes the container |
 | The Library's stage filter dies at stage 10 | `js/app.js:2858` — `libFilter.length === 2 && ch.stage !== +libFilter[1]` | Hanzi Quest has 13 stages; chips 10–13 select nothing and show everything |
+| No viewport meta tag | `index.html` — the `<head>` has none | every `max-width` rule under 860px has never once run on a phone; see §12 |
+| The phone bottom bar is full to the brim | `css/app.css:228` — `.nav { grid-template-columns: repeat(7, 1fr) }` | exactly seven buttons for seven columns, so the next tab added breaks it silently |
+| The wide notebook square is inert | `css/app.css` — `@media (min-width: 720px) { .nb-sq … }` sits **above** the base `.nb-sq` rule | a media query buys no specificity; the later base rule wins at every width |
+| Touch hides keycaps in prose | `css/app.css` — `@media (hover: none) { .opt-n, … }` | `.opt-n` is also the inline keycap: Settings reads "reload with&nbsp; held, or ." |
+| Centred scrollers hide their own top | `css/app.css` — `.nb-stage`, `.place-body` | latent today, live the moment the viewport tag lands: the first square scrolls out of reach |
+| Four copies of a CSS size live in JS | `js/app.js` — `makeWriter` and its three call sites | they match today; change either side and every stroke lands 40% off the guide lines, silently |
 
 
 ### "Study ahead" ran away in two separate places
@@ -1676,6 +1684,316 @@ is coarser: probably every hundred, plus the end.
 A smoke check compares `MILESTONES` against the keys of `HAIL` in `js/app.js`
 as text, because a milestone with no card opens an empty overlay and app.js has
 no DOM in the harness.
+
+---
+
+## §12 · The phone, and the promise it made to the desktop
+
+Cantonese Quest now lays out on a phone. **Hanzi Quest has the same omission
+and the same fallout**, and the order below is the order it has to be done in:
+one of these steps makes every other one visible.
+
+### The one line that makes the rest of the stylesheet exist
+
+`index.html` had **no viewport meta tag**. Without one a phone lays the page
+out at 980px and scales the result down to fit, so every `max-width` block
+below 860px in `css/app.css` had never once run — the bottom bar, the stacked
+dashboard, the two-up options, the 360px label shrink. All of it was written,
+none of it had ever been seen.
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+```
+
+`viewport-fit=cover` is not optional garnish: the CSS already asks for
+`env(safe-area-inset-bottom)` in three places, and that stays `0` without it.
+
+Adding this tag is the whole risk of the exercise, because it turns on a large
+body of CSS that has never been executed. Do it first and walk every tab.
+
+### The deal: everything for the phone lives inside a query
+
+The refusal that shaped all of this was *not wanting to trade the desktop UX
+for a mobile one*, and it is worth stating what actually resolves it. Width
+breakpoints force a choice. Capability queries do not — both behaviours can be
+true at once. So:
+
+> Every rule written for a phone goes inside a `max-width` or a pointer query,
+> in one marked section at the foot of `css/app.css`. Nothing there can reach a
+> desktop window.
+
+That is a promise about the shape of a file, so a check can keep it. **"the
+phone layer stays on the phone"** in `tools/smoke.mjs` reads `css/app.css` from
+the marker comment to EOF, strips comments, counts braces, and fails if any
+top-level block is not an `@media`, or is an `@media` without `max-width`,
+`pointer: coarse` or `hover: none` in it. Port the check with the section; on
+its own the section is a convention, and conventions rot.
+
+The desktop measurements did not move: `.wrap` 1184px at 1280, top nav present,
+burger absent, no horizontal scroll, sprint options 4-across at 202px.
+
+### Eight tabs do not fit a phone's bottom bar, and never did
+
+`<nav class="nav">` was drawn as `grid-template-columns: repeat(7, 1fr)` and
+held **eight** buttons, because the Menu tab arrived after the bar was last
+counted. Nobody saw it, because of the missing viewport tag.
+
+**Checked, and Hanzi Quest is not broken here yet**: it has seven tabs in seven
+columns, which fits exactly. It is one tab away from the same bug, with nothing
+to catch it — and it is hard to argue seven labels are legible at 375px anyway,
+so the sheet below is worth having on its own terms.
+
+It is gone. A burger in the top bar opens a **bottom sheet** — anchored to the
+floor of the screen, not dropped under the button, because a phone is held from
+the bottom and the list is the part you aim at. Rows are 48px. The buttons
+carry `data-nav` like every other tab button, so `go()` lights the right one
+and the single `[data-nav]` handler in `boot()` wires them without knowing they
+exist; `go()` calls `closeDrawer()`, since picking a tab is the only reason it
+was open.
+
+One measured detail: `.icon-btn.burger`, two classes, because `.icon-btn` sets
+`display: grid` and is declared *below* — a single-class `.burger { display:
+none }` loses on source order and the burger appears at 1280px.
+
+The top bar then needed 417px to lay out without squeezing, so below 480px the
+wordmark stands down and the seal carries the identity alone — which is what it
+already does between 860 and 1439, for the same reason.
+
+### Two rules that had never applied, found by looking
+
+Both are live in Hanzi Quest.
+
+- **`@media (min-width: 720px) { .nb-sq { width: 172px } }` sits *above* the
+  base `.nb-sq` rule.** A media query buys no specificity, so the later,
+  equally specific base rule won at every width and the wide notebook square
+  has never appeared. Move the query below the rule it overrides. This is the
+  same class of bug as `libFilter.length === 2` in §0: written, shipped,
+  inert.
+- **`@media (hover: none) { .opt-n, .key-hint { display: none } }`** was
+  written to hide the *drill numbering* on touch, and `.opt-n` is also the
+  inline keycap used in prose. On a phone the Settings version row read
+  "reload with &nbsp; held, or ." Scope it: `.opts .opt-n, .sp-opts .opt-n,
+  .key-hint`.
+
+### Four across or two-up is a setting, not a width
+
+`@media (min-width: 820px) { .opts.grid2 { …4 columns… } }` was the window
+deciding alone. It is the right *default* at both ends and the wrong answer for
+anyone who wants the other one, so `state.optCols` now holds `auto | row |
+grid` and the width only votes on `auto`.
+
+The resolution cannot live in CSS, because it depends on two things — the
+setting and the width — and a media query can only ask about one. So
+`optColsEffective()` weighs them, `applyOptCols()` writes the answer to
+`document.documentElement.dataset.optCols`, and the stylesheet reads
+`:root[data-opt-cols="row"]` and never has to know how it was arrived at. Both
+`optColsMQ.addEventListener("change", …)` **and** `addEventListener("resize",
+…)`: the media query is the right question, resize is the one that always gets
+asked — an emulated viewport changes without dispatching the former.
+
+The same attribute drives the sprint sheet's options. Only `.sp-inner`'s
+`max-width` stayed in a width query, because that really is about the window.
+
+### Big, because there was never a reason for small
+
+Asked for on both platforms, not as a phone concession: `.opt` went `.92rem →
+1.05rem` and `3rem → 3.5rem` of height, `.opt .big` `2.6 → 3rem`,
+`.writer-box` **190px → `min(268px, 76vw)`** inside a column that is 544px on a
+phone and 864px on a desktop. The sprint's options moved with them. Checked for
+clipping at 1280 (242px buttons, nothing overflowing) and at 375.
+
+### Answers go where the thumb is
+
+On a phone the prompt keeps the top of the screen and the answers sit on the
+floor of it — `.drill, .sp-q { flex: 1 0 auto }` with `margin-top: auto` on the
+options, so a long sentence prompt is still allowed to push them down and
+scroll. 2×2 boxes are 166×90 ending at y=763 of 812.
+
+One trap: `.ses-body` had to become a flex column for this, and `.ses-inner`
+centres itself with `margin: 0 auto`. An auto cross-axis margin on a flex item
+*eats* free space instead of stretching into it — the column came out 297px of
+a 375px screen. `width: 100%` alongside the `max-width` fixes it.
+
+### What a finger can do, and what it is spared
+
+All of this is `pointer: coarse` / `pointer: fine`, never a width: a touchscreen
+laptop is both, and a narrow desktop window is neither.
+
+- **`padSupported()` now also requires `(pointer: fine)`.** Pointer lock alone
+  is not enough — Android reports `requestPointerLock` and then has nothing to
+  lock, so the 觸控 button appeared on phones and did nothing. Two of the three
+  trackpad buttons (`#nbPad`, `#wpPad`) were not gated on `padSupported()` at
+  all; only `#padW` was. `padStart()` also refuses outright now, because `T` on
+  a keyboard still calls in and a tablet has both.
+- **The flashcard takes tap / hold / swipe**, mirroring what the space bar
+  already does with tap / double tap / hold — tap to hear it, hold to peek at
+  the back, swipe across to move on, left carrying you forward. The touch hold
+  is its own number (`320ms`, against the keyboard's `170ms`): a thumb rests
+  that long on the way back up, so the keyboard threshold fires on ordinary
+  taps.
+- **The card's `onclick` returns early on a coarse pointer.** A real tap fires
+  `click` as well as the pointer events, so without this the card turned over
+  every time it was asked to say something. A mouse keeps click-to-flip.
+- `pointercancel` matters and is easy to forget: the browser takes the pointer
+  away when it decides a drag is a scroll, and the hold timer would otherwise
+  fire onto a card the thumb has already left.
+
+### Making a square bigger is not a CSS change
+
+This is the trap that bit hardest, and Hanzi Quest is sitting on it.
+
+`makeWriter()` built the hanzi-writer SVG at a hardcoded `width: 190, height:
+190`, and three other call sites carried their own copies — `150` for the
+notebook, `168` for the stroke-order panel, `104` for the introduction. Each
+number is a duplicate of a number in the stylesheet, and today they all happen
+to match. **Change one side and nothing errors.** hanzi-writer emits width and
+height attributes and no `viewBox`, so its SVG cannot scale: built at 190
+inside a 268px 田字格 it sits in the top-left corner, and since it positions
+strokes from its own bounding rect, every stroke you draw lands about 40% off
+the guide lines behind it. It reads as bad handwriting, not as a bug.
+
+The fix is to delete the duplication rather than re-synchronise it — the square
+is the thing that knows how big it is:
+
+```js
+function writerPx(mount) {
+  const sq = mount.closest(".tian");
+  return Math.round(sq ? sq.getBoundingClientRect().width : 0) || 190;
+}
+```
+
+…and drop `width`/`height` from all four call sites. A smoke check asserts no
+call site carries one.
+
+The corollary: **`.writer-box` and `.nb-sq` must be fixed pixels, not `vw`.**
+The writer is built once, at whatever the square measured at that instant, and
+cannot follow. A viewport unit is correct until the phone is turned sideways.
+268px and 196px clear the narrowest phone still in use (320px, less 32 of
+padding), so nothing is lost by pinning them.
+
+### Centring a scrolling box hides the top of it
+
+Both of these are in Hanzi Quest verbatim, and both become live the moment the
+viewport tag lands:
+
+```css
+.nb-stage   { …  justify-content: center;  overflow-y: auto; }
+.place-body { …  place-items: center;      overflow-y: auto; }
+```
+
+When the content is taller than the box, centring puts the first item **above
+the scroll origin**, and no amount of scrolling reaches it. In the notebook
+that item is the square you are being asked to write in — it was cut off under
+the header, which reads as "the header is covering it" rather than as an
+alignment bug. The bigger squares are what tipped it over on a phone; Hanzi
+Quest has 763 characters to list, so it will tip over sooner.
+
+`safe` is the keyword for exactly this — it falls back to start alignment on
+overflow. Declare it twice so an older browser keeps the plain centring rather
+than dropping the rule:
+
+```css
+justify-content: center;
+justify-content: safe center;
+```
+
+### What did not need doing
+
+The Today dashboard **already** stacked below 900px — `.dash` is a flex column
+by default and only becomes a grid at `min-width: 900px`. It had simply never
+run. Worth checking before writing anything: some of what looks like missing
+mobile work is mobile work that was never switched on.
+
+---
+
+## §13 · Signing in, so a record follows you between devices
+
+The record lives in localStorage, which is per-browser: what you build on a
+laptop is invisible on a phone and ends when site data is cleared. Both apps
+have the same problem and **most of the same answer already written**.
+
+### There was already a remote layer, pointed at the wrong runtime
+
+`connectRemote()` in `js/srs.js` syncs against `window.claude.use("db")` — the
+Claude artifact runtime. On GitHub Pages `window.claude` is undefined, so it
+returns `false` on the first line and has never done anything there. What it
+got right is the shape: a document with `get()` and `set()`, and a debounced
+push on every `save()`. So this is not a new subsystem, it is a second provider
+behind an interface that already exists:
+
+```js
+async function useRemote(doc)   /* hand the record a document to sync against */
+function dropRemote()           /* let go of it on sign-out */
+```
+
+`connectRemote()` now just calls `useRemote()` with Claude's document, and
+`js/sync.js` calls it with Firebase's. Neither is required; with no provider,
+`remoteDoc` stays null and `pushRemote()` is a no-op.
+
+### Last-write-wins is the wrong rule for work
+
+This is the part worth reading twice, because getting it wrong loses somebody's
+afternoon and does it silently.
+
+The old code took the remote wholesale when `remote.updated > state.updated`. A
+morning on the phone and an afternoon on the laptop are both real, and whichever
+pushed second erased the other. `mergeState(a, b)` replaces it:
+
+- **Counts union by max.** `seen`, `right`, `wrong`, `skills`, `shown` are
+  incremented in `grade()` and reset nowhere, so the max of two counts of the
+  same monotonic thing is the true count. Verify this before porting — if
+  Hanzi Quest ever resets a counter, max resurrects what was reset.
+- **`lvl` and `due` come as a pair from the later sighting.** They are a
+  position in a review queue, not a score; maxing them invents a schedule
+  neither device had.
+- **`first` is the earlier date, `last` the later, `streak.best` the max.** A
+  best is a claim about the past and cannot be undone by the other device not
+  knowing about it.
+- **Settings follow the clock.** They are answers, not accumulations.
+- **The output is key-sorted.** Not tidiness: the merged record is serialised
+  to compare against the local one and again to write remotely, so unstable key
+  order makes two identical records compare as different — a repaint on every
+  pull and a write on every load. `mergeBy` sorts; `Object.assign` unions were
+  replaced with `unionKeys` for the same reason. A smoke check asserts
+  `mergeState(a, b)` and `mergeState(b, a)` are byte-identical.
+
+Nine smoke checks exercise the merge against made-up records. Port them with
+the merge — this is the one piece of the app whose failure mode is invisible.
+
+### Firebase, and why the key in the file is not a leak
+
+`js/sync.js` is self-contained and **inert until configured**: with an empty
+`apiKey` no row appears in Settings, no SDK is fetched, and the app is the
+localStorage-only app it was. The full five-step setup lives in the header
+comment of that file rather than here, because that is where somebody doing it
+will be looking.
+
+Things that were not obvious:
+
+- **The SDK is ~510KB.** It is fetched lazily, and at boot only if this browser
+  has signed in before (`cq-signed-in` in localStorage). A first-time visitor
+  pays nothing. Same pattern as `loadAudioBundle()`.
+- **The three compat bundles must load in order** — app, then auth, then
+  firestore — so `script.async = false` and they are awaited in sequence.
+- **Popups are blocked on phones and in in-app browsers.** `signInWithPopup`
+  falls back to `signInWithRedirect` on `auth/popup-blocked` and friends, so
+  the button works everywhere without asking the device what it is.
+  `auth/popup-closed-by-user` is *not* a fallback case — that one is a person
+  changing their mind.
+- **`onAuthStateChanged` fires on every load** for an existing session, which
+  is what makes signing in a once-per-device act. It also fires after a
+  redirect returns, so both paths land in the same handler.
+- **The apiKey is not a secret** and is in every Firebase web app ever shipped.
+  The Firestore rule is the entire security model: a signed-in person can read
+  and write the one document named after their own uid. That rule is written
+  out in the header of `js/sync.js`; do not ship without it.
+
+### What this deliberately is not
+
+Not an account system. No server of ours, no profile, nothing to administer,
+and no second source of truth — the document Firebase holds is the same JSON the
+💾 button already writes to a file. Signing out drops the remote and leaves the
+local record exactly where it was.
 
 ---
 
