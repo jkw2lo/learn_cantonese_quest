@@ -15,6 +15,16 @@ why, and where — with a note where Hanzi Quest needs it done differently.
 Read **§0 first**: those are defects rather than preferences, and every one of
 them is in Hanzi Quest's source today, at the line numbers given.
 
+**Entries marked *(Superseded)* are kept on purpose.** Where I got something
+wrong and fixed it two commits later, the sequence is usually the most useful
+part — but the superseded step is labelled, and says which entry to port
+instead. Port the labelled one.
+
+`tools/smoke.mjs` checks this file: every identifier it cites in backticks has
+to exist in the source, unless it is on a short list of names deliberately
+mentioned *because* they are gone. That check exists because five entries had
+quietly rotted into describing code that no longer existed.
+
 ---
 
 ## How to work through this
@@ -572,12 +582,13 @@ words, and it is the character's label anyway. `charCard()` takes a `topper`
 now and renders it at the top of the hero column. That one change is 66px of
 the 76px that separated "just overflows" from "comfortable" at 1280×720.
 
-Measured after, all 146 characters:
+Measured after, every card in the library — first at 146, and again at 300
+when the curriculum doubled (§11), which is the run that matters:
 
 | window | tallest card | overflowing |
 |---|---|---|
-| 1280 × 720 | 551 of 592 | 0 of 146 |
-| 1024 × 768 | 551 of 640 | 0 of 146 |
+| 1280 × 720 | 551 of 592 | 0 of 300 |
+| 1024 × 768 | 555 of 640 | 0 of 300 |
 
 The tallest are 冇 咗 喎 — the ones with no stroke data, where the explanatory
 note makes the *hero* the binding side rather than the text. The card needs 679px
@@ -688,7 +699,9 @@ Output goes to `js/strokes-made.js`, **not** into `js/strokes.js`, so
 `check-strokes.mjs` can go on comparing the real bundle byte-for-byte with
 upstream. The app merges them at load and never overwrites a real entry;
 `STROKE_MADE` lists what was generated, and the card footnotes it rather than
-hiding the buttons. Coverage went 136/146 → 144/146.
+hiding the buttons. Coverage went 136/146 → 144/146, and at 300 characters it
+is 289 upstream + 9 composed, with 攰 and 啱 still unreachable — no parts exist
+to build them from.
 
 Hanzi Quest teaches simplified from a much larger set and will have far fewer
 gaps, but the technique is the same wherever upstream is short.
@@ -954,20 +967,23 @@ generalised.
 
 ### Eight menu characters were taught but nowhere to be found
 
-`MENU_CHARS` teaches 43 characters. Eight of them — 我 該 個 呀 幾 碗 呢 埋 —
-appear only in the phrases you say to a waiter, never on the printed dish
-list. The card said "One character a day. **Find it on the menu below**"
-regardless, which was already misleading; the day the Menu tab stopped
-rendering the phrases, 呢 had nowhere to be found at all.
+`MENU_CHARS` covers every character the quest counts — 43 of them when this was
+written, 61 now that the curriculum has grown. Eight — 我 該 個 呀 幾 碗 呢 埋 —
+appear only in the phrases you say to a waiter, never on the printed dish list.
+The card said "One character a day. **Find it on the menu below**" regardless,
+which was already misleading; the day the Menu tab stopped rendering the
+phrases, 呢 had nowhere to be found at all.
 
-Two fixes, both needed. The phrases come back onto the Menu tab (speakable
-now, and with the day's character highlighted in them). And the copy tells the
-truth about where to look:
+Two fixes, both needed. The phrases come back onto the Menu tab (speakable now,
+and with the day's character highlighted in them). And the pick is restricted to
+characters that are actually printed.
 
-    onPrintedMenu(c) ? "on the menu below" : "in the phrases under the menu"
-
-`PRINTED` is derived from `MENU` at load rather than listed by hand, so
-editing the menu data cannot put it out of date.
+The first version of that restriction was a `PRINTED` set and an
+`onPrintedMenu()` helper in `app.js`, derived from `MENU` at load rather than
+listed by hand. **Both are gone** — the set moved into `js/data.js` and became
+level-aware (§7, *The menu is not all on the wall at once*), and the helper
+turned out to be dead code that nothing had ever called. Take the principle
+from here and the model from there.
 
 **Smoke gains three checks**: every `MENU_CHARS` character appears somewhere on
 the page; exactly eight are phrase-only (so adding a ninth is a deliberate
@@ -1042,8 +1058,10 @@ Verified on a fresh record: after the menu character, `learned` 0 and the
 goal still 5; after a session character, `learned` 1 and the goal 4. The menu
 character is known and scheduled throughout.
 
-**Where:** `js/app.js` — `learnedToday()`, `menuLearnedToday()`, `teachOne(c,
-{menu})`, the `#gotIt` handler.
+**Where:** `js/app.js` — `learnedToday()`, `teachOne(c, {menu})`, the `#gotIt`
+handler. *(An earlier draft of this kept a separate `menuLearnedToday()`. It is
+gone: the quest now records what it taught in `state.menuTaught`, read through
+`taughtHere()` in `js/srs.js` — see* **The side quest keeps its own books** *.)*
 
 ### The menu is not all on the wall at once
 
@@ -1085,9 +1103,10 @@ Three consequences worth copying:
   holding 快 when this shipped would otherwise have spent the rest of the day
   hunting for it. That is a repair, not a shift.
 - **Running out at this level is not finishing the quest.** `menuToday()`
-  returns `wall: true` when the level is exhausted but the card is not, and the
-  card says so — "You can read this whole menu … there is more on a longer
-  menu" — rather than declaring the quest complete.
+  returned `wall: true` when the level was exhausted but the card was not, and
+  the card said so rather than declaring the quest complete. *(Superseded: the
+  gate in the next entry promotes you the moment the wall is clear, so that
+  state became unreachable and the flag was deleted. Do not implement it.)*
 
 **The bar keeps a stable denominator (53, the whole card) and the note carries
 the countable one.** A denominator that shrank and grew as levels arrived would
@@ -1099,6 +1118,11 @@ stands" — the figure they can verify by looking.
 `MENU_TIERS` thresholds were rescaled with the denominator (20 → 17, 34 → 30,
 against 53 rather than 61). Measured over a 30-day run: level 2 on day 14,
 level 3 on day 23, and every pick on the wall on the day it is offered.
+
+*(Those thresholds are also superseded — the next entry removes `at` and `by`
+from `MENU_TIERS` altogether. **Port that entry, not this paragraph.** What
+survives here is the level-aware `MENU_READ` / `MENU_LEVELS` model, which
+everything after it depends on.)*
 
 Hanzi Quest's menu has the same three-level reveal and the same one-set model
 behind it, so it has both bugs waiting — its board characters are simply luckier
@@ -1328,10 +1352,14 @@ Three details worth copying:
 - **A step whose target is not on screen is skipped**, not pointed at nothing.
   The flashcard column stacks away on a narrow layout and the mistake notebook
   does not exist until you have made mistakes.
-- **Point at selectors that actually exist.** Four of mine did not on the first
-  pass — `.sp-board`, `.leech-list`, `.rec-head`, `.lib-bar` were all invented.
-  Walk every tab and assert each target resolves; it takes one loop and it is
-  the whole difference between a guide and a blank overlay.
+- **Point at selectors that actually exist.** Four of my first-pass targets
+  resolved to nothing. `.rec-head` and `.lib-bar` were invented outright and
+  are in no file to this day; `.sp-board` and `.leech-list` are real classes in
+  `js/sprint.js`, but they are not rendered on the tab the step was pointing at
+  until there is something to put in them. Both failures look identical from
+  the overlay: a ring around nothing. Walk every tab and assert each target
+  resolves; it takes one loop and it is the whole difference between a guide
+  and a blank overlay.
 - **The first run's coach is locked** (no ✕, the veil does not dismiss); the
   one from the `?` closes normally.
 
@@ -1354,17 +1382,19 @@ variation selector — asks for the emoji glyph.
 The card says "find it on the menu below", so the character it picks has to be
 there. `MENU_CHARS` counts everything on the page — dish names, section heads,
 the set-lunch board, the small print under a dish, and the phrases you say to a
-waiter — which is right for *progress* and wrong for *picking*.
+waiter — which is right for *progress* and wrong for *picking*. The first fix
+narrowed the pick to `MENU_PRINTED`, the characters actually on the card.
 
-`MENU_PRINTED` is the narrower set: dish names and section headings, the part
-of the menu you read in order to order. `menuToday()` picks from that. Eight
-characters are consequently never taught by the quest — they are still taught
-by the ordinary curriculum.
+**That was half of it, and this entry is kept only because the diagnosis is the
+useful part.** "On the card" turned out not to be one set either: the card
+prints itself in three stages, so a character can be printed and still not be
+on the learner's wall. See **§7 · The menu is not all on the wall at once** and
+the two entries after it for the model that replaced this one — `MENU_READ[n]`,
+`menuOnWall()`, and a level gate that opens when you can read what you have.
 
-Two smoke checks hold it: every pickable character is on the dish list, and
-nothing off the dish list is pickable.
-
-**Where:** `js/data.js` — `MENU_PRINTED`; `js/srs.js` — `menuToday()`.
+**Port §7, not this.** What holds here is only the principle: *a card that tells
+someone to go and look at something has to be pointing at something they can
+see.*
 
 ---
 
@@ -1422,7 +1452,7 @@ neighbours in both themes.
 |---|---|---|
 | Notebook releases the trackpad when the deck is finished | It held the pointer lock over the two buttons the finishing card had just put on screen | `startSquare()` `onComplete`, `nbAutoPad()`, `nbPad()` |
 | Notebook names the characters it dropped | `todaysWritable()` silently drops characters without stroke data, so five learned showed four squares | `renderNotebook()`, `.nb-missing` |
-| Notebook source switcher is a segmented pair | Three chips made "which set" and "give me another" look like the same control | `.nb-switch`, `.nb-seg` |
+| Notebook source switcher is a segmented pair | Three chips made "which set" and "give me another" look like the same control | `.nb-seg`, `.nb-mode` |
 | Word of the week reads across, with a copy button | The meaning was a third line under a tall stack; the copy button had claimed a column | `.wotw-row`, `.wotw-said`, `copyText()`, `legacyCopy()` |
 | The vocabulary deck says 生字 | It sampled its own contents, so its face was whatever word came first — it read as a card about that word | `oneDeck("deckWords", …)` |
 | Go deeper reads across in three | A narrow label, the modes in the middle, the reps on the right in line with the heading | `.dash-wide .deeper` |
@@ -1457,6 +1487,52 @@ does nothing is worse than none.
 | Names are capitalised | Each word, and after a hyphen or apostrophe: mary-jane → Mary-Jane, o'brien → O'Brien. The rest of the word is left alone or McRae and van der Berg break in the name of tidiness. Applied on save *and* on load, since records already exist | `capName()`, `load()` |
 | The greeting takes the first name only | The headline is one line by design and "Ready when you are, Jen O'Brien." came out as "…, J…" | `renderToday()` |
 | Flashcard buttons show ← and → | The footer named the space bar and said nothing about the arrow keys that were already working | `renderFlash()` |
+
+---
+
+### Five that were all the same bug
+
+Each of these was reported as "this one page looks wrong", and every one turned
+out to be a page opting out of a convention the other seven follow. Worth
+grouping because the fix is never the page — it is the opt-out.
+
+| what | what was actually wrong | where |
+|---|---|---|
+| The Menu intro wrapped to two lines | `.menu-intro .note` carried `max-width: 46rem`, left over from renaming `.menu-head` when that class collided with the menu sheet's own masthead. No other tab's intro note has a measure cap, so one 55rem sentence broke in half with 74rem of room beside it. Removed rather than raised: a measure rule belongs on `.today-head .note` globally or nowhere | `css/app.css` |
+| The Exercise book's title was tiny | It titled itself with an `.eyebrow` — 0.68rem uppercase — against the 1.6rem display face the other seven tabs use, so Write read as a section inside some larger page. An `h1` now; all seven measure 25.6px | `renderWrite()` |
+| …and sat in narrower margins | `.wp-wrap { max-width: 78rem }` pinned it at every width, overriding the 34 / 62 / 74rem that `.wrap` steps through. 64px wider than every other tab on a desktop, and ignoring the narrow step entirely on a tablet. Class deleted | `css/app.css`, `renderWrite()` |
+| The Sprint blurb explained consequences | "Nothing here is marked until you hand it in, and nothing here can make tomorrow's review queue any longer" — two reassurances about worries nobody has before starting, in the first two lines of the page. The result screen already says what was marked | `js/sprint.js` |
+| The quest was named after the restaurant | "Read a Cha Chaan Teng" → "Read a Cha Chaan Teng **Menu**". What you learn to read is the menu on its wall. Four places plus the `needs:` chain of the quest locked behind it | `QUESTS`, `renderQuest()`, session end, `openQuest()` |
+
+**The general shape:** when a page looks wrong beside its siblings, look for
+what it overrides before you adjust what it renders. All five of these were one
+declaration or one element choice, and in four of the five the right fix was
+deleting the override rather than tuning it.
+
+---
+
+### Say it out loud, in one row
+
+The Menu tab's five phrases ran two-across and three deep. One row across the
+full width is better, and the interesting part is making that safe:
+
+    <div class="phrase-list" style="--phrase-n:${Math.min(MENU.phrases.length, 6)}">
+
+Three decisions in one line:
+
+- **The count comes from the data, not the stylesheet.** `repeat(5, …)` in CSS
+  means a sixth phrase is silently squeezed into five columns. The fix belongs
+  next to the thing that can change.
+- **Every track is `minmax(0, 1fr)`,** so a track can never exceed its share and
+  the cards cannot collide at any count. The other half of that is the
+  jyutping: `m4 goi1 ngo5 jiu3 go3 caan1 paai2` is one unbreakable run to a
+  browser, and an unbreakable run is exactly what forces a track open. It gets
+  `min-width: 0; overflow-wrap: anywhere` so it wraps inside its track instead.
+- **Clamped at six.** Stress-tested at 5, 6, 7, 8 and 10 phrases: one row every
+  time, nothing clipped, no overlap, no page overflow — but at ten the cards are
+  94px and unreadable. Layout that cannot break is not the same as layout that
+  still works, so a seventh phrase wraps to a second row rather than squeezing
+  the rest.
 
 ---
 

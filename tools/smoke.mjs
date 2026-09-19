@@ -287,6 +287,54 @@ console.log('\nthe rest of the wall');
      !/You can read the whole menu/.test(app));
 }
 
+console.log('\nthe porting guide still describes this app');
+{
+  /* PORTING.md is the one file whose whole value is being trustworthy, and it
+     is the one file nothing was checking. Five entries had quietly rotted: two
+     described a `wall` flag and a set of MENU_TIERS thresholds that later work
+     deleted, one cited a `PRINTED` helper that turned out to be dead code, one
+     named a `menuLearnedToday()` that never survived the side-quest rewrite,
+     and one pointed at a `.nb-switch` class that does not exist.
+
+     So: every identifier the guide cites in backticks must appear in the
+     source — unless it is listed below as deliberately named for being gone,
+     which several entries do on purpose ("X replaces Y", "both are gone"). */
+  const doc = readFileSync(new URL('../PORTING.md', import.meta.url), 'utf8');
+  const files = ['js/app.js', 'js/srs.js', 'js/data.js', 'js/sprint.js',
+                 'index.html', 'css/app.css',
+                 'tools/check-strokes.mjs', 'tools/check-components.mjs',
+                 'tools/check-jyutping.mjs', 'tools/audit-strokes.mjs',
+                 'tools/compose-strokes.mjs', 'tools/make-audio.mjs',
+                 'tools/version.mjs'];
+  /* this file is deliberately not in that list: the GONE names are written out
+     below, so including it would find every one of them in "the source" and
+     the check would pass by looking at itself */
+  const sources = files.map(read).join('\n');
+  const smoke = read('tools/smoke.mjs');
+
+  /* named on purpose as things that no longer exist */
+  const GONE = new Set([
+    '.rec-head', '.lib-bar',                                // invented selectors, §9
+    'onPrintedMenu', 'menuLearnedToday', 'showStrokeOrder'  // replaced, and said so
+  ]);
+
+  const cited = new Set();
+  for (const m of doc.matchAll(/`([A-Za-z_$][\w$]*)\(\)`/g)) cited.add(m[1]);
+  for (const m of doc.matchAll(/`([A-Z][A-Z0-9_]{3,})`/g)) cited.add(m[1]);
+  for (const m of doc.matchAll(/`(\.[a-z][a-z0-9-]{3,})`/g)) cited.add(m[1]);
+
+  const all = sources + '\n' + smoke;
+  const stale = [...cited].filter(n => !GONE.has(n) && !all.includes(n));
+  ok('every name the guide cites is still in the source', !stale.length, stale.join(' '));
+
+  /* and the reverse: an allowlist entry that came back is just as misleading */
+  const resurrected = [...GONE].filter(n => sources.includes(n));
+  ok('and nothing on the gone-list has come back', !resurrected.length, resurrected.join(' '));
+
+  ok('the guide covers every section it advertises',
+     [...doc.matchAll(/^\| \*\*§(\d+)\*\*/gm)].every(m => doc.includes(`## §${m[1]} ·`)));
+}
+
 console.log('\nhow much of the wall you can read');
 {
   /* Counted in ink, not in vocabulary: every character printed on the card,
