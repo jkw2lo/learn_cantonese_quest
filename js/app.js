@@ -40,6 +40,20 @@ const RADICAL_GLOSS = {
 const gloss = c => CHAR_INDEX[c] ? [CHAR_INDEX[c].p, CHAR_INDEX[c].m]
                  : (RADICAL_GLOSS[c] || EXTRA_GLOSS[c] || ["", ""]);
 
+/* A meaning that opens with a bracket is a job description, not a translation.
+
+   Twenty-two of the three hundred are like this, and they are exactly the ones
+   with no English word behind them: the particles and the measure words.
+   "(measure word: flat things)" against "(measure word: long thin things)"
+   against "(measure word: clothes, pieces)" asks the learner to tell three
+   characters apart by a couple of words of English, which is a test of my
+   phrasing rather than of their Cantonese.
+
+   So wherever a meaning like that has to stand in for the character on its
+   own — a drill option, a placement prompt — the reading rides along. zoeng1
+   is the thing that identifies 張; the bracket only says what it is for. */
+const isJobGloss = m => /^\(/.test(String(m));
+
 /* ---------- tiny helpers ---------- */
 
 const $  = (s, r = document) => r.querySelector(s);
@@ -1457,7 +1471,40 @@ function renderDrill(item, ch, body, foot) {
   if (kind === "r") {
     prompt = `<div class="drill-char han">${esc(ch.c)}</div>`;
     correct = ch.m;
-    options = [ch.m, ...optionSet(ch.m, pool, x => x.m)].map(m => ({ v: m, html: esc(m) }));
+    /* Options are meanings, and a bracketed one cannot be told from another
+       bracketed one — see isJobGloss. So the reading rides along, but ONLY
+       when two or more of the four need it.
+
+       That condition is the whole point. Tagging a lone bracketed option would
+       hand the answer over: one option carrying a reading and three without is
+       a tell, and a learner would very quickly stop reading the options and
+       start looking for the pinyin. With two or more tagged there is nothing
+       to spot, and a single bracketed option among three plain ones was always
+       answerable anyway — it is the only one of its kind. */
+    const byMeaning = new Map(pool.map(x => [x.m, x]));
+    byMeaning.set(ch.m, ch);
+    /* A bracketed answer draws bracketed distractors, the way kind "c" draws
+       characters that share a component.
+
+       "(measure word: flat things)" against "fresh", "cup" and "to return" is
+       not really a question about 張 — it is answerable by elimination without
+       knowing anything about measure words. Against 條, 件 and 枝, with each
+       one's reading beside it, it asks the thing worth asking: which of the
+       twelve is this one. Harder, and the only version that tests what the
+       character actually does. */
+    const kin = isJobGloss(ch.m) ? pool.filter(x => isJobGloss(x.m)) : pool;
+    let others = optionSet(ch.m, kin, x => x.m);
+    if (others.length < 3) {
+      others = [...others, ...optionSet(ch.m, pool.filter(x => !others.includes(x.m)),
+                                        x => x.m, 3 - others.length)];
+    }
+    const ms = [ch.m, ...others];
+    const say = ms.filter(isJobGloss).length >= 2;
+    options = ms.map(m => {
+      const o = byMeaning.get(m);
+      return { v: m, html: say && o && isJobGloss(m)
+        ? `${esc(m)} <span class="pin opt-say">${esc(o.p)}</span>` : esc(m) };
+    });
   } else if (kind === "p") {
     prompt = `<div class="drill-char han">${esc(ch.c)}</div>`;
     correct = ch.p;
@@ -3540,21 +3587,17 @@ function renderQuest() {
       <span class="sq-frac" title="Characters printed on this menu you can read — learned here or anywhere else in the app">${mp.known}/${mp.total}</span>
     </div>
     <div class="bar ${mp.done ? "gold" : ""}"><i style="width:${(mp.pct * 100).toFixed(1)}%"></i></div>
-    <p class="note">${(() => { const w = menuWall();
-      /* The bar's 53 is the whole card; this is the bit that is on the wall
-         right now, which is the only number a learner can check by looking. */
-      return `You can read <b>${w.known}</b> of the ${w.total} characters on the menu as it stands. `;
-    })()}${(() => { const o = menuOwn();
-      return o.taught
-        ? `<b>${o.taught}</b> of ${o.total} learned here${o.taught >= o.total ? " — the whole menu" : ""}. `
-        : "Nothing learned here yet. ";
-    })()}Menu level ${menuTier().n} of ${MENU_TIERS.length} — ${esc(menuTier().label.toLowerCase())}.${(() => {
-      const nx = menuNext();
-      if (!nx) return " This is a menu you could be handed in Mong Kok.";
-      const bits = [];
-      if (nx.needMenu) bits.push(`${nx.needMenu} more menu character${nx.needMenu === 1 ? "" : "s"}`);
-      if (nx.needAll) bits.push(`${nx.needAll} more character${nx.needAll === 1 ? "" : "s"} overall`);
-      return ` It grows to <b>${esc(nx.tier.label.toLowerCase())}</b> after ${bits.join(" and ")}.`;
+    <p class="note">${(() => {
+      /* The bar's 53 is the whole card. This sentence is about the menu on the
+         wall right now — the only number a learner can check by looking, and
+         now also the only thing standing between them and a longer one. */
+      const w = menuWall(), nx = menuNext(), o = menuOwn();
+      const lvl = `Menu level ${menuTier().n} of ${MENU_TIERS.length} — ${esc(menuTier().label.toLowerCase())}.`;
+      const mine = o.taught ? ` ${o.taught} of them learned right here.` : "";
+      if (!nx) return `You can read every one of the ${w.total} characters on this menu.${mine} ${lvl}
+        This is a menu you could be handed in Mong Kok.`;
+      return `You can read <b>${w.known}</b> of the ${w.total} characters on the menu as it stands —
+        <b>${nx.left}</b> to go before it grows to <b>${esc(nx.tier.label.toLowerCase())}</b>.${mine} ${lvl}`;
     })()}</p>
 
     ${pch ? `<div class="sq-target ${learnedIt ? "done" : ""}">
@@ -3568,25 +3611,11 @@ function renderQuest() {
           : `<span class="p">${esc(pch.words[0][0])} · ${esc(pch.words[0][2])}</span>`}
       </span>
       ${!learnedIt ? `<button class="btn btn-seal sq-learn" id="learnMenu">Learn ${esc(pch.c)}</button>` : ""}
-    </div>` : pick2.wall ? `<div class="sq-target done">
-      <span class="sq-glyph">✓</span>
-      <span class="sq-info"><span class="t">You can read this whole menu</span>
-      <span class="m">Every character on the wall right now is one you can read — ${menuOwn().taught}
-        of them learned right here. ${(() => {
-          const nx = menuNext();
-          if (!nx) return "A longer menu is on its way.";
-          const bits = [];
-          if (nx.needMenu) bits.push(`${nx.needMenu} more menu character${nx.needMenu === 1 ? "" : "s"}`);
-          if (nx.needAll) bits.push(`${nx.needAll} more character${nx.needAll === 1 ? "" : "s"} overall`);
-          return bits.length
-            ? `There is more on a longer menu — ${bits.join(" and ")}, and it grows to <b>${esc(nx.tier.label.toLowerCase())}</b>.`
-            : "A longer menu is on its way.";
-        })()}</span></span>
     </div>` : `<div class="sq-target done">
       <span class="sq-glyph">✓</span>
-      <span class="sq-info"><span class="t">Nothing left to show you</span>
-      <span class="m">Every character printed on this menu is one you can read — ${menuOwn().taught}
-        of them learned right here.</span></span>
+      <span class="sq-info"><span class="t">You can read the whole menu</span>
+      <span class="m">Every character printed on it, set lunches and small print included —
+        ${menuOwn().taught} of them learned right here.</span></span>
     </div>`}
 
     <div class="menu-wrap full">${renderMenuCard(learnedIt ? null : pick2.c, true)}</div>
@@ -5442,8 +5471,9 @@ function renderPlacement() {
 
   $("#placeBody").innerHTML = `<div class="place-inner">
     <span class="place-where">${esc(stage.icon)} ${esc(stage.name)} · #${ch.i + 1} of ${HQ.length}</span>
-    <span class="eyebrow">Which character means</span>
-    <h1 class="place-q">${esc(ch.m)}</h1>
+    <span class="eyebrow">Which character ${isJobGloss(ch.m) ? "is" : "means"}</span>
+    <h1 class="place-q">${esc(ch.m)}${isJobGloss(ch.m)
+      ? ` <span class="pin opt-say">${esc(ch.p)}</span>` : ""}</h1>
     <div class="place-opts">
       ${opts.map((o, i) => `<button class="place-opt" data-c="${esc(o.c)}">
         <kbd class="opt-n">${i + 1}</kbd><span class="han">${esc(o.c)}</span></button>`).join("")}

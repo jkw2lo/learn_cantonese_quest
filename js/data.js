@@ -1932,21 +1932,29 @@ const MENU_ORDER = MENU_READ[3];
 
 /* How grown-up a menu you get handed, and when.
 
-   The first version gated on menu characters alone, and menu characters are
-   not spread evenly through the curriculum — they bunch in the Eating stage,
-   where you learn eight of them in two days. So level 2 arrived on day 8 and
-   level 3 on day 11: the whole menu went from dish names to descriptions to
-   set lunches inside a week, while the learner was fifty characters in and
-   could read thirteen of the forty-four glyphs on it. It got denser without
-   getting more readable, which is the opposite of a reward.
+   Three rules have been tried here. The first gated on menu characters alone,
+   and menu characters bunch — you learn eight of them in the Eating stage — so
+   the whole menu went from dish names to set lunches inside a week while the
+   learner could read a quarter of it. The second added an overall-total gate
+   for pacing, which fixed the bunching and introduced a worse problem: the
+   menu grew because of characters learned on the Today tab, so it could get
+   longer while the dishes in front of you were still unreadable. "It grows to
+   with what the waiter says after 3 more characters overall" is a promise that
+   the menu will get harder for reasons having nothing to do with the menu.
 
-   Each level now needs menu progress AND a total, whichever comes later. The
-   total is the part that guarantees the pacing, because it advances at exactly
-   the rate you study — five a day — and cannot bunch. */
+   The rule now is the obvious one, and it should have been the rule first:
+   **you get the next menu when you can read this one.** Every character
+   printed at your level, all of them, and then the card grows.
+
+   It cannot strand anybody. MENU_READ only holds characters the library
+   teaches, and the quest teaches one a day from the level you are on — so the
+   worst case is 23 days to clear level 1, and every one of those days moves
+   you one character closer. The gate is entirely in the learner's hands, which
+   is the other thing the overall-total gate could not claim. */
 const MENU_TIERS = [
-  { n: 1, at: 0,  by: 0,   label: "Dish names only" },
-  { n: 2, at: 17, by: 70,  label: "With what the waiter says" },
-  { n: 3, at: 30, by: 115, label: "Full menu, set lunches and all" }
+  { n: 1, label: "Dish names only" },
+  { n: 2, label: "With what the waiter says" },
+  { n: 3, label: "Full menu, set lunches and all" }
 ];
 
 const QUESTS = [

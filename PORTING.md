@@ -693,6 +693,47 @@ hiding the buttons. Coverage went 136/146 → 144/146.
 Hanzi Quest teaches simplified from a much larger set and will have far fewer
 gaps, but the technique is the same wherever upstream is short.
 
+### A meaning in brackets is not a translation
+
+Twenty-two of the 300 meanings open with a bracket — `(measure word: flat
+things)`, `(completed action marker)`, `(reporting / reminding particle)`. They
+are exactly the characters with no English word behind them: the particles and
+the measure words. Hanzi Quest has the same shape of gloss for the same reason.
+
+In a recognition drill (character → meaning) this fails twice over:
+
+- **Against three plain meanings** — "fresh", "cup", "to return" — the drill is
+  answerable by elimination without knowing anything about measure words.
+- **Against another bracketed one** it is unanswerable in the other direction:
+  "(measure word: flat things)" against "(measure word: long thin things)" asks
+  the learner to tell 張 from 條 by a couple of words of *my* English.
+
+Two changes, and the second one matters more than it looks:
+
+    const isJobGloss = m => /^\(/.test(String(m));
+
+    /* a bracketed answer draws bracketed distractors, like kind "c" draws
+       characters sharing a component */
+    const kin = isJobGloss(ch.m) ? pool.filter(x => isJobGloss(x.m)) : pool;
+
+    /* the reading rides along — but only when two or more options need it */
+    const say = ms.filter(isJobGloss).length >= 2;
+
+**The `>= 2` is the part not to drop.** Tagging a lone bracketed option with
+its reading would hand the answer over: one option carrying pinyin and three
+without is a tell, and a learner stops reading the options and starts looking
+for the pinyin within about four drills. Measured over 300 sampled drills after
+the change: the tag appeared on 23 of them, never once alone, and on all 21
+where the answer was a bracketed meaning.
+
+The same gloss stands alone in one other place — the placement prompt, "Which
+character means (general measure word)" — where it gets the reading
+unconditionally, there being no options to compare it against.
+
+Everywhere else a bracketed meaning appears (the teaching card, flashcard
+backs, the hover tooltip, the radicals page, the tone pairs) the reading is
+already next to it, so nothing needed doing.
+
 ---
 
 ## §4 · Writing
@@ -1062,6 +1103,56 @@ level 3 on day 23, and every pick on the wall on the day it is offered.
 Hanzi Quest's menu has the same three-level reveal and the same one-set model
 behind it, so it has both bugs waiting — its board characters are simply luckier
 in where they fall in its 763-character order.
+
+### Three gates were tried before the obvious one
+
+Worth reading as a sequence, because each fix was reasonable and each one was
+wrong in a way only the next one exposed.
+
+**Gate one — menu characters.** Level 2 at 20 menu characters, level 3 at 34.
+Menu characters bunch: eight of them are taught in the Eating stage. So the
+card went from dish names to set lunches inside a week while the learner could
+read a quarter of it.
+
+**Gate two — menu characters AND an overall total.** The total advances at
+exactly the rate you study and cannot bunch, so the pacing came right. What it
+introduced was worse than what it fixed: the card now grew because of work done
+on the *Today tab*. The interface said, in as many words:
+
+> It grows to **with what the waiter says** after 3 more characters overall.
+
+Which is a promise that the menu will get harder for reasons having nothing to
+do with the menu — and the learner reading it had eight characters still grey
+in front of them.
+
+**Gate three — you get the next menu when you can read this one.**
+
+    function menuTier() {
+      let n = 1;
+      while (n < MENU_TIERS.length && MENU_READ[n].every(menuCanRead)) n++;
+      return MENU_TIERS[n - 1];
+    }
+
+`MENU_TIERS` lost its `at` and `by` fields entirely; a tier is now a number and
+a label. Three things fall out of it:
+
+- **It cannot strand anybody.** `MENU_READ` holds only characters the library
+  teaches, and the quest teaches one a day from the level you are on — so the
+  worst case is 23 days to clear level 1, and every one of those days moves you
+  one character closer.
+- **The gate is in the learner's hands.** Nothing on another tab can spring it,
+  and nothing on another tab is required.
+- **"Level exhausted but card not finished" stopped existing.** Clearing the
+  wall promotes you on the spot, so `menuToday()`'s `wall` flag and the whole
+  branch of the card that rendered it went away. A state you have made
+  unreachable is better than a state you have handled.
+
+The copy follows the rule: *"You can read **15** of the 23 characters on the
+menu as it stands — **8** to go before it grows to **with what the waiter
+says**."* One sentence, one number to check by looking, one thing to do.
+
+Measured over a 60-day run at five characters a day: level 2 on day 19, level 3
+on day 30, whole menu read on day 31.
 
 ---
 

@@ -784,18 +784,20 @@ function menuProgress() {
    Lived in app.js, which meant menuToday() could not ask what the learner can
    actually see — and menuToday() has to ask, or it picks characters off a part
    of the menu that is not being printed yet. Model logic, so it lives here. */
+/* You get the next menu when you can read this one — see MENU_TIERS. */
 function menuTier() {
-  const k = menuProgress().known, all = knownChars().length;
-  return MENU_TIERS.filter(t => k >= t.at && all >= (t.by || 0)).pop() || MENU_TIERS[0];
+  let n = 1;
+  while (n < MENU_TIERS.length && MENU_READ[n].every(menuCanRead)) n++;
+  return MENU_TIERS[n - 1];
 }
 
-/* What is standing between you and the next level, named. */
+/* What is standing between you and the next level, and it is only ever one
+   thing now: the characters still grey on the menu in front of you. */
 function menuNext() {
   const t = MENU_TIERS[menuTier().n];
   if (!t) return null;
-  const needMenu = Math.max(0, t.at - menuProgress().known);
-  const needAll = Math.max(0, (t.by || 0) - knownChars().length);
-  return { tier: t, needMenu, needAll, more: Math.max(needMenu, needAll) };
+  const left = menuOnWall().filter(c => !menuCanRead(c));
+  return { tier: t, left: left.length, chars: left };
 }
 
 /* The characters printed on the card AS IT STANDS — what the learner can
@@ -844,8 +846,10 @@ function menuToday() {
   if (held && held.d === k && held.c && menuOnWall().includes(held.c)) return held;
   if (held && held.d === k && !held.c && menuOnWall().every(menuCanRead)) return held;
   const next = menuOnWall().find(c => !menuCanRead(c)) || null;
-  const wall = !next && !menuProgress().done;   /* level exhausted, card is not */
-  state.menuPick = { d: k, c: next, done: !next, wall };
+  /* Clearing the wall now promotes you on the spot, so there is no longer a
+     state where the level is finished and the card is not: `next` is null only
+     when the whole menu is read. */
+  state.menuPick = { d: k, c: next, done: !next };
   save();
   return state.menuPick;
 }

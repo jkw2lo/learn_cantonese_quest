@@ -532,6 +532,10 @@ code {
   border: 1px solid var(--rule); background: transparent; color: var(--ink-2); white-space: nowrap;
 }
 .filt.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* the reading that rides along with a bracketed meaning — see isJobGloss */
+.opt-say { opacity: .72; font-size: .92em; white-space: nowrap; }
+.opt.on .opt-say, .opt.right .opt-say, .opt.wrong .opt-say { opacity: .85; }
 /* the stage picker wears the chip's clothes so the row reads as one control */
 .filt-sel { font: inherit; font-size: .78rem; padding-right: 1.5rem; cursor: pointer;
   appearance: none; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),

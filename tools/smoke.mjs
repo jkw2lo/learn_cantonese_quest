@@ -245,6 +245,27 @@ ok('a character learned anywhere still reads on the menu', api.menuCanRead(other
 ok('and the quest moves past it', api.menuToday.length >= 0 &&
    !api.MENU_ORDER.filter(c => !api.menuCanRead(c)).includes(other));
 
+console.log('\nvague meanings');
+{
+  /* Twenty-two meanings are a job description in brackets rather than a
+     translation — the particles and the measure words. They cannot be told
+     apart by their English, so the reading rides along; but tagging only ONE
+     option of four would say which one is the answer. */
+  const app = read('js/app.js');
+  const vague = api.HQ.filter(ch => /^\(/.test(ch.m));
+  ok('there are meanings that only describe a job', vague.length > 10, vague.length + ' of ' + api.HQ.length);
+  ok('and every one of them is a particle or a measure word',
+     vague.every(ch => ch.pos.some(p => p === 'mw' || p.startsWith('part'))),
+     vague.filter(ch => !ch.pos.some(p => p === 'mw' || p.startsWith('part'))).map(c => c.c).join(' '));
+  ok('the reading only rides along when two options need it',
+     /const say = ms\.filter\(isJobGloss\)\.length >= 2;/.test(app));
+  ok('and the tag is gated on that flag', /say && o && isJobGloss\(m\)/.test(app));
+
+  /* The other place a meaning stands alone with no character beside it. */
+  ok('the placement prompt carries it too',
+     /place-q[^`]*isJobGloss\(ch\.m\)/.test(app));
+}
+
 console.log('\nmilestones');
 {
   /* Its own store, so the running state above is left alone. */
@@ -315,8 +336,34 @@ ok('a missed RECOGNITION still costs a level', api.rec(hw).lvl < lvl2);
 
 console.log('\nmenu tiers');
 ok('three tiers defined', api.MENU_TIERS.length === 3);
-ok('tier 1 needs nothing', api.MENU_TIERS[0].at === 0);
-ok('tiers ascend', api.MENU_TIERS.every((t, i, a) => !i || t.at > a[i - 1].at));
+ok('they are numbered in order', api.MENU_TIERS.every((t, i) => t.n === i + 1));
+
+/* The gate is the menu itself: you get the next one when you can read this
+   one. It used to be a menu count plus an overall-character count, which meant
+   the card could grow because of work done on the Today tab — "it grows after
+   3 more characters overall" promised a harder menu for reasons having nothing
+   to do with the menu. */
+{
+  const g = new Function(read('js/data.js') + '\n' + read('js/srs.js') +
+    '\nreturn {MENU_READ,MENU_TIERS,load,introduce,menuLearn,menuTier,menuOnWall,menuCanRead,state};')();
+  globalThis.localStorage._d = {};
+  g.load();
+  ok('a new learner gets the short menu', g.menuTier().n === 1);
+
+  /* one short of the whole of level 1 */
+  g.MENU_READ[1].slice(0, -1).forEach(c => g.menuLearn(c));
+  ok('and keeps it while one character is still grey', g.menuTier().n === 1,
+     g.menuOnWall().filter(c => !g.menuCanRead(c)).join(''));
+
+  /* everything else in the library, which used to be what opened the gate */
+  g.MENU_READ[3].filter(c => !g.MENU_READ[1].includes(c)).forEach(c => g.introduce(c));
+  ok('learning the rest of the card elsewhere does not open it', g.menuTier().n === 1,
+     'still level 1 with ' + g.menuOnWall().filter(c => !g.menuCanRead(c)).length + ' to go');
+
+  g.menuLearn(g.MENU_READ[1][g.MENU_READ[1].length - 1]);
+  ok('reading the last one does', g.menuTier().n === 3, 'level ' + g.menuTier().n);
+  ok('and the wall grows with it', g.menuOnWall().length === g.MENU_READ[3].length);
+}
 const withDesc = MENU.sections.flatMap(s => s.items).filter(i => i[4]);
 ok('every dish has a description for tier 2', withDesc.length === MENU.sections.flatMap(s => s.items).length);
 const tierGlyphs = [...withDesc.flatMap(i => cjk(i[4][0])),
