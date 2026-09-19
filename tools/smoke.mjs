@@ -17,6 +17,7 @@ const CONTRACT = [
   'TIERS', 'TIER_UNLOCK', 'tierOf', 'tierChars', 'tierFrom', 'tierProgress',
   'tierUnlocked', 'tierNeeds', 'unlockedCeiling', 'isLocked',
   'POS_LABEL', 'MENU', 'MENU_CHARS', 'MENU_PRINTED', 'MENU_ORDER', 'MENU_READ', 'MENU_LEVELS',
+  'MENU_UNTAUGHT', 'EXTRA_GLOSS',
   'menuTier', 'menuNext', 'menuOnWall', 'menuWall',
   'state', 'blank', 'load', 'save', 'dayKey', 'toneOf', 'connectRemote',
   'rec', 'isKnown', 'strength', 'grade', 'introduce', 'today', 'tally', 'liveStreak',
@@ -244,6 +245,47 @@ api.introduce(other);
 ok('a character learned anywhere still reads on the menu', api.menuCanRead(other));
 ok('and the quest moves past it', api.menuToday.length >= 0 &&
    !api.MENU_ORDER.filter(c => !api.menuCanRead(c)).includes(other));
+
+console.log('\nthe rest of the wall');
+{
+  /* The card prints 98 characters and the curriculum teaches 53 of them. The
+     other 45 are dish names — 菠蘿包, 叉燒, 羅宋湯 — and a real cha chaan teng
+     menu cannot be written without them. Inking them the same grey as "not
+     learned yet" put the learner 45 characters further from the goal than they
+     were, and at 53 of 53 would have claimed a menu still half grey. */
+  const app = read('js/app.js');
+  const onCard = new Set();
+  const eat = t => cjk(t).forEach(c => onCard.add(c));
+  eat(MENU.title); eat(MENU.name);
+  MENU.sections.forEach(sec => {
+    eat(sec.head);
+    sec.items.forEach(i => { eat(i[0]); if (i[4]) eat(i[4][0]); });
+  });
+  eat(MENU.specials.head);
+  MENU.specials.items.forEach(i => eat(i[0]));
+  eat(MENU.specials.note[0]);
+
+  ok('the untaught set is not empty', api.MENU_UNTAUGHT.length > 20, api.MENU_UNTAUGHT.length);
+  ok('and none of it is in the curriculum',
+     api.MENU_UNTAUGHT.every(c => !api.CHAR_INDEX[c]),
+     api.MENU_UNTAUGHT.filter(c => api.CHAR_INDEX[c]).join(' '));
+  ok('taught and untaught do not overlap',
+     !api.MENU_UNTAUGHT.some(c => api.MENU_PRINTED.includes(c)));
+  ok('together they are the whole card',
+     api.MENU_UNTAUGHT.length + api.MENU_PRINTED.length === onCard.size,
+     `${api.MENU_UNTAUGHT.length} + ${api.MENU_PRINTED.length} vs ${onCard.size}`);
+  ok('every one of them still has a gloss to hover',
+     api.MENU_UNTAUGHT.every(c => api.EXTRA_GLOSS[c]),
+     api.MENU_UNTAUGHT.filter(c => !api.EXTRA_GLOSS[c]).join(' '));
+
+  ok('the menu inks them as a third thing', /CHAR_INDEX\[c\] \? "" : "outside"/.test(app));
+  ok('and the legend says what that ink means', /not taught here, hover for the gloss/.test(app));
+  ok('the bar says what its denominator is',
+     /characters on this menu that\s+Cantonese Quest\s+teaches/i.test(app));
+  ok('and finishing does not claim the whole menu',
+     /Every character on it this app teaches/.test(app) &&
+     !/You can read the whole menu/.test(app));
+}
 
 console.log('\nvague meanings');
 {

@@ -1043,6 +1043,13 @@ code {
   color: var(--ink-3); transition: color .2s, background .2s;
 }
 .g.known { color: var(--ink); }
+/* printed on the menu but outside the curriculum — see glyphs(). Lighter than
+   "not yet" and marked with a dotted rule, so a wall of dish names does not
+   read as 45 characters of homework. */
+.g.outside {
+  color: color-mix(in srgb, var(--ink-3) 62%, transparent);
+  border-bottom: 1px dotted color-mix(in srgb, var(--ink-3) 45%, transparent);
+}
 .g.target {
   color: var(--seal); background: var(--seal-wash);
   box-shadow: 0 0 0 2px var(--seal-wash);
@@ -1052,6 +1059,8 @@ code {
 @keyframes breathe { 0%,100% { background: var(--seal-wash); } 50% { background: transparent; } }
 
 .menu-legend { display: flex; gap: .9rem; flex-wrap: wrap; font-size: .7rem; color: var(--ink-3); }
+/* the level sentence sits under the headline one, quieter */
+.sq-lvl { color: var(--ink-3); }
 .menu-legend b { font-family: var(--f-han-ui); font-weight: 400; }
 
 /* hover card */

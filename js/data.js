@@ -1930,6 +1930,35 @@ const MENU_PRINTED = MENU_READ[3];
    curriculum ordering. */
 const MENU_ORDER = MENU_READ[3];
 
+/* ---------- and the rest of the wall ----------
+
+   The card prints 98 distinct characters. Fifty-three of them are in the
+   curriculum; the other forty-five are not, and never will be — 菠蘿包, 叉燒,
+   乾炒牛河, 羅宋湯, 檸檬, 咖啡. They are dish names, and a real cha chaan teng
+   menu cannot be written without them.
+
+   This set exists so the app can say so. Counting them would make the quest
+   unfinishable; leaving them looking identical to "not learned yet" told the
+   learner they were 45 characters behind where they actually were, and would
+   have told them, at 53 of 53, that they could read a menu still half grey.
+   They are inked as a third thing: glossed on hover, never drilled, never
+   counted, and visibly not part of the climb. */
+const MENU_UNTAUGHT = (() => {
+  const out = new Set();
+  const add = str => [...String(str)].forEach(c => {
+    if (/[一-鿿]/.test(c) && !CHAR_INDEX[c]) out.add(c);
+  });
+  add(MENU.title); add(MENU.name);
+  MENU.sections.forEach(sec => {
+    add(sec.head);
+    sec.items.forEach(i => { add(i[0]); if (i[4]) add(i[4][0]); });
+  });
+  add(MENU.specials.head);
+  MENU.specials.items.forEach(i => add(i[0]));
+  add(MENU.specials.note[0]);
+  return [...out];
+})();
+
 /* How grown-up a menu you get handed, and when.
 
    Three rules have been tried here. The first gated on menu characters alone,

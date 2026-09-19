@@ -1154,6 +1154,56 @@ says**."* One sentence, one number to check by looking, one thing to do.
 Measured over a 60-day run at five characters a day: level 2 on day 19, level 3
 on day 30, whole menu read on day 31.
 
+### Three numbers, and saying only one of them misleads
+
+The gate above was right and the sentence it produced was still wrong:
+
+> You can read **15** of the 23 characters on the menu as it stands — **8** to
+> go before it grows to **with what the waiter says**.
+
+Which reads as "eight from being able to read a menu". It means "eight from
+being shown a longer one". There are three numbers in play and the copy led
+with the smallest:
+
+| | |
+|---|---|
+| **98** | distinct characters printed on the card |
+| **53** | of those the curriculum teaches — the quest, and the bar's denominator |
+| **23** | of those printed at level 1 |
+
+The 45-character gap is the part that had never been said out loud. 菠蘿包,
+叉燒, 乾炒牛河, 羅宋湯, 檸檬, 咖啡 — a real cha chaan teng menu cannot be
+written without them, and nothing in this app will ever drill them. They were
+inked in exactly the same grey as a character you simply had not reached yet,
+which put the menu 45 characters further from readable than it was, and would
+have told a learner at 53 of 53 that they could read a wall still half grey.
+
+**A third ink.** `glyphs()` now marks them `outside` — lighter than "not yet"
+and under a dotted rule — and the legend has three rows rather than two:
+
+    const cls = c === target ? "target"
+              : menuCanRead(c) ? "known"
+              : CHAR_INDEX[c] ? "" : "outside";
+
+**And the copy leads with the goal, with the level underneath it:**
+
+> **28** of the **53** characters on this menu that Cantonese Quest teaches. 3
+> of them learned right here. The other 45 characters on it are dish names —
+> 菠蘿包, 叉燒, 羅宋湯 — glossed when you hover, never drilled.
+> *Level 1 of 3 prints dish names only — 23 of those 53, and you can read 15.
+> Read the last 8 and* ***with what the waiter says*** *arrives.*
+
+Finishing says the true thing too: "Every character on it this app teaches …
+The dish names still in grey are the 45 it does not."
+
+**This half does not port.** Hanzi Quest's menu prints 54 distinct characters
+and its 763-character curriculum teaches **all of them**, so it has no third
+category and needs no third ink. What ports is the habit: before writing
+`known/total` into an interface, check what `total` actually is, and whether
+the learner can reach it. The lesson generalises past menus — any progress bar
+whose denominator is "the things we teach" while the screen shows "the things
+that exist" is telling the same kind of lie.
+
 ---
 
 ## §8 · Data, audio and tooling

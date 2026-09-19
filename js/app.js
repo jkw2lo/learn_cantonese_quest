@@ -1916,10 +1916,19 @@ function ringSvg(pct, done) {
    is one you can read here, even though it never entered the library. That is
    the cross-reference working in both directions — the library inks the menu,
    and the menu inks itself. */
+/* Three inks, not two.
+
+   A character the curriculum never teaches — 菠蘿, 叉燒, 羅宋 — used to render
+   identically to one you simply had not reached yet, which made the menu look
+   45 characters further from readable than it is, and would have said, at 53
+   of 53, that you could read a menu still half grey. `outside` marks them: the
+   hover gloss still works, they are just not part of the climb. */
 function glyphs(str, target) {
   return [...str].map(c => {
     if (!/[\u4e00-\u9fff]/.test(c)) return esc(c);
-    const cls = c === target ? "target" : menuCanRead(c) ? "known" : "";
+    const cls = c === target ? "target"
+              : menuCanRead(c) ? "known"
+              : CHAR_INDEX[c] ? "" : "outside";
     return `<span class="g ${cls}" data-ch="${esc(c)}">${esc(c)}</span>`;
   }).join("");
 }
@@ -3584,20 +3593,30 @@ function renderQuest() {
     <div class="sq-top">
       <span class="sq-icon">🍜</span>
       <span class="sq-name"><b>Read a Cha Chaan Teng</b><span class="zh">睇餐牌</span></span>
-      <span class="sq-frac" title="Characters printed on this menu you can read — learned here or anywhere else in the app">${mp.known}/${mp.total}</span>
+      <span class="sq-frac" title="Characters on this menu that Cantonese Quest teaches, and how many of them you can read — from here or anywhere else in the app">${mp.known}/${mp.total}</span>
     </div>
     <div class="bar ${mp.done ? "gold" : ""}"><i style="width:${(mp.pct * 100).toFixed(1)}%"></i></div>
     <p class="note">${(() => {
-      /* The bar's 53 is the whole card. This sentence is about the menu on the
-         wall right now — the only number a learner can check by looking, and
-         now also the only thing standing between them and a longer one. */
+      /* Three numbers, and saying only one of them misleads.
+
+         53 is the goal: the characters on this card that this app teaches.
+         98 is the card — the other 45 are dish names nothing here will ever
+         drill. 23 is what is being printed at level 1. Leading with the level
+         made "8 to go" read as "8 from being able to read a menu", when it
+         meant "8 from being shown a longer one". */
       const w = menuWall(), nx = menuNext(), o = menuOwn();
-      const lvl = `Menu level ${menuTier().n} of ${MENU_TIERS.length} — ${esc(menuTier().label.toLowerCase())}.`;
-      const mine = o.taught ? ` ${o.taught} of them learned right here.` : "";
-      if (!nx) return `You can read every one of the ${w.total} characters on this menu.${mine} ${lvl}
-        This is a menu you could be handed in Mong Kok.`;
-      return `You can read <b>${w.known}</b> of the ${w.total} characters on the menu as it stands —
-        <b>${nx.left}</b> to go before it grows to <b>${esc(nx.tier.label.toLowerCase())}</b>.${mine} ${lvl}`;
+      const mine = o.taught ? ` <b>${o.taught}</b> of them learned right here.` : "";
+      const scope = `The other ${MENU_UNTAUGHT.length} characters on it are dish names —
+        <span class="han">菠蘿包</span>, <span class="han">叉燒</span>,
+        <span class="han">羅宋湯</span> — glossed when you hover, never drilled.`;
+      if (!nx) return `You can read all <b>${mp.total}</b> of the characters on this menu that
+        Cantonese Quest teaches.${mine} ${scope} This is a menu you could be handed in Mong Kok.`;
+      return `<b>${mp.known}</b> of the <b>${mp.total}</b> characters on this menu that Cantonese Quest
+        teaches.${mine} ${scope}<br>
+        <span class="sq-lvl">Level ${menuTier().n} of ${MENU_TIERS.length} prints
+        ${esc(menuTier().label.toLowerCase())} — ${w.total} of those ${mp.total}, and you can read
+        <b>${w.known}</b>. Read the last <b>${nx.left}</b> and
+        <b>${esc(nx.tier.label.toLowerCase())}</b> arrives.</span>`;
     })()}</p>
 
     ${pch ? `<div class="sq-target ${learnedIt ? "done" : ""}">
@@ -3613,9 +3632,10 @@ function renderQuest() {
       ${!learnedIt ? `<button class="btn btn-seal sq-learn" id="learnMenu">Learn ${esc(pch.c)}</button>` : ""}
     </div>` : `<div class="sq-target done">
       <span class="sq-glyph">✓</span>
-      <span class="sq-info"><span class="t">You can read the whole menu</span>
-      <span class="m">Every character printed on it, set lunches and small print included —
-        ${menuOwn().taught} of them learned right here.</span></span>
+      <span class="sq-info"><span class="t">You can read this menu</span>
+      <span class="m">Every character on it this app teaches, set lunches and small print included —
+        ${menuOwn().taught} of them learned right here. The dish names still in grey are the
+        ${MENU_UNTAUGHT.length} it does not: hover any of them for what it says.</span></span>
     </div>`}
 
     <div class="menu-wrap full">${renderMenuCard(learnedIt ? null : pick2.c, true)}</div>
@@ -3636,7 +3656,8 @@ function renderQuest() {
 
     <div class="menu-legend">
       <span><b style="color:var(--ink)">黑</b> you can read</span>
-      <span><b style="color:var(--ink-3)">灰</b> not yet</span>
+      <span><b style="color:var(--ink-3)">灰</b> not yet — it's in the curriculum</span>
+      <span><b class="g outside" style="font-family:var(--f-han-ui)">淡</b> not taught here, hover for the gloss</span>
       ${!learnedIt ? `<span><b style="color:var(--seal)">紅</b> today's character</span>` : ""}
       <span class="dim">Hover any character for its meaning</span>
     </div>
