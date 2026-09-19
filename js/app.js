@@ -979,9 +979,13 @@ function startQuestionTimer(run) {
 
 /* Extra reps, on demand. Each targets one skill and draws the characters
    you're shakiest at — it reinforces without rescheduling your reviews. */
+/* Same order as the day's list above, minus the two steps that only make sense
+   for characters you met today. Object key order is insertion order, and the
+   Go deeper panel iterates with Object.entries — so this literal IS the order
+   on screen. */
 const PRACTICE = {
-  say:   { k: "聽力", name: "Listening",     blurb: "Hear it, name it",          kinds: ["l", "p"], skill: "p" },
   read:  { k: "認讀", name: "Reading",       blurb: "Do you know what it means?", kinds: ["r", "d"], skill: "r" },
+  say:   { k: "聽力", name: "Listening",     blurb: "Hear it, name it",          kinds: ["l", "p"], skill: "p" },
   write: { k: "默寫", name: "Writing",       blurb: "Draw it from memory",        kinds: ["w"],      skill: "w" }
 };
 
@@ -3133,19 +3137,24 @@ function learnedToday() {
 
 /* Today's practice list — everything here is scoped to the characters you
    picked up today, so it's a short, finishable list rather than a menu. */
-/* Sound leads.
+/* The order the day is worked through, and it is the order of the list.
 
-   Hanzi Quest put recognition first, which is right for a language most people
-   meet on a page. Cantonese is the other way round: you meet it spoken, in a
-   kitchen or a phone call or a film, and written Cantonese is a niche skill
-   even in Hong Kong — most formal writing there is Standard Chinese, which is
-   not what anybody says out loud. So the day opens with hearing it, and a
-   character you can hear and say has been half learnt before you ever have to
-   recognise the shape. */
+   It goes shape first, then sound: meet the character, recognise it alone, read
+   it in a sentence, hear it, write it out. Hearing sits after reading rather
+   than opening the day — the earlier version led with sound on the grounds that
+   Cantonese is a spoken language met in a kitchen rather than on a page, which
+   is true of the language and turned out not to be true of this list. Arriving
+   at "Hear them" before having recognised anything meant guessing at four
+   characters you had seen once, and the task that should confirm what you know
+   was the one introducing it.
+
+   `nextExercise()` walks this array to decide what to hand you next, so the
+   order is not only how the list is drawn. Writing stays last: it is the only
+   one that asks you to produce the character rather than pick it. */
 const TODAY_TASKS = [
-  { id: "say",    k: "聽力", name: "Hear them",            sub: "sound and tone",       kinds: ["l", "p"], kind: "l", proves: ["p", "l"] },
   { id: "recall", k: "認讀", name: "Recognise them",       sub: "character to meaning", kind: "r", proves: ["r"] },
   { id: "read",   k: "閱讀", name: "Read them in context", sub: "words and sentences",  kind: "d", proves: ["d"] },
+  { id: "say",    k: "聽力", name: "Hear them",            sub: "sound and tone",       kinds: ["l", "p"], kind: "l", proves: ["p", "l"] },
   { id: "copy",   k: "抄寫", name: "Write them out",       sub: "square by square",     copy: true }
 ];
 

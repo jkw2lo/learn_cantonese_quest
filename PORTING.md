@@ -1688,9 +1688,21 @@ Cantonese-specific, and wrong for Hanzi Quest:
 - **Six-tone jyutping** — `toneOf()`, `toneless`, `TONE_PATHS`, and the
   ASCII-based `bare`/`searchable`/`untoned`. Hanzi Quest's four-tone diacritic
   handling is correct for pinyin.
-- **Sound-first ordering** — `TODAY_TASKS`, `PRACTICE`, the Sprint panel order,
-  the `drillKind()` bag, and the skills-bar order in Record. This is a claim
-  about Cantonese, not about learning generally.
+- **Sound-first ordering** — the Sprint panel order, the `drillKind()` bag (which
+  puts listening in from the first review rather than the third), and the
+  skills-bar order in Record. This is a claim about Cantonese, not about
+  learning generally.
+
+  `TODAY_TASKS` and `PRACTICE` **used** to be in that list and are not any more:
+  the day's list now runs recognise → read → hear → write, and Go deeper runs
+  reading → listening → writing. Sound-first was right about the language and
+  wrong about this list — arriving at "Hear them" before having recognised
+  anything meant guessing at four characters seen once, so the task meant to
+  confirm what you knew was the one introducing it. Hanzi Quest's own order was
+  already shape-first, so there is nothing to port here either way; the reason is
+  recorded because the reversal is the interesting part. A smoke check pins both
+  orders now, since `nextExercise()` walks `TODAY_TASKS` to decide what to hand
+  you next — the order is behaviour, not decoration.
 - **Traditional-first font stacks** and the `SIMPLIFIED` cross-reference.
 - **The cha chaan teng**, its pacing gate, and its own tab. The *mechanism* —
   gating a level on menu progress **and** an overall total, so clustered

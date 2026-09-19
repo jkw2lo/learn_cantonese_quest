@@ -287,6 +287,30 @@ console.log('\nthe rest of the wall');
      !/You can read the whole menu/.test(app));
 }
 
+console.log('\nthe order of the day');
+{
+  /* The list order is also the order nextExercise() hands you things in, so it
+     is behaviour rather than decoration — and it has been deliberately changed
+     once already, from sound-first to shape-first. Pinned so a reshuffle is a
+     decision somebody made rather than a diff nobody noticed. */
+  const app = read('js/app.js');
+  const ids = [...app.slice(app.indexOf('const TODAY_TASKS = ['))
+    .slice(0, 900).matchAll(/id: "(\w+)"/g)].map(m => m[1]);
+  ok('the day goes recognise, read, hear, write',
+     ids.join() === 'recall,read,say,copy', ids.join(' '));
+  ok('and writing is last, being the only one that asks you to produce',
+     ids[ids.length - 1] === 'copy');
+
+  const pr = [...app.slice(app.indexOf('const PRACTICE = {'))
+    .slice(0, 600).matchAll(/^  (\w+):\s+\{/gm)].map(m => m[1]);
+  ok('Go deeper follows the same order', pr.join() === 'read,say,write', pr.join(' '));
+  /* Object key order is insertion order and the panel uses Object.entries, so
+     the literal above is the order on screen — this check is the only thing
+     keeping that implicit dependency honest. */
+  ok('and the panel still reads it in insertion order',
+     /Object\.entries\(PRACTICE\)\.map/.test(app));
+}
+
 console.log('\nthe porting guide still describes this app');
 {
   /* PORTING.md is the one file whose whole value is being trustworthy, and it
