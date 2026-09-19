@@ -1510,7 +1510,9 @@ console.log('\nwhat a finger does, and what it is spared');
      then has nothing to lock, so the capability test alone put a dead button
      on every phone. */
   ok('the trackpad asks for a fine pointer', /pointer: fine/.test(app));
-  ok('  and padStart refuses without one', /if \(!padSupported\(\)\) return false;/.test(app));
+  ok('  and padStart refuses without one',
+     /function padStart\([\s\S]{0,400}?!padSupported\(\)[\s\S]{0,80}?return false/.test(app),
+     'T on a keyboard still calls in, and a tablet has both');
   const padButtons = [...app.matchAll(/id="(padW|nbPad|wpPad)"/g)].length;
   const padGated = [...app.matchAll(/padSupported\(\) \? `<button[^`]*id="(padW|nbPad|wpPad)"/g)].length;
   ok(`  and all ${padButtons} trackpad buttons are behind it`, padButtons > 0 && padGated === padButtons,
