@@ -2526,8 +2526,14 @@ function buildWritePage() {
     <div class="cols">
       <div class="section">
         <div class="wp-bar">
+          <!-- an h1, like every other tab's title. This was the one page that
+               titled itself with an .eyebrow — 0.68rem uppercase against the
+               1.6rem display face everywhere else — so Write read as a section
+               inside some larger page rather than as a tab of its own. The
+               Chinese goes with it: no other tab head carries one, and 練字 is
+               already on the nav tab above. -->
           <div class="wp-title">
-            <span class="eyebrow">Exercise book ${hanLabel("練字")}</span>
+            <h1>Exercise book</h1>
             <p class="note">A blank page. Nothing is checked here — fill it, scrawl on it, clear it and go again.</p>
           </div>
           <div class="wp-tools">

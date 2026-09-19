@@ -1253,7 +1253,7 @@ code {
   display: flex; align-items: flex-end; justify-content: space-between;
   gap: 1rem; flex-wrap: wrap; margin-bottom: .9rem;
 }
-.wp-title { display: flex; flex-direction: column; gap: .2rem; max-width: 30rem; }
+.wp-title { display: flex; flex-direction: column; gap: .3rem; max-width: 30rem; }
 .wp-tools { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
 .wp-field {
   display: inline-flex; align-items: center; gap: .35rem;
