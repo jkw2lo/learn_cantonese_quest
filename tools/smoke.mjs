@@ -16,7 +16,8 @@ const CONTRACT = [
   'HQ', 'STAGES', 'CHAR_INDEX', 'FAMILIES', 'RADICALS', 'QUESTS',
   'TIERS', 'TIER_UNLOCK', 'tierOf', 'tierChars', 'tierFrom', 'tierProgress',
   'tierUnlocked', 'tierNeeds', 'unlockedCeiling', 'isLocked',
-  'POS_LABEL', 'MENU', 'MENU_CHARS', 'MENU_PRINTED', 'MENU_ORDER',
+  'POS_LABEL', 'MENU', 'MENU_CHARS', 'MENU_PRINTED', 'MENU_ORDER', 'MENU_READ', 'MENU_LEVELS',
+  'menuTier', 'menuNext', 'menuOnWall', 'menuWall',
   'state', 'blank', 'load', 'save', 'dayKey', 'toneOf', 'connectRemote',
   'rec', 'isKnown', 'strength', 'grade', 'introduce', 'today', 'tally', 'liveStreak',
   'dueList', 'dueCount', 'nextNew', 'remainingNew', 'stageProgress', 'currentStage',
@@ -133,10 +134,32 @@ ok('the quest targets only characters it teaches', MENU_CHARS.every(c => CHAR_IN
   ok('and nothing that is only ever spoken can be picked',
      phraseOnly.every(c => !api.MENU_PRINTED.includes(c)),
      phraseOnly.filter(c => api.MENU_PRINTED.includes(c)).join(' '));
+  const curriculumOrder = api.HQ.map(ch => ch.c).filter(c => api.MENU_PRINTED.includes(c));
   ok('the quest walks the menu in reading order, not the curriculum\'s',
-     api.MENU_ORDER.length === api.MENU_PRINTED.length &&
-     api.MENU_ORDER.join('') !== api.MENU_PRINTED.join(''),
+     api.MENU_ORDER.join('') !== curriculumOrder.join(''),
      api.MENU_ORDER.slice(0, 6).join(''));
+
+  /* ---- and only as far down the card as is actually being printed ----
+
+     The card is not all on the wall at once: a dish's small print arrives at
+     level 2 and the set-lunch board at level 3. The pick used to walk the full
+     reading order — with the board FIRST, because it is printed above the
+     sections — so the ninth character the quest offered was 快, which appears
+     nowhere but that board, under the words "find it on the menu below". */
+  const only = (has, lacks) => [...has].filter(c => !lacks.has(c));
+  const descOnly = only(api.MENU_LEVELS[2], api.MENU_LEVELS[1]);
+  const boardOnly = only(api.MENU_LEVELS[3], api.MENU_LEVELS[2]);
+  ok('each level only adds to the one below',
+     api.MENU_READ[1].every(c => api.MENU_LEVELS[2].has(c)) &&
+     api.MENU_READ[2].every(c => api.MENU_LEVELS[3].has(c)));
+  ok('level 1 is dish names and headings alone', api.MENU_READ[1].length < api.MENU_READ[2].length,
+     api.MENU_READ[1].length + ' of ' + api.MENU_READ[3].length);
+  ok('the small print is not reachable until level 2', descOnly.length > 0 &&
+     descOnly.every(c => !api.MENU_LEVELS[1].has(c)), descOnly.length + ' characters');
+  ok('the set-lunch board is not reachable until level 3', boardOnly.length > 0 &&
+     boardOnly.every(c => !api.MENU_LEVELS[2].has(c)), boardOnly.join(' '));
+  ok('快 in particular, which is printed on that board and nowhere else',
+     boardOnly.includes('快'));
 
   const app = read('js/app.js');
   ok('so the Menu tab still renders the phrases', /MENU\.phrases\.map/.test(app.split('renderQuest')[1] || ''));
@@ -180,6 +203,22 @@ const pick = api.menuToday();
 ok('picks a character', !!pick.c);
 ok('the pick is stable within the day', api.menuToday().c === pick.c);
 ok('the pick is printed on the menu card', api.MENU_PRINTED.includes(pick.c), pick.c);
+ok('and on the part of it being printed at this level',
+   api.menuOnWall().includes(pick.c), `level ${api.menuTier().n}`);
+ok('the pick is one the learner cannot already read', !api.menuCanRead(pick.c), pick.c);
+
+/* The bar counts the card, not the vocabulary. Eight of the quest's characters
+   are only ever spoken to a waiter and all eight are taught early, so counting
+   them read the bar half full while every dish was still opaque. */
+{
+  const p0 = api.menuProgress();
+  ok('the bar counts printed characters only', p0.total === api.MENU_PRINTED.length,
+     `${p0.total}, not ${api.MENU_CHARS.length}`);
+  const spoken = api.MENU_CHARS.filter(c => !api.MENU_PRINTED.includes(c));
+  spoken.forEach(c => api.introduce(c));
+  ok('so learning a spoken-only character does not move it',
+     api.menuProgress().known === p0.known, spoken.join(' '));
+}
 
 /* ---- and the quest keeps its own books ----
 

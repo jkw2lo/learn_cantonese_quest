@@ -1004,6 +1004,65 @@ character is known and scheduled throughout.
 **Where:** `js/app.js` — `learnedToday()`, `menuLearnedToday()`, `teachOne(c,
 {menu})`, the `#gotIt` handler.
 
+### The menu is not all on the wall at once
+
+The fix above was half of it. The other half took another round to find, and it
+is the more general lesson: **"on the menu" is not one set of characters.**
+
+`renderMenuCard` prints the masthead and the dish names from the start, a
+dish's small print from level 2, and the set-lunch board from level 3. Nothing
+in the model knew that. So:
+
+- **The daily pick walked the whole card**, and walked the set-lunch board
+  *first*, because the board is printed above the sections. The ninth character
+  the quest ever offered was **快** — which appears nowhere except that board —
+  printed in red above a menu that did not contain it, under the words "find it
+  on the menu below". Unfindable on anybody's screen until level 3, roughly a
+  fortnight later.
+- **The bar counted `MENU_CHARS`**, which includes the eight spoken-only
+  characters from the entry above. All eight are taught in the first four
+  stages, so they arrived pre-ticked: the bar was several points ahead of
+  anything the learner could actually read.
+
+The model now derives, from `MENU` itself, what is printed **at each level**:
+
+    const MENU_READ = [], MENU_LEVELS = [];   /* 1-indexed by menu level */
+
+`MENU_READ[n]` is that level's characters in the order the eye meets them going
+down the card; `MENU_LEVELS[n]` is the same as a Set. `MENU_PRINTED` is
+`MENU_READ[3]` — the whole card — and the pick comes from
+`menuOnWall()`, which is `MENU_READ[current level]`.
+
+Three consequences worth copying:
+
+- **`menuTier()` and `menuNext()` had to move from `app.js` to `srs.js`.**
+  `menuToday()` must know the level to pick a findable character, and `srs.js`
+  cannot reach into `app.js`. A `PRINTED` set that had been sitting in `app.js`
+  went with them — it turned out to be dead code, never read.
+- **A cached pick that is no longer on the wall gets re-picked.** The pick is
+  deliberately fixed for the day so it cannot shift underfoot, but anyone
+  holding 快 when this shipped would otherwise have spent the rest of the day
+  hunting for it. That is a repair, not a shift.
+- **Running out at this level is not finishing the quest.** `menuToday()`
+  returns `wall: true` when the level is exhausted but the card is not, and the
+  card says so — "You can read this whole menu … there is more on a longer
+  menu" — rather than declaring the quest complete.
+
+**The bar keeps a stable denominator (53, the whole card) and the note carries
+the countable one.** A denominator that shrank and grew as levels arrived would
+have the learner apparently losing progress on being promoted. But 53 is not a
+number anyone can check against the menu in front of them, so the line under
+the bar says "You can read **13** of the 23 characters on the menu as it
+stands" — the figure they can verify by looking.
+
+`MENU_TIERS` thresholds were rescaled with the denominator (20 → 17, 34 → 30,
+against 53 rather than 61). Measured over a 30-day run: level 2 on day 14,
+level 3 on day 23, and every pick on the wall on the day it is offered.
+
+Hanzi Quest's menu has the same three-level reveal and the same one-set model
+behind it, so it has both bugs waiting — its board characters are simply luckier
+in where they fall in its 763-character order.
+
 ---
 
 ## §8 · Data, audio and tooling

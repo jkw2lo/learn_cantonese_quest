@@ -1868,43 +1868,67 @@ const MENU_CHARS = (() => {
            .map(x => x.c);
 })();
 
-/* The characters the daily pick may choose from: the ones in a dish name or a
-   section heading — the part of the menu you read in order to order.
+/* ---------- what is actually on the wall, level by level ----------
 
-   Deliberately narrower than MENU_CHARS, which also counts the phrases you
-   say to a waiter, the set-lunch board and the small print under a dish. All
-   of those are on the page and all of them count towards reading it; none of
-   them is a thing the card can send you to "find on the menu below" and
-   expect you to find. */
-const MENU_PRINTED = (() => {
-  const on = new Set();
-  const add = str => [...String(str)].forEach(c => { if (/[一-鿿]/.test(c)) on.add(c); });
-  add(MENU.title); add(MENU.name);
-  MENU.sections.forEach(s => { add(s.head); s.items.forEach(i => { add(i[0]); if (i[4]) add(i[4][0]); }); });
-  add(MENU.specials.head); add(MENU.specials.note[0]);
-  MENU.specials.items.forEach(i => add(i[0]));
-  return MENU_CHARS.filter(c => on.has(c));
+   The card is not all printed at once. renderMenuCard shows the masthead and
+   the dish names from the start, a dish's small print from level 2, and the
+   set-lunch board from level 3 — so "on the menu" is a different set of
+   characters depending on how far you have got.
+
+   Two things went wrong for want of saying that out loud:
+
+   The daily pick walked a reading order that included the set-lunch board, and
+   included it FIRST, because the board is printed above the sections. So the
+   ninth character the quest ever offered was 快 — which appears nowhere except
+   that board — above a menu that did not contain it, under the words "find it
+   on the menu below". It was findable on nobody's screen until level 3.
+
+   And the progress bar counted MENU_CHARS, which also holds the eight
+   characters that appear only in the phrases you say to a waiter: 我 該 個 呀
+   幾 碗 呢 埋. All eight are taught in the first four stages, so they arrived
+   pre-ticked and the bar read half full while the dishes were still opaque.
+
+   MENU_READ[n] is what is printed at level n, in the order your eye meets it
+   going down the card; MENU_LEVELS[n] is the same thing as a set. Both are
+   derived from MENU, so editing the menu keeps them honest, and both are
+   restricted to taught characters — the quest cannot offer to teach a
+   character the library has no card for. */
+const MENU_READ = [], MENU_LEVELS = [];
+(() => {
+  const cjk = str => [...String(str)].filter(c => /[一-鿿]/.test(c));
+  const taught = new Set(HQ.map(ch => ch.c));
+  const readAt = lvl => {
+    const seen = [];
+    const add = str => cjk(str).forEach(c => {
+      if (taught.has(c) && !seen.includes(c)) seen.push(c);
+    });
+    add(MENU.title); add(MENU.name);
+    /* the set-lunch board sits above the sections on the card, and arrives last */
+    if (lvl >= 3) {
+      add(MENU.specials.head);
+      MENU.specials.items.forEach(i => add(i[0]));
+      add(MENU.specials.note[0]);
+    }
+    MENU.sections.forEach(sec => {
+      add(sec.head);
+      sec.items.forEach(i => { add(i[0]); if (lvl >= 2 && i[4]) add(i[4][0]); });
+    });
+    return seen;
+  };
+  for (let n = 1; n <= 3; n++) { MENU_READ[n] = readAt(n); MENU_LEVELS[n] = new Set(MENU_READ[n]); }
 })();
 
-/* The same characters in the order you meet them reading the menu — top left
-   to bottom right — rather than in curriculum order.
+/* Everything the card ever prints — the quest's denominator, and a stable one:
+   it does not shrink and grow underneath the learner as levels arrive. What
+   DOES depend on the level is which of these the daily pick may choose from,
+   which is MENU_READ[level]. */
+const MENU_PRINTED = MENU_READ[3];
 
-   The quest used to walk MENU_PRINTED, which is curriculum order, so its daily
-   character marched in step with the Today tab and jumped forward every time
-   the library learned something. This is the menu's own order, and it belongs
-   to the menu. */
-const MENU_ORDER = (() => {
-  const seen = [], add = str => [...String(str)].forEach(c => {
-    if (/[一-鿿]/.test(c) && !seen.includes(c)) seen.push(c);
-  });
-  add(MENU.title); add(MENU.name);
-  add(MENU.specials.head);
-  MENU.specials.items.forEach(i => add(i[0]));
-  add(MENU.specials.note[0]);
-  MENU.sections.forEach(s => { add(s.head); s.items.forEach(i => { add(i[0]); if (i[4]) add(i[4][0]); }); });
-  const printed = new Set(MENU_PRINTED);
-  return seen.filter(c => printed.has(c));
-})();
+/* Kept as a name because the rest of the app reads it: the full card in the
+   order you read it. Identical to MENU_PRINTED now that both are derived from
+   the same walk — the old MENU_ORDER existed only to correct MENU_PRINTED's
+   curriculum ordering. */
+const MENU_ORDER = MENU_READ[3];
 
 /* How grown-up a menu you get handed, and when.
 
@@ -1921,8 +1945,8 @@ const MENU_ORDER = (() => {
    the rate you study — five a day — and cannot bunch. */
 const MENU_TIERS = [
   { n: 1, at: 0,  by: 0,   label: "Dish names only" },
-  { n: 2, at: 20, by: 70,  label: "With what the waiter says" },
-  { n: 3, at: 34, by: 115, label: "Full menu, set lunches and all" }
+  { n: 2, at: 17, by: 70,  label: "With what the waiter says" },
+  { n: 3, at: 30, by: 115, label: "Full menu, set lunches and all" }
 ];
 
 const QUESTS = [

@@ -765,10 +765,52 @@ const taughtHere = c => !!menuTaught()[c];
    counts, and so does anything this tab has shown them. */
 const menuCanRead = c => isKnown(c) || taughtHere(c);
 
+/* The bar counts the menu, and only the menu.
+
+   It used to count MENU_CHARS, which also holds the eight characters that
+   appear nowhere on the card — 我 該 個 呀 幾 碗 呢 埋, the ones you say to a
+   waiter. All eight are taught in the first four stages, so a learner arrived
+   with them already ticked and the bar read half full while every dish on the
+   wall was still unreadable. Now: characters you can read that are printed on
+   the menu, out of the characters printed on the menu. */
 function menuProgress() {
-  const known = MENU_CHARS.filter(menuCanRead).length;
-  return { known, total: MENU_CHARS.length, pct: known / MENU_CHARS.length,
-           done: known === MENU_CHARS.length };
+  const known = MENU_PRINTED.filter(menuCanRead).length;
+  return { known, total: MENU_PRINTED.length, pct: known / MENU_PRINTED.length,
+           done: known === MENU_PRINTED.length };
+}
+
+/* ---------- how much of the card is on the wall ----------
+
+   Lived in app.js, which meant menuToday() could not ask what the learner can
+   actually see — and menuToday() has to ask, or it picks characters off a part
+   of the menu that is not being printed yet. Model logic, so it lives here. */
+function menuTier() {
+  const k = menuProgress().known, all = knownChars().length;
+  return MENU_TIERS.filter(t => k >= t.at && all >= (t.by || 0)).pop() || MENU_TIERS[0];
+}
+
+/* What is standing between you and the next level, named. */
+function menuNext() {
+  const t = MENU_TIERS[menuTier().n];
+  if (!t) return null;
+  const needMenu = Math.max(0, t.at - menuProgress().known);
+  const needAll = Math.max(0, (t.by || 0) - knownChars().length);
+  return { tier: t, needMenu, needAll, more: Math.max(needMenu, needAll) };
+}
+
+/* The characters printed on the card AS IT STANDS — what the learner can
+   actually point at right now, in the order they read it. */
+const menuOnWall = () => MENU_READ[menuTier().n] || MENU_READ[1];
+
+/* The countable claim. The bar runs to 53 because the quest is the whole card
+   and a denominator that shrank and grew underneath the learner would be
+   worse than a steady one — but 53 is not a number anybody can check against
+   the menu in front of them, and at level 1 only 23 of them are on it. This
+   is the number they can check by looking. */
+function menuWall() {
+  const wall = menuOnWall();
+  const known = wall.filter(menuCanRead).length;
+  return { known, total: wall.length, done: known === wall.length };
 }
 
 /* What this tab itself has taught, which is the only number it controls. */
@@ -777,18 +819,33 @@ function menuOwn() {
   return { taught: mine.length, total: MENU_PRINTED.length };
 }
 
-/* Today's menu character, fixed once chosen so it can't shift underfoot. */
+/* Today's menu character, fixed once chosen so it can't shift underfoot.
+
+   The card says "find it on the menu below", so the pick has to be ON the menu
+   below — which means the menu at THIS level, not the whole card. Walking the
+   full reading order offered 快 on day nine, a character printed only on the
+   set-lunch board, which does not appear until level 3. The learner was sent
+   to look for something that was not on their screen.
+
+   Reading order, too, not the curriculum's: the character you meet next is the
+   next one you cannot read going down the card, which has nothing to do with
+   where the Today tab has got to.
+
+   `wall` distinguishes the two ways of running out. If there is nothing left
+   on the wall but more on the card, the quest is not finished — the menu just
+   has not grown yet, and saying "done" would be a lie. */
 function menuToday() {
   const k = dayKey();
-  if (state.menuPick && state.menuPick.d === k) return state.menuPick;
-  /* MENU_PRINTED, not MENU_CHARS: eight of the menu's characters appear only
-     in the phrases you say to a waiter, and the card sends you to look for
-     today's character on the menu. */
-  /* MENU_ORDER, not the curriculum's: the character you meet next is the next
-     one you cannot read as you read down the menu, which has nothing to do
-     with where the Today tab has got to. */
-  const next = MENU_ORDER.find(c => !menuCanRead(c)) || null;
-  state.menuPick = { d: k, c: next, done: !next };
+  const held = state.menuPick;
+  /* A pick from today stands — except one that is no longer on the wall. That
+     is not the pick shifting underfoot, it is a repair: anyone holding 快 from
+     before this was fixed would otherwise spend the rest of the day being told
+     to find it on a menu that does not print it. */
+  if (held && held.d === k && held.c && menuOnWall().includes(held.c)) return held;
+  if (held && held.d === k && !held.c && menuOnWall().every(menuCanRead)) return held;
+  const next = menuOnWall().find(c => !menuCanRead(c)) || null;
+  const wall = !next && !menuProgress().done;   /* level exhausted, card is not */
+  state.menuPick = { d: k, c: next, done: !next, wall };
   save();
   return state.menuPick;
 }
@@ -807,8 +864,9 @@ function menuLearn(c) {
   save();
 }
 
-/* The menu characters you can already read — the flashcard deck. */
-const menuKnown = () => MENU_CHARS.filter(menuCanRead);
+/* The menu characters you can already read — the flashcard deck. Printed
+   ones: a card for 埋, which is on no part of the menu, is not a menu card. */
+const menuKnown = () => MENU_PRINTED.filter(menuCanRead);
 
 function stageProgress(stageNo) {
   const inStage = HQ.filter(c => c.stage === stageNo);

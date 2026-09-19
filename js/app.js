@@ -1877,40 +1877,12 @@ function glyphs(str, target) {
   }).join("");
 }
 
-/* How grown-up a menu you can cope with right now. */
-/* A level needs both its menu count and its overall total — see MENU_TIERS. */
-function menuTier() {
-  const k = menuProgress().known, all = knownChars().length;
-  return MENU_TIERS.filter(t => k >= t.at && all >= (t.by || 0)).pop() || MENU_TIERS[0];
-}
+/* menuTier(), menuNext() and the printed-character set all moved to js/srs.js.
 
-/* What is actually standing between you and the next level, named. "9 more
-   characters and it gets harder" was wrong twice over when the gate was really
-   your overall total, and "harder" was the wrong word for it anyway. */
-function menuNext() {
-  const t = MENU_TIERS[menuTier().n];
-  if (!t) return null;
-  const needMenu = Math.max(0, t.at - menuProgress().known);
-  const needAll = Math.max(0, (t.by || 0) - knownChars().length);
-  return { tier: t, needMenu, needAll, more: Math.max(needMenu, needAll) };
-}
-
-/* Is this character actually printed on the dish list?
-
-   Eight of the forty-three menu characters — 我 該 個 呀 幾 碗 呢 埋 — appear
-   only in the phrases you say to a waiter, never on the menu itself. The card
-   told you to "find it on the menu below" regardless, and once the phrases
-   stopped being shown on this tab there was nowhere to find 呢 at all. */
-const PRINTED = (() => {
-  const out = new Set();
-  const eat = t => { for (const c of String(t)) if (/[\u4e00-\u9fff]/.test(c)) out.add(c); };
-  eat(MENU.title); eat(MENU.name);
-  const section = s => { eat(s.head); s.items.forEach(i => { eat(i[0]); if (i[4]) eat(i[4][0]); }); };
-  MENU.sections.forEach(section);
-  if (MENU.specials) { section(MENU.specials); if (MENU.specials.note) eat(MENU.specials.note[0]); }
-  return out;
-})();
-const onPrintedMenu = c => PRINTED.has(c);
+   They had to: menuToday() picks the day's character and must not pick one off
+   a part of the menu that is not being printed yet, so it needs to know the
+   level — and srs.js cannot reach into app.js. The `PRINTED` set that used to
+   sit here was dead code besides, replaced by MENU_LEVELS. */
 
 function renderMenuCard(target, tall) {
   const m = MENU, tier = menuTier().n;
@@ -3565,10 +3537,14 @@ function renderQuest() {
     <div class="sq-top">
       <span class="sq-icon">🍜</span>
       <span class="sq-name"><b>Read a Cha Chaan Teng</b><span class="zh">睇餐牌</span></span>
-      <span class="sq-frac" title="Characters on this menu you can read — from anywhere in the app">${mp.known}/${mp.total}</span>
+      <span class="sq-frac" title="Characters printed on this menu you can read — learned here or anywhere else in the app">${mp.known}/${mp.total}</span>
     </div>
     <div class="bar ${mp.done ? "gold" : ""}"><i style="width:${(mp.pct * 100).toFixed(1)}%"></i></div>
-    <p class="note">${(() => { const o = menuOwn();
+    <p class="note">${(() => { const w = menuWall();
+      /* The bar's 53 is the whole card; this is the bit that is on the wall
+         right now, which is the only number a learner can check by looking. */
+      return `You can read <b>${w.known}</b> of the ${w.total} characters on the menu as it stands. `;
+    })()}${(() => { const o = menuOwn();
       return o.taught
         ? `<b>${o.taught}</b> of ${o.total} learned here${o.taught >= o.total ? " — the whole menu" : ""}. `
         : "Nothing learned here yet. ";
@@ -3592,6 +3568,20 @@ function renderQuest() {
           : `<span class="p">${esc(pch.words[0][0])} · ${esc(pch.words[0][2])}</span>`}
       </span>
       ${!learnedIt ? `<button class="btn btn-seal sq-learn" id="learnMenu">Learn ${esc(pch.c)}</button>` : ""}
+    </div>` : pick2.wall ? `<div class="sq-target done">
+      <span class="sq-glyph">✓</span>
+      <span class="sq-info"><span class="t">You can read this whole menu</span>
+      <span class="m">Every character on the wall right now is one you can read — ${menuOwn().taught}
+        of them learned right here. ${(() => {
+          const nx = menuNext();
+          if (!nx) return "A longer menu is on its way.";
+          const bits = [];
+          if (nx.needMenu) bits.push(`${nx.needMenu} more menu character${nx.needMenu === 1 ? "" : "s"}`);
+          if (nx.needAll) bits.push(`${nx.needAll} more character${nx.needAll === 1 ? "" : "s"} overall`);
+          return bits.length
+            ? `There is more on a longer menu — ${bits.join(" and ")}, and it grows to <b>${esc(nx.tier.label.toLowerCase())}</b>.`
+            : "A longer menu is on its way.";
+        })()}</span></span>
     </div>` : `<div class="sq-target done">
       <span class="sq-glyph">✓</span>
       <span class="sq-info"><span class="t">Nothing left to show you</span>
