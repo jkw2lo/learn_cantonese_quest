@@ -2522,7 +2522,7 @@ function renderWrite() {
 }
 
 function buildWritePage() {
-  $("#viewWrite").innerHTML = `<div class="wrap wp-wrap">
+  $("#viewWrite").innerHTML = `<div class="wrap">
     <div class="cols">
       <div class="section">
         <div class="wp-bar">

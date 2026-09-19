@@ -1248,7 +1248,11 @@ code {
 /* ---------- 练字 exercise book ---------- */
 
 /* the page shares the row with the trace panel now, so give it more room */
-.wp-wrap { max-width: 78rem; }
+/* No .wp-wrap max-width any more. It set 78rem at every width, overriding the
+   34 / 62 / 74rem that .wrap steps through, so the Exercise book ran 64px
+   wider than every other tab and its margins were visibly narrower beside
+   them. The page is a canvas and a character picker in .cols, which splits at
+   1080px and has room to spare at 74rem. */
 .wp-bar {
   display: flex; align-items: flex-end; justify-content: space-between;
   gap: 1rem; flex-wrap: wrap; margin-bottom: .9rem;
