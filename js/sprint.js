@@ -494,8 +494,7 @@ function renderSprint() {
     <div class="today-head">
       <h1>Sprint</h1>
       <p class="note">A fixed number of questions and a fixed number of minutes. Finish the sheet, then find out
-        what you got right. Nothing here is marked until you hand it in, and nothing here can make tomorrow's
-        review queue any longer.</p>
+        what you got right.</p>
     </div>
     ${short ? `<div class="sheet" style="padding:1rem">
       <p class="note">Sprints need at least ${SPRINT_MIN_POOL} characters to draw on — you have ${pool}.
