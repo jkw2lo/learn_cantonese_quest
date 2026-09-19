@@ -1987,11 +1987,11 @@ const MENU_TIERS = [
 ];
 
 const QUESTS = [
-  { id:"menu",   icon:"🍜", name:"Read a Cha Chaan Teng", zh:"睇餐牌", open:true,
+  { id:"menu",   icon:"🍜", name:"Read a Cha Chaan Teng Menu", zh:"睇餐牌", open:true,
     promise:"Walk into a Hong Kong diner, read the laminated menu on the wall, and order out loud.",
     chars: MENU_CHARS, menu: MENU },
   { id:"street", icon:"🚇", name:"Find Your Way",  zh:"搭車",   locked:true,
-    promise:"MTR exits, minibus signs and street names.",          needs:"Read a Cha Chaan Teng" },
+    promise:"MTR exits, minibus signs and street names.",          needs:"Read a Cha Chaan Teng Menu" },
   { id:"shop",   icon:"🛒", name:"Buy Something",  zh:"買嘢",   locked:true,
     promise:"Prices, sizes, and asking for it a bit cheaper.",     needs:"Find Your Way" },
   { id:"chat",   icon:"💬", name:"Small Talk",     zh:"傾偈",   locked:true,

@@ -1720,7 +1720,7 @@ function renderDone() {
       ${fixing ? `<button class="btn btn-ghost" id="againFix">Take the next five</button>`
       : prac ? `<button class="btn btn-ghost" id="again">Another ${esc(prac.name.toLowerCase())} round</button>`
       : `<div class="quest-bump">
-        <div class="lbl"><span>🍜 Read a Cha Chaan Teng</span><span>${qp.known} / ${qp.total}</span></div>
+        <div class="lbl"><span>🍜 Read a Cha Chaan Teng Menu</span><span>${qp.known} / ${qp.total}</span></div>
         <div class="bar ${qp.done ? "gold" : ""}"><i style="width:${(qp.pct * 100).toFixed(1)}%"></i></div>
         <div class="lbl"><span>${gained > 0 ? `+${gained} from today` : "No menu characters today"}</span>
           <span>${qp.done ? "Complete" : `${qp.total - qp.known} to go`}</span></div>
@@ -1873,7 +1873,7 @@ function openQuest(id) {
   const pick = menuToday();
   const target = pick.c && !isKnown(pick.c) ? pick.c : null;
 
-  openSheet(`🍜 Read a Cha Chaan Teng <span class="dim" style="font-weight:400;font-size:.85rem">睇餐牌</span>`,
+  openSheet(`🍜 Read a Cha Chaan Teng Menu <span class="dim" style="font-weight:400;font-size:.85rem">睇餐牌</span>`,
     `<div class="wrap"><div class="section">
       <div class="today-head">
         <h1>${p.done ? "You can read this." : "The menu you're working towards."}</h1>
@@ -1885,7 +1885,7 @@ function openQuest(id) {
       ${renderMenuCard(target, true)}
       <div class="sheet block">
         <div class="block-head"><span class="k">講嘢</span><span class="t">Say it out loud</span></div>
-        <div class="phrase-list">
+        <div class="phrase-list" style="--phrase-n:${MENU.phrases.length}">
           ${MENU.phrases.map(ph => `<button class="phrase" data-speak="${esc(ph[0])}">
             <span class="z">${glyphs(ph[0], target)}</span>
             <span class="p">${esc(ph[1])}</span>
@@ -3592,7 +3592,7 @@ function renderQuest() {
   const card = `<div class="sheet sq">
     <div class="sq-top">
       <span class="sq-icon">🍜</span>
-      <span class="sq-name"><b>Read a Cha Chaan Teng</b><span class="zh">睇餐牌</span></span>
+      <span class="sq-name"><b>Read a Cha Chaan Teng Menu</b><span class="zh">睇餐牌</span></span>
       <span class="sq-frac" title="Characters on this menu that Cantonese Quest teaches, and how many of them you can read — from here or anywhere else in the app">${mp.known}/${mp.total}</span>
     </div>
     <div class="bar ${mp.done ? "gold" : ""}"><i style="width:${(mp.pct * 100).toFixed(1)}%"></i></div>
@@ -3606,9 +3606,11 @@ function renderQuest() {
          meant "8 from being shown a longer one". */
       const w = menuWall(), nx = menuNext(), o = menuOwn();
       const mine = o.taught ? ` <b>${o.taught}</b> of them learned right here.` : "";
-      const scope = `The other ${MENU_UNTAUGHT.length} characters on it are dish names —
-        <span class="han">菠蘿包</span>, <span class="han">叉燒</span>,
-        <span class="han">羅宋湯</span> — glossed when you hover, never drilled.`;
+      /* The three examples were the right instinct and the wrong place: they
+         pushed this sentence onto a second line, and the menu is right there
+         underneath showing them in their own ink. */
+      const scope = `The other ${MENU_UNTAUGHT.length} characters on it are dish names,
+        glossed when you hover but never drilled.`;
       if (!nx) return `You can read all <b>${mp.total}</b> of the characters on this menu that
         Cantonese Quest teaches.${mine} ${scope} This is a menu you could be handed in Mong Kok.`;
       return `<b>${mp.known}</b> of the <b>${mp.total}</b> characters on this menu that Cantonese Quest
@@ -3645,7 +3647,11 @@ function renderQuest() {
         <span class="eyebrow">Say it out loud ${hanLabel("講嘢")}</span>
         <span class="dim" style="font-size:.72rem">tap to hear</span>
       </div>
-      <div class="phrase-list">
+      <!-- one column per phrase, up to six. Five of them sit comfortably at
+           206px each; the grid cannot overlap at any count, but past six the
+           cards are too narrow to read, so a seventh phrase wraps to a second
+           row rather than squeezing the rest. -->
+      <div class="phrase-list" style="--phrase-n:${Math.min(MENU.phrases.length, 6)}">
         ${MENU.phrases.map(ph => `<button class="phrase" data-speak="${esc(ph[0])}">
           <span class="z">${glyphs(ph[0], learnedIt ? null : pick2.c)}</span>
           <span class="p">${esc(ph[1])}</span>

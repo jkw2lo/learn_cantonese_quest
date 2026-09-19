@@ -748,8 +748,26 @@ code {
 
 .phrase-list { display: flex; flex-direction: column; gap: .1rem; }
 /* Five phrases in one narrow column left most of the menu tab empty beside
-   them. They are short, independent lines — exactly what columns are for. */
-@media (min-width: 720px) {
+   them. They are short, independent lines — exactly what columns are for.
+
+   One column each at full width, two when that gets tight, one list on a
+   phone. The count comes from the data as --phrase-n, set where the list is
+   rendered: hard-coding `repeat(5, ...)` here would mean a sixth phrase
+   silently squeezed into five columns, and the fix belongs next to the thing
+   that can change rather than in a stylesheet nobody would think to look at.
+
+   Columns cannot overlap whatever the count: every track is minmax(0, 1fr),
+   so a track is never wider than its share, and the jyutping — the longest
+   line in a card, and one with no break opportunities of its own — is allowed
+   to wrap rather than push the track open. */
+@media (min-width: 1040px) {
+  .menu-say .phrase-list {
+    display: grid; grid-template-columns: repeat(var(--phrase-n, 2), minmax(0, 1fr));
+    gap: .1rem 1.1rem; align-items: start;
+  }
+  .menu-say .phrase { border-bottom: 0; padding-top: 0; }
+}
+@media (min-width: 720px) and (max-width: 1039.98px) {
   .menu-say .phrase-list {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: .1rem .9rem; align-items: start;
@@ -762,8 +780,11 @@ code {
 }
 .phrase:last-child { border-bottom: 0; }
 .phrase .z { font-family: var(--f-han-ui); font-size: 1.15rem; }
-.phrase .p { font-family: var(--f-pin); font-size: .74rem; color: var(--ink-3); }
-.phrase .e { font-size: .8rem; color: var(--ink-2); }
+/* min-width:0 so a long unbroken reading cannot widen its grid track, and
+   overflow-wrap so it breaks inside a syllable rather than spilling out */
+.phrase .p { font-family: var(--f-pin); font-size: .74rem; color: var(--ink-3);
+  min-width: 0; overflow-wrap: anywhere; }
+.phrase .e { font-size: .8rem; color: var(--ink-2); min-width: 0; }
 
 /* ============================================================
    Grammar tags and etymology

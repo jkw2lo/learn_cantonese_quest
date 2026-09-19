@@ -287,6 +287,24 @@ console.log('\nthe rest of the wall');
      !/You can read the whole menu/.test(app));
 }
 
+console.log('\nsay it out loud');
+{
+  const app = read('js/app.js');
+  ok('the phrases get one column each', /--phrase-n:\$\{Math\.min\(MENU\.phrases\.length, 6\)\}/.test(app));
+  const css = read('css/app.css');
+  /* Every track minmax(0, 1fr) is what makes overlap impossible at any count:
+     a track can never be wider than its share, so the cards cannot collide
+     however many phrases the menu grows. */
+  ok('every track is capped at its share',
+     /grid-template-columns: repeat\(var\(--phrase-n, 2\), minmax\(0, 1fr\)\)/.test(css));
+  /* and the longest line in a card, which has no break opportunities of its
+     own, is allowed to break rather than push its track open */
+  ok('the reading may break inside a syllable',
+     /\.phrase \.p \{[^}]*overflow-wrap: anywhere/.test(css));
+  ok('six is where one row stops being readable, and it wraps instead',
+     /past six the\s*\n?\s*cards are too narrow/.test(app));
+}
+
 console.log('\nvague meanings');
 {
   /* Twenty-two meanings are a job description in brackets rather than a
