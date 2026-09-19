@@ -1204,6 +1204,39 @@ the learner can reach it. The lesson generalises past menus — any progress bar
 whose denominator is "the things we teach" while the screen shows "the things
 that exist" is telling the same kind of lie.
 
+### Count the ink, not the vocabulary
+
+The quest's bar answers "how many of a list of 53 do I know". Nobody standing
+in a cha chaan teng asks that. The question the quest is named after is **how
+much of this can I read**, and the denominator for it is not a set:
+
+    /* every character printed on the card, WITH repeats — 茶 in four dishes
+       is four characters of wall that light up when you learn it */
+    const MENU_INK = …;                                     // 184
+    const MENU_INK_CEILING = MENU_INK.filter(c => CHAR_INDEX[c]).length;  // 111
+
+A set answers a question about vocabulary. This answers a question about a
+wall, and it weights common characters the way the wall does. It also moves
+much more often — every session, rather than only when a menu character comes
+up — which is most of why it is fun to look at.
+
+Measured over the curriculum: 2% at five characters, 15% at thirty, **41% at
+sixty-five**, 46% at 150, 60% at 300.
+
+**Draw the ceiling on the bar.** It stops at 60% because 叉燒 and 羅宋湯 are
+printed on the wall and in no curriculum this size. A bar that quietly halted
+at 60 with no explanation would read as broken, so the tick is rendered on the
+track at `left: ceilingPct` and the line under it says what it is: "The mark at
+60% is where this stops: the other 73 characters are dish names the curriculum
+never teaches." At max the fill lands exactly on the tick, which is the whole
+shape of the idea in one glance.
+
+This ports as an idea rather than as code. Hanzi Quest teaches every character
+on its menu, so its ceiling is 100% and the tick would sit at the end of the
+bar doing nothing — but the *ink* count still beats the set count there, for
+the same reason: it moves more often and it weights what the eye actually
+meets.
+
 ---
 
 ## §8 · Data, audio and tooling

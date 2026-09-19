@@ -804,6 +804,17 @@ function menuNext() {
    actually point at right now, in the order they read it. */
 const menuOnWall = () => MENU_READ[menuTier().n] || MENU_READ[1];
 
+/* How much of the printed menu is legible to you, counted in ink rather than
+   in vocabulary — see MENU_INK. `ceiling` is where this curriculum runs out. */
+function menuLegible() {
+  const read = MENU_INK.filter(menuCanRead).length;
+  return {
+    read, total: MENU_INK.length, pct: read / MENU_INK.length,
+    ceiling: MENU_INK_CEILING, ceilingPct: MENU_INK_CEILING / MENU_INK.length,
+    maxed: read === MENU_INK_CEILING
+  };
+}
+
 /* The countable claim. The bar runs to 53 because the quest is the whole card
    and a denominator that shrank and grew underneath the learner would be
    worse than a steady one — but 53 is not a number anybody can check against

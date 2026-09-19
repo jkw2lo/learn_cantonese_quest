@@ -17,7 +17,7 @@ const CONTRACT = [
   'TIERS', 'TIER_UNLOCK', 'tierOf', 'tierChars', 'tierFrom', 'tierProgress',
   'tierUnlocked', 'tierNeeds', 'unlockedCeiling', 'isLocked',
   'POS_LABEL', 'MENU', 'MENU_CHARS', 'MENU_PRINTED', 'MENU_ORDER', 'MENU_READ', 'MENU_LEVELS',
-  'MENU_UNTAUGHT', 'EXTRA_GLOSS',
+  'MENU_UNTAUGHT', 'EXTRA_GLOSS', 'MENU_INK', 'MENU_INK_CEILING', 'menuLegible',
   'menuTier', 'menuNext', 'menuOnWall', 'menuWall',
   'state', 'blank', 'load', 'save', 'dayKey', 'toneOf', 'connectRemote',
   'rec', 'isKnown', 'strength', 'grade', 'introduce', 'today', 'tally', 'liveStreak',
@@ -285,6 +285,43 @@ console.log('\nthe rest of the wall');
   ok('and finishing does not claim the whole menu',
      /Every character on it this app teaches/.test(app) &&
      !/You can read the whole menu/.test(app));
+}
+
+console.log('\nhow much of the wall you can read');
+{
+  /* Counted in ink, not in vocabulary: every character printed on the card,
+     repeats and all, because 茶 in four dishes is four characters of wall that
+     light up together. The 53-character bar answers "how much of the list do I
+     know"; this answers the question the quest is named after. */
+  const g = new Function(read('js/data.js') + '\n' + read('js/srs.js') +
+    '\nreturn {HQ,MENU_INK,MENU_INK_CEILING,menuLegible,load,introduce,menuLearn,MENU_PRINTED,MENU_UNTAUGHT};')();
+  globalThis.localStorage._d = {};
+  g.load();
+
+  ok('the ink counts repeats', g.MENU_INK.length > new Set(g.MENU_INK).size,
+     `${g.MENU_INK.length} printed, ${new Set(g.MENU_INK).size} distinct`);
+  ok('and every one of them is Chinese', g.MENU_INK.every(c => /[一-鿿]/.test(c)));
+
+  const zero = g.menuLegible();
+  ok('a new learner reads none of it', zero.read === 0 && zero.pct === 0);
+  ok('but the ceiling is known from the start', zero.ceiling === g.MENU_INK_CEILING);
+
+  ok('the ceiling is below the whole wall', g.MENU_INK_CEILING < g.MENU_INK.length,
+     `${g.MENU_INK_CEILING} of ${g.MENU_INK.length} — ${Math.round(g.MENU_INK_CEILING / g.MENU_INK.length * 100)}%`);
+  /* which is only true because the card prints characters nothing teaches */
+  ok('and that is exactly the untaught dish names',
+     g.MENU_INK.length - g.MENU_INK_CEILING === g.MENU_INK.filter(c => g.MENU_UNTAUGHT.includes(c)).length);
+
+  g.HQ.forEach(ch => g.introduce(ch.c));
+  const full = g.menuLegible();
+  ok('learning the whole library reaches the ceiling and stops', full.read === full.ceiling && full.maxed,
+     `${full.read}/${full.total} = ${Math.round(full.pct * 100)}%`);
+  ok('which is not 100%', full.pct < 1);
+
+  const app = read('js/app.js');
+  ok('the ceiling is drawn on the bar rather than hidden',
+     /ink-bar[\s\S]{0,240}left:\$\{\(lg\.ceilingPct \* 100\)/.test(app));
+  ok('and the copy says what it is', /where this stops/.test(app));
 }
 
 console.log('\nsay it out loud');

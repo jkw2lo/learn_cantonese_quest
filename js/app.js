@@ -3646,6 +3646,43 @@ function renderQuest() {
         ${MENU_UNTAUGHT.length} it does not: hover any of them for what it says.</span></span>
     </div>`}
 
+    ${(() => {
+      /* The one number you can check by looking up at a menu.
+
+         Counted in ink rather than in vocabulary — every character printed on
+         the card, repeats and all, because 茶 appearing four times is four
+         characters of wall that light up when you learn it. The 53-character
+         bar above answers "how much of the list do I know"; this answers "how
+         much of this can I read", which is the question the quest is named
+         after.
+
+         The ceiling is drawn on the bar rather than hidden. It caps at 60%
+         because 叉燒 and 羅宋湯 are on the wall and are not in the curriculum,
+         and a bar that quietly stopped at 60 with no explanation would read as
+         broken. */
+      const lg = menuLegible();
+      const pct = Math.round(lg.pct * 100);
+      const cap = Math.round(lg.ceilingPct * 100);
+      return `<div class="ink-read">
+        <div class="ink-top">
+          <span class="ink-pct">${pct}<small>%</small></span>
+          <span class="ink-say"><b>of this menu is legible to you</b>
+            <small>${lg.read} of the ${lg.total} characters printed on it — repeats and all, because
+              <span class="han">茶</span> in four dishes is four characters of wall.</small></span>
+        </div>
+        <div class="ink-bar" role="img" aria-label="${pct}% of the menu legible, out of a possible ${cap}%">
+          <i style="width:${(lg.pct * 100).toFixed(1)}%"></i>
+          <b style="left:${(lg.ceilingPct * 100).toFixed(1)}%"></b>
+        </div>
+        <p class="ink-foot">${lg.maxed
+          ? `That is everything this app can teach you here. The remaining ${lg.total - lg.ceiling} characters
+             are dish names — <span class="han">叉燒</span>, <span class="han">羅宋湯</span> — printed on every
+             real menu and taught by no curriculum this size.`
+          : `The mark at ${cap}% is where this stops: the other ${lg.total - lg.ceiling} characters are dish
+             names the curriculum never teaches.`}</p>
+      </div>`;
+    })()}
+
     <div class="menu-wrap full">${renderMenuCard(learnedIt ? null : pick2.c, true)}</div>
 
     <div class="menu-say">

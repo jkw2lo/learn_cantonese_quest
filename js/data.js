@@ -1959,6 +1959,38 @@ const MENU_UNTAUGHT = (() => {
   return [...out];
 })();
 
+/* ---------- the ink on the wall ----------
+
+   Every Chinese character printed on the card, counted WITH repeats — 茶 four
+   times is four characters of ink, and learning it lights all four.
+
+   This is the denominator for the one number a learner can check by looking up
+   at a menu: not "how many of a list do I know" but "how much of what is
+   printed here can I read". It is deliberately not a set. A set answers a
+   question about vocabulary; this answers a question about a wall.
+
+   It is also the honest one, because it counts the 45 characters the
+   curriculum never teaches. That caps it at 60%, and the cap is the point: a
+   real cha chaan teng menu has 叉燒 and 羅宋湯 on it, and no amount of work in
+   this app will make those readable. Saying so is better than quietly
+   excluding them and calling the result a menu. */
+const MENU_INK = (() => {
+  const out = [];
+  const add = str => [...String(str)].forEach(c => { if (/[一-鿿]/.test(c)) out.push(c); });
+  add(MENU.title); add(MENU.name);
+  add(MENU.specials.head);
+  MENU.specials.items.forEach(i => add(i[0]));
+  add(MENU.specials.note[0]);
+  MENU.sections.forEach(sec => {
+    add(sec.head);
+    sec.items.forEach(i => { add(i[0]); if (i[4]) add(i[4][0]); });
+  });
+  return out;
+})();
+
+/* How much of that ink this curriculum could ever reach. */
+const MENU_INK_CEILING = MENU_INK.filter(c => CHAR_INDEX[c]).length;
+
 /* How grown-up a menu you get handed, and when.
 
    Three rules have been tried here. The first gated on menu characters alone,
