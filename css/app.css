@@ -2691,7 +2691,10 @@ button.tier-head:hover { border-color: var(--ink-3); }
    masthead of the standalone menu sheet, and reusing it put a 2px vermilion
    rule and centred type on this page's introduction. */
 .menu-intro { margin-bottom: .6rem; }
-.menu-intro .note { max-width: 46rem; }
+/* No measure cap here. Every other tab's intro note runs the width of the
+   wrap; this one carried a 46rem cap left over from the .menu-head rename,
+   which broke one sentence of 55rem across two lines while 74rem of room sat
+   unused beside it. */
 .menu-legend { padding-top: .1rem; }
 
 /* the three things the space bar does, said once where they are used */
