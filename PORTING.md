@@ -85,13 +85,14 @@ radical frames had been averaged from the wrong donors.
 | **§8** | Data, audio and tooling |
 | **§9** | Per-tab quick-start guides |
 | **§10** | Smaller fixes |
+| **§11** | [Growing the curriculum, and milestones](#11--growing-the-curriculum-and-milestones) |
 | | **Do not port these** — Cantonese-specific |
 
 ---
 
 ## §0 · Bugs that are live in Hanzi Quest right now
 
-All four verified against Hanzi Quest's working tree at the time of writing —
+All five verified against Hanzi Quest's working tree at the time of writing —
 these are not "might apply", they are there:
 
 | bug | where in Hanzi Quest | one-line summary |
@@ -101,6 +102,7 @@ these are not "might apply", they are there:
 | Space skips the writing quiz | `js/app.js:3544` — `\|\| $("#skipW")` in the space-bar list | two taps give up on the quiz with nothing written |
 | `data-speak` has no listener | `js/app.js:1484` emits it; `dataset.speak` appears nowhere | those buttons do nothing at all |
 | The 正 tally overflows its corner | `js/app.js:2684` — `tallyRow(exToday)` with no `max` | 31 reps draws seven glyphs and pushes the container |
+| The Library's stage filter dies at stage 10 | `js/app.js:2858` — `libFilter.length === 2 && ch.stage !== +libFilter[1]` | Hanzi Quest has 13 stages; chips 10–13 select nothing and show everything |
 
 
 ### "Study ahead" ran away in two separate places
@@ -1252,12 +1254,128 @@ cannot render, and the gate stops consulting the flag. Gone rather than off.
 
 ---
 
+## §11 · Growing the curriculum, and milestones
+
+Cantonese Quest went from 146 characters to **300**, in eleven new themed
+stages, and gained a celebration every fiftieth character. Hanzi Quest already
+has 763 characters and 13 stages, so the *content* does not port — but every
+one of the following bit it on the way, and would bite Hanzi Quest the next
+time its curriculum grows.
+
+### The numbers that turn out to be hardcoded
+
+Adding characters is not only adding characters. In order of how long each one
+took to find:
+
+- **`STAGES[].end` is cumulative and hand-written.** Miss one and
+  `STAGES.find(s => i < s.end)` returns `undefined` for every character past
+  it, and `ch.stage = …​.n` throws at load with a null-property error that says
+  nothing about stages. Recompute the whole column, and have the checker count
+  characters per stage rather than trusting the arithmetic.
+- **`libFilter.length === 2`** — see §0. The Library's stage filter reads one
+  digit of the filter key, so `s10` and up match nothing and quietly return the
+  unfiltered library. A regex, `/^s(\d+)$/`, is the whole fix.
+- **Prose that states a count.** `js/srs.js` said "all 146", `js/data.js` said
+  "the library is 145 characters", `tools/smoke.mjs` said it four times. None
+  of them break; all of them become lies. `grep -n` for the old number before
+  starting and again at the end.
+- **Radical coverage text.** The radicals page said "the other 187 are real" —
+  `214 - 27`, typed out. It is `${214 - documented.length}` now.
+- **`RAD_THEMES` is a hand-grouped list of radical keys**, with a catch-all for
+  anything not in it. The catch-all means new radicals never vanish, but they
+  all pile into "Others" until you place them.
+
+### A chip row that scrolls is a chip row that hides things
+
+Twenty-one stage chips came to **2,395px inside a 1,136px row**. It scrolled,
+so nothing was broken and nothing looked broken — and half the curriculum sat
+off the right-hand edge with no affordance saying so. The five state filters
+stayed as chips; the stages became a `<select>` styled as one more chip.
+
+The general shape: **a horizontally scrolling row is fine for five things and a
+trap for twenty.** Hanzi Quest's 13 stages are already at the edge of it.
+
+### Checkers earn their keep at scale
+
+Every one of these was caught by a tool rather than by reading:
+
+| checker | what it caught in 154 new entries |
+|---|---|
+| `check-components` | 3 wrong `comp` claims — and two of them were the checker's fault: `⺮` was missing from its squeezed-radical map, so 答 and 笑 "claimed 竹 which isn't there" |
+| `check-jyutping` | 13 sentences with a comma inside the jyutping, 7 words glossed two different ways, 18 readings that disagreed with CC-Canto |
+| `check-strokes` | 啲 had no data at all until 的 was added as a component so the fetcher would pull it |
+| `audit-strokes` | 11 false "component not in decomposition" notes, from a one-to-one variant map that could not express 肉 → both 月 and ⺼ |
+| `smoke` | 189 missing audio clips, a character with no all-taught example word, 3 meanings containing Chinese, and one calibration that had gone stale |
+
+Two of those deserve spelling out, because both are the checker being wrong
+rather than the data:
+
+**A variant map wants many forms per key.** `{ "肉": "月" }` cannot also say
+`⺼`, and `{ "八": "丷" }` was simply missing. Both audit maps now hold a string
+of forms and test `[...forms].some(f => decomp.includes(f))`.
+
+**A threshold calibrated against the library size measures the library.**
+`smoke` asserted that 40 rounds of practice touch `HQ.length * 0.6` distinct
+characters. The pool deliberately spends 70% of every round inside a
+40-character recent window, so the fraction it can reach *falls* as the library
+grows — the check was passing at 145 and failing at 300 with the rotation
+working perfectly. What it actually wanted was that the 30% reaching back lands
+somewhere new nearly every time:
+
+    const older = total - hits;
+    ok('rotation spreads across the library', seen.size > recent.size + older * 0.7);
+
+That one holds at any size. **Any threshold with the library's own size in it
+should be read twice** — usually it is measuring the wrong thing.
+
+### Composing a glyph needs its parts bundled
+
+`啲` is `口` + `的`, and the composer had both recipes and donors — but `的` was
+in neither the curriculum nor any `comp` array, so `fetch-strokes` had never
+downloaded it and the composer reported "missing a part". Declaring it as a
+component of 啲 (which is also simply true) put it in the fetch list. **The
+composer can only use parts the bundle already holds.**
+
+### Milestones
+
+Every fiftieth character, and the last one, stop the session for a moment.
+
+    const MILESTONES = [50, 100, 150, 200, 250, 300];
+    const hailed = () => (state.hailed = state.hailed || []);
+
+Four decisions in it, all of which would come up again:
+
+- **Record what was celebrated; do not derive it from the count.** The count
+  goes down as well as up — a reset, a character dropped from the curriculum —
+  and deriving it congratulates someone twice for the same fifty. There is a
+  smoke check that deletes 60 characters and asserts nothing re-arms.
+- **Offer the highest passed, not the lowest.** The placement test can credit
+  sixty characters at once. A queue of overlays to click through turns the
+  moment into a chore, so `markMilestone(m)` marks everything at or below `m`.
+- **Placement marks silently.** `hailSilently()` runs in `afterPlacement()`:
+  the overlay is for work done, and congratulating somebody for the test they
+  have just taken cheapens the five they earn afterwards.
+- **One celebratory gesture per app.** The card stamps the number as the same
+  red 印章 the session grade uses, at the same `rotate(-7deg)`, with the same
+  `stamp` keyframes. Confetti would belong to different software.
+
+The copy names what the characters bought rather than saying well done —
+"enough to say hello, count to ten, name the people around you and ask for a
+table" instead of "50 characters!". For Hanzi Quest with 763, the natural list
+is coarser: probably every hundred, plus the end.
+
+A smoke check compares `MILESTONES` against the keys of `HAIL` in `js/app.js`
+as text, because a milestone with no card opens an empty overlay and app.js has
+no DOM in the harness.
+
+---
+
 ## Do not port these
 
 Cantonese-specific, and wrong for Hanzi Quest:
 
 - **The curriculum order and its contents.** Numbers-and-pictographs first,
-  greetings second, 146 characters, two tiers.
+  greetings second, 300 characters, five tiers.
 - **Six-tone jyutping** — `toneOf()`, `toneless`, `TONE_PATHS`, and the
   ASCII-based `bare`/`searchable`/`untoned`. Hanzi Quest's four-tone diacritic
   handling is correct for pinyin.

@@ -214,7 +214,15 @@ console.log('\nagainst CC-Canto');
     "劏房": "變調 — 房 takes fong2 here, as it does in 廚房",
     "唔好意思": "意思 is ji3 si1; si3 is not a reading 思 takes here",
     "粵語殘片": "片 is pin2 in the film sense",
-    "利是": "利是 is lai6 si6 in Hong Kong; lei6 is the literary reading of 利"
+    "利是": "利是 is lai6 si6 in Hong Kong; lei6 is the literary reading of 利",
+    "幾多錢": "變調 — 錢 lifts to cin2 after another word, as CC-Canto itself has it in 有錢",
+    "收錢": "變調 — 錢 lifts to cin2 after another word, as CC-Canto itself has it in 俾錢",
+    "百分百": "分 is fan1 in the percentage sense, as in 百分比",
+    "間房": "間 here is the measure word gaan1, not the 'between' sense",
+    "打字": "CC-Canto has a stray double space in this entry; the reading agrees",
+    "請假": "請 is cing2 throughout this file; ceng2 is the colloquial variant",
+    "巴士站": "士 is si2 in 巴士, which is how CC-Canto reads 巴士 itself",
+    "為咗": "wai6 is the 'for the sake of' reading; wai4 is 'to do'"
   };
   const fresh = differ.filter(d => !REVIEWED[d.word]);
   const seen = differ.filter(d => REVIEWED[d.word]);

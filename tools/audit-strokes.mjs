@@ -247,11 +247,14 @@ for (const ch of HQ) {
   const unseen = ch.comp.filter(k => !decomp.includes(k));
   if (unseen.length) {
     /* variants are the usual reason: 亻 in the decomposition, 人 in the claim */
-    const VARIANT = { "人": "亻", "水": "氵", "火": "灬", "心": "忄", "手": "扌",
-                      "言": "訁", "食": "飠", "艸": "艹", "辵": "辶", "犬": "犭",
-                      "玉": "王", "示": "礻", "衣": "衤", "肉": "月", "刀": "刂",
-                      "金": "釒", "糸": "糹", "水": "氵" };
-    const still = unseen.filter(k => !(VARIANT[k] && decomp.includes(VARIANT[k])));
+    const VARIANT = { "人": "亻𠆢", "水": "氵氺", "火": "灬", "心": "忄㣺⺗", "手": "扌",
+                      "言": "訁讠", "食": "飠饣", "艸": "艹", "辵": "辶⻌", "犬": "犭",
+                      "玉": "王𤣩", "示": "礻", "衣": "衤", "肉": "月⺼", "刀": "刂⺈",
+                      "金": "釒钅", "糸": "糹纟", "八": "丷龸", "攴": "攵", "阜": "阝⻖",
+                      "竹": "⺮𥫗", "小": "⺌⺍", "网": "罒", "爪": "爫⺤", "土": "龶",
+                      "卜": "⺊" };
+    const still = unseen.filter(k =>
+      !(VARIANT[k] && [...VARIANT[k]].some(v => decomp.includes(v))));
     if (still.length) { note(`${ch.c}: claims ${still.join(' ')}, decomposition is ${decomp}`); compNotes++; }
   }
 }

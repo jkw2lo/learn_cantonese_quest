@@ -70,6 +70,7 @@ const blank = () => ({
   demo: false,
   sprint: { marks: {}, runs: [], best: {}, pick: {} },
   menuTaught: {},       /* the side quest's own books — see menuCanRead */
+  hailed: [],           /* milestones already celebrated — see MILESTONES */
   name: "",
   interests: [],
   profiled: false,
@@ -117,7 +118,7 @@ function resetProgress() {
 /* ---------- 示範 demo mode ----------
 
    For showing somebody the whole app without spending six weeks earning the
-   right to. It opens every tier at once, so the Library lists all 146
+   right to. It opens every tier at once, so the Library lists all 300
    characters and any card can be opened — and it does nothing else. It never
    marks a character known, never grades anything, never touches the review
    queue or the streak. Turning it off puts the gate straight back where it
@@ -684,6 +685,35 @@ function practicePool(skill, n, pool) {
 }
 
 const knownChars = () => Object.keys(state.chars).filter(c => CHAR_INDEX[c]);
+
+/* ---------- milestones ----------
+
+   Every fiftieth character, and the last one, get a moment. The list is
+   deliberately coarse: a library of 300 gives six of these, which is often
+   enough to look forward to and rare enough that one still means something.
+
+   `hailed` records what has been celebrated rather than deriving it from the
+   count, because the count goes down as well as up — a reset, or a character
+   removed from the curriculum — and nobody should be congratulated twice for
+   the same fifty. */
+const MILESTONES = [50, 100, 150, 200, 250, 300];
+const hailed = () => (state.hailed = state.hailed || []);
+
+/* The HIGHEST milestone reached and not yet celebrated, not the lowest.
+   The placement test can credit sixty characters in one go, and a queue of
+   overlays to click through would turn the moment into a chore. */
+function milestoneDue() {
+  const n = knownChars().length;
+  const due = MILESTONES.filter(m => n >= m && !hailed().includes(m));
+  return due.length ? due[due.length - 1] : null;
+}
+
+/* Marking one marks everything below it, so the ones jumped over do not
+   queue up and surface one at a time over the next six sessions. */
+function markMilestone(m) {
+  MILESTONES.forEach(x => { if (x <= m && !hailed().includes(x)) hailed().push(x); });
+  save();
+}
 
 /* Everything done on one day, counted in reps.
 

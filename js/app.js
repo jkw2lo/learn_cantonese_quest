@@ -1694,6 +1694,83 @@ function renderDone() {
   const or = $("#openReward");
   if (or) or.onclick = () => { endSession(); openQuest("menu"); };
   $("#sesProg").style.width = "100%";
+  /* after the grade seal has landed, so the two stamps don't fight */
+  maybeHail(700);
+}
+
+/* ============================================================
+   Milestones
+
+   Every fiftieth character stops the session for a moment. The stamp is the
+   same red seal the session grade uses, because this app's one celebratory
+   gesture should be the same gesture everywhere — confetti would belong to a
+   different piece of software.
+
+   The copy names what those characters actually bought, rather than saying
+   well done. "Fifty" means nothing on its own; "you can greet someone, count,
+   and ask for a table" is the thing worth being pleased about.
+   ============================================================ */
+
+const HAIL = {
+  50:  { zh: "五十", title: "Fifty characters",
+         note: "Enough to say hello, count to ten, name the people around you and ask for a table. That is a real conversation's worth of Cantonese." },
+  100: { zh: "一百", title: "A hundred",
+         note: "A hundred is where the writing system stops being a wall of shapes. New characters now arrive as parts you have already met, stuck together." },
+  150: { zh: "一百五十", title: "Halfway",
+         note: "Half the library. From here most of what you meet is built out of what you know — which is why the second half goes faster than the first." },
+  200: { zh: "二百", title: "Two hundred",
+         note: "Two thirds. Money, the body, the weather, your flat, the market: the vocabulary of an ordinary Hong Kong week is behind you." },
+  250: { zh: "二百五十", title: "Fifty to go",
+         note: "What is left is mostly connective tissue — because, but, so, if — and the colours. The hard part is done." },
+  300: { zh: "三百", title: "The whole library",
+         note: "Every character in Cantonese Quest. They are all in your reviews now, and the reviews are the part that keeps them." }
+};
+
+function openHail(m) {
+  const h = HAIL[m];
+  if (!h) return;
+  const rads = new Set();
+  knownChars().forEach(c => CHAR_INDEX[c].comp.forEach(k => { if (RADICALS[k]) rads.add(k); }));
+  const tier = TIERS.filter(t => m >= t.to).pop();
+  $("#hailCard").innerHTML = `
+    <div class="hail-seal"><span class="han">${h.zh}</span></div>
+    <h2>${esc(h.title)}</h2>
+    <p>${esc(h.note)}</p>
+    <div class="hail-stats">
+      <div><b>${knownChars().length}</b><small>characters</small></div>
+      <div><b>${daysStudied()}</b><small>days studied</small></div>
+      <div><b>${rads.size}</b><small>radicals met</small></div>
+    </div>
+    ${tier ? `<div class="hail-tier">${tier.icon} <b>${esc(tier.name)}</b>
+      <span class="han">${esc(tier.zh)}</span> — ${esc(tier.blurb)}</div>` : ""}
+    <button class="btn btn-block" id="hailOk">${m === 300 ? "Close" : "Keep going"}</button>`;
+  $("#hail").hidden = false;
+  document.body.style.overflow = "hidden";
+  $("#hailOk").onclick = closeHail;
+  $("#hailOk").focus();
+}
+
+function closeHail() {
+  $("#hail").hidden = true;
+  document.body.style.overflow = "";
+}
+
+/* Placement can credit sixty characters before the first session has been
+   sat. Those milestones are recorded as passed rather than celebrated: the
+   overlay is for work done, and congratulating someone for the test they have
+   just taken would cheapen the five they earn afterwards. */
+function hailSilently() {
+  const m = milestoneDue();
+  if (m !== null) markMilestone(m);
+}
+
+/* Called where the count can jump on the strength of actual work: the end of
+   a session. */
+function maybeHail(delay = 0) {
+  const m = milestoneDue();
+  if (m === null) return;
+  markMilestone(m);
+  setTimeout(() => openHail(m), delay);
 }
 
 /* ============================================================
@@ -3589,15 +3666,25 @@ function renderLibrary() {
     if (libFilter === "learning" && st !== "learning") return false;
     if (libFilter === "strong" && st !== "strong") return false;
     if (libFilter === "new" && isKnown(ch.c)) return false;
-    if (libFilter[0] === "s" && libFilter.length === 2 && ch.stage !== +libFilter[1]) return false;
+    /* Was `libFilter.length === 2 && ch.stage !== +libFilter[1]`, which reads
+       one digit and so silently stopped filtering at stage 10 — the chip went
+       dark and the whole library stayed on screen. With 21 stages that is 12
+       dead filters, so it is a regex now. */
+    const stageOnly = /^s(\d+)$/.exec(libFilter);
+    if (stageOnly && ch.stage !== +stageOnly[1]) return false;
     if (libSearch && !(matches(ch, libSearch)
         || ch.words.some(w => w[0].includes(libSearch) || bare(w[2]).includes(bare(libSearch))
                            || untoned(w[1]).includes(untoned(libSearch))))) return false;
     return true;
   });
 
-  const filters = [["all","All"],["due","Due"],["learning","Learning"],["strong","Strong"],["new","Not started"],
-    ...STAGES.map(s => ["s" + s.n, `${s.icon} ${s.name}`])];
+  /* The five states stay as chips; the stages went into a select when there
+     started to be twenty-one of them. As chips they ran to 2,395px inside a
+     1,136px row — it scrolled, but half the curriculum sat off the right-hand
+     edge with nothing to say so, which is the opposite of what a library of
+     three hundred characters needs. */
+  const filters = [["all","All"],["due","Due"],["learning","Learning"],["strong","Strong"],["new","Not started"]];
+  const stagePick = /^s\d+$/.test(libFilter) ? libFilter : "";
 
   /* Grouped by tier rather than laid out in one sheet of 348. A beginner
      scrolling past three hundred characters they can't start on is the
@@ -3662,7 +3749,11 @@ function renderLibrary() {
     </div>
     <input class="search" id="libQ" type="search" placeholder="Search a character, pinyin or meaning…" value="${esc(libSearch)}">
     <div class="filters">${filters.map(([k, l]) =>
-      `<button class="filt ${libFilter === k ? "on" : ""}" data-f="${k}">${esc(l)}</button>`).join("")}</div>
+      `<button class="filt ${libFilter === k ? "on" : ""}" data-f="${k}">${esc(l)}</button>`).join("")}
+      <select class="filt filt-sel ${stagePick ? "on" : ""}" id="libStage" aria-label="Filter by stage">
+        <option value="">All stages</option>
+        ${STAGES.map(st => `<option value="s${st.n}" ${stagePick === "s" + st.n ? "selected" : ""}>${st.n}. ${esc(st.icon)} ${esc(st.name)} ${esc(st.zh)}</option>`).join("")}
+      </select></div>
     ${chars.length ? sections
       : `<div class="empty"><span class="z">空</span><p>Nothing here yet. Try another filter.</p></div>`}
     <div class="legend">
@@ -3674,7 +3765,8 @@ function renderLibrary() {
     ${noteCard(["syllable", "spoken"])}
   </div>`;
 
-  $$("#viewLibrary .filt").forEach(b => b.onclick = () => { libFilter = b.dataset.f; renderLibrary(); });
+  $$("#viewLibrary button.filt").forEach(b => b.onclick = () => { libFilter = b.dataset.f; renderLibrary(); });
+  $("#libStage").onchange = e => { libFilter = e.target.value || "all"; renderLibrary(); };
   $$("#viewLibrary .tier-toggle").forEach(b => b.onclick = () => {
     const n = +b.dataset.tier;
     const cur = b.getAttribute("aria-expanded") === "true";
@@ -3721,16 +3813,17 @@ function renderLibrary() {
 const RAD_THEMES = [
   { k: "body",   zh: "身體", name: "The body",
     blurb: "Parts of a person. These turn up in what people do with them.",
-    keys: ["口", "目", "耳", "心", "手", "力"] },
+    keys: ["口", "目", "耳", "心", "手", "力", "肉", "疒"] },
   { k: "people", zh: "人物", name: "People",
     blurb: "Who someone is, and who they are to each other.",
     keys: ["人", "女", "子", "父", "立"] },
   { k: "world",  zh: "自然", name: "The natural world",
     blurb: "What things are made of and where they come from.",
-    keys: ["水", "火", "木", "日", "月", "土", "石", "艸", "米", "金"] },
+    keys: ["水", "火", "木", "日", "月", "土", "石", "艸", "米", "金",
+           "雨", "冫", "牛", "馬", "虫", "竹", "阜"] },
   { k: "made",   zh: "事物", name: "Made and done",
     blurb: "Things people built, and the actions they built them for.",
-    keys: ["言", "食", "門", "貝", "辶", "糸"] }
+    keys: ["言", "食", "門", "貝", "辶", "糸", "車", "刀", "斤", "攴", "广", "囗", "彳"] }
 ];
 
 /* The worked example, chosen because it is unusually clean: a meaning part
@@ -3800,7 +3893,8 @@ function renderRadicals() {
     <p class="note rad-scope">No, this isn't all of them — the full traditional set is <b>214</b>, and a big
       dictionary indexes every character under one of them. These ${documented.length} are the ones that
       actually earn their keep in this library: each has at least one character you are being taught. The
-      other 187 are real, but you would be learning them for characters that aren't here yet.</p>
+      other ${214 - documented.length} are real, but you would be learning them for characters that
+      aren't here yet.</p>
     <div class="rad-map-grid">
       ${themes.map(t => t.keys.map(k => {
         const r = RADICALS[k], { kids, known } = tally(k);
@@ -5325,6 +5419,7 @@ function closePlacement() {
    questions itself; afterwards the standalone sheet is still the way to
    change them. */
 function afterPlacement() {
+  hailSilently();
   if (!state.started) maybeOpenIntro();
   else if (!state.profiled) maybeOfferProfile();
   else if (state.levelAsked) setTimeout(startSession, 350);   /* it interrupted a session; resume it */

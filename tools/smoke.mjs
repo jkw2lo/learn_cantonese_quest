@@ -27,6 +27,7 @@ const CONTRACT = [
   'wordOfWeek', 'weekKey', 'INTERESTS', 'INTEREST_KEYS', 'shownIn', 'shuffle',
   'FESTIVALS', 'festivalThisWeek', 'festivalDate', 'wotwEntry',
   'menuProgress', 'menuToday', 'menuLearn', 'menuKnown', 'menuOwn', 'menuCanRead',
+  'MILESTONES', 'milestoneDue', 'markMilestone',
   'MENU_TIERS', 'practicePool', 'knownChars', 'daysStudied',
   'sprintState', 'sprintMark', 'sprintMarkOf', 'sprintHits', 'sprintMisses', 'sprintByMode',
   'sprintTrouble', 'sprintFluent', 'sprintForget', 'rightRun', 'troubleScore',
@@ -89,7 +90,7 @@ const onMenu = new Set([...cjk(MENU.title), ...cjk(MENU.name),
   ...MENU.sections.flatMap(s => [...cjk(s.head), ...s.items.flatMap(i => cjk(i[0]))])]);
 const spoken = new Set(MENU.phrases.flatMap(p => cjk(p[0])));
 /* The menu is a real one, and a real cha chaan teng menu cannot be written
-   with 145 characters — 菠蘿包, 乾炒牛河 and 羅宋湯 all need characters this
+   with 300 characters — 菠蘿包, 乾炒牛河 and 羅宋湯 all need characters this
    library does not teach. Hanzi Quest could demand that every glyph on its
    menu was taught because it has 763 of them; demanding it here would mean
    inventing dishes nobody sells.
@@ -146,7 +147,7 @@ ok('and covers every taught character on the menu',
 ok('printed characters come first', MENU_CHARS.slice(0, printedTaught.length).every(c => onMenu.has(c)),
    'so day one lights up a visible dish');
 {
-  /* A fifth, not a half. 145 characters against a real menu is what it is, and
+  /* A fifth, not a half. 300 characters against a real menu is what it is, and
      inflating the number by inventing dishes made of the characters we happen
      to teach would be measuring the test rather than the learner. What the
      floor is for is catching a menu that has drifted so far from the curriculum
@@ -204,6 +205,49 @@ api.introduce(other);
 ok('a character learned anywhere still reads on the menu', api.menuCanRead(other));
 ok('and the quest moves past it', api.menuToday.length >= 0 &&
    !api.MENU_ORDER.filter(c => !api.menuCanRead(c)).includes(other));
+
+console.log('\nmilestones');
+{
+  /* Its own store, so the running state above is left alone. */
+  const m = new Function(read('js/data.js') + '\n' + read('js/srs.js') +
+    '\nreturn {HQ,load,introduce,knownChars,MILESTONES,milestoneDue,markMilestone,state};')();
+  globalThis.localStorage._d = {};
+  const st = m.load();
+  ok('nothing to celebrate at zero', m.milestoneDue() === null);
+
+  m.HQ.slice(0, 49).forEach(ch => m.introduce(ch.c));
+  ok('nor at forty-nine', m.milestoneDue() === null, m.knownChars().length + ' known');
+  m.introduce(m.HQ[49].c);
+  ok('fifty is a milestone', m.milestoneDue() === 50);
+
+  m.markMilestone(50);
+  ok('and is not offered twice', m.milestoneDue() === null);
+
+  /* The jump a placement test makes: past two at once. */
+  m.HQ.slice(50, 160).forEach(ch => m.introduce(ch.c));
+  ok('a jump offers the highest passed, not the lowest', m.milestoneDue() === 150,
+     m.knownChars().length + ' known');
+  m.markMilestone(150);
+  ok('marking it clears the ones jumped over', m.milestoneDue() === null);
+  ok('and they are recorded, not merely hidden', st.hailed.includes(100));
+
+  /* The count can go down — a reset, or a character dropped from the
+     curriculum — and nobody gets congratulated for the same fifty twice. */
+  m.knownChars().slice(0, 60).forEach(c => delete st.chars[c]);
+  ok('losing characters does not re-arm a milestone', m.milestoneDue() === null,
+     m.knownChars().length + ' known');
+
+  ok('the last milestone is the whole library', m.MILESTONES[m.MILESTONES.length - 1] === m.HQ.length);
+  ok('every fiftieth character is one', m.MILESTONES.every((x, i) => x === (i + 1) * 50));
+
+  /* The copy lives in app.js, which has no DOM here — but a milestone with no
+     card would open an empty overlay, so the two lists are compared as text. */
+  const app = read('js/app.js');
+  const keys = [...app.slice(app.indexOf('const HAIL = {')).slice(0, 2000).matchAll(/^  (\d+):/gm)].map(x => +x[1]);
+  ok('every milestone has a card', m.MILESTONES.every(x => keys.includes(x)),
+     keys.join(' '));
+  ok('and no card is left over', keys.every(x => m.MILESTONES.includes(x)));
+}
 
 console.log('\npractice');
 const someone = api.knownChars();
@@ -308,7 +352,7 @@ console.log('\nwhat a practice round draws');
   fresh.load();
   /* Sized to this library rather than to Hanzi Quest's. RECENT_WINDOW is 40,
      so the learner needs at least that many "recent" characters and a decent
-     tail of older ones behind them; with 145 in total, 40 recent and 105 old
+     tail of older ones behind them; with 300 in total, 40 recent and 260 old
      is the shape the split was designed for. */
   fresh.HQ.forEach(ch => fresh.introduce(ch.c));
   const OLD = fresh.HQ.length - 40;
@@ -324,7 +368,15 @@ console.log('\nwhat a practice round draws');
   const share = hits / total;
   ok('about 70% of a round is recently learned', share > 0.6 && share < 0.8, (share * 100).toFixed(0) + '%');
   ok('the rest reaches back into older characters', [...seen.keys()].some(c => !recent.has(c)));
-  ok('rotation spreads across the library', seen.size > fresh.HQ.length * 0.6, seen.size + ' distinct');
+  /* Not "most of the library": the pool deliberately spends 70% of every round
+     on the recent window, so a fixed number of rounds can only reach so far
+     into a library of any size — and the bigger the library, the smaller that
+     fraction, which made the old `HQ.length * 0.6` a test of the library's
+     size rather than of the rotation. What matters is that the 30% reaching
+     back lands somewhere new nearly every time. */
+  const older = total - hits;
+  ok('rotation spreads across the library', seen.size > recent.size + older * 0.7,
+     `${seen.size} distinct, of at most ${recent.size + older}`);
   const olderCounts = [...seen.entries()].filter(([c]) => !recent.has(c)).map(([, n]) => n);
   ok('and no old character is hammered', Math.max(...olderCounts) <= 4, 'max ' + Math.max(...olderCounts));
   ok('being asked is counted separately from being right',
@@ -676,8 +728,9 @@ console.log('\ntiers gate the library');
     '\nreturn {HQ,TIERS,TIER_UNLOCK,state,load,introduce,tierProgress,tierUnlocked,tierNeeds,unlockedCeiling,isLocked,nextNew,remainingNew,tierFrom,tierChars,tierOf,placeKnown};')();
   globalThis.localStorage._d = {};
   fresh.load();
-  /* Two gates, not three. 145 characters is one door to walk through and one
-     to see ahead of you; a third would be a locked door with nothing behind it. */
+  /* Five gates now. The boundaries sit where the ability changes rather than
+     every sixty characters, which is why they are uneven — 81, 65, 41, 71, 42.
+     What is checked is that they tile the library with no gaps and no overlap. */
   ok('tiers end where the library does', fresh.TIERS[fresh.TIERS.length - 1].to === fresh.HQ.length,
      fresh.TIERS.map(t => t.to).join());
   ok('they tile the curriculum with no gaps',

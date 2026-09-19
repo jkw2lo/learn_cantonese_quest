@@ -79,7 +79,7 @@ console.log(`stroke counts: ${counts[0]}–${counts[counts.length - 1]}, median 
 
    Listing them here rather than ignoring every gap means a NEW character with
    no data still fails the check. */
-const KNOWN_GAP = new Set(['佢', '哋', '冇', '喺', '嚟', '嗰', '攰', '咗', '喎', '啱']);
+const KNOWN_GAP = new Set(['佢', '哋', '冇', '喺', '嚟', '嗰', '攰', '咗', '喎', '啱', '啲']);
 const gaps = problems.filter(p => /no stroke data bundled at all/.test(p));
 const unexpected = gaps.filter(p => !KNOWN_GAP.has([...p][0]));
 problems = problems.filter(p => !gaps.includes(p)).concat(unexpected);

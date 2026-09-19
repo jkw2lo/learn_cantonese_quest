@@ -110,6 +110,7 @@ const COMPOUND = [
   { c: "嗰", fam: "口", left: "口", right: "個" },
   { c: "咗", fam: "口", left: "口", right: "左" },
   { c: "喎", fam: "口", left: "口", right: "咼" },
+  { c: "啲", fam: "口", left: "口", right: "的" },
   /* 亻 is not a character and has no entry of its own, so it is lifted from
      你 — whose first two strokes are exactly that radical. */
   { c: "佢", fam: "亻", left: { from: "你", take: [0, 2] }, right: "巨" }
