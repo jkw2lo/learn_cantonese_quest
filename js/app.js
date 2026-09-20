@@ -4554,7 +4554,13 @@ function openCoach(i = 0, locked = false) {
   coachLocked = locked;
   $("#coach").hidden = false;
   $("#coach").classList.toggle("locked", locked);
-  document.body.style.overflow = "hidden";
+  /* The body is deliberately NOT locked here. renderCoach scrolls each target
+     into view, and body { overflow: hidden } makes that a no-op — so every
+     step would draw its ring wherever the element already happened to be, and
+     the coach would behave as though the whole page were on screen. On a
+     desktop the dashboard mostly is, which is why it only shows on a phone.
+     The veil already stops the page being touched; it does not need to stop
+     it moving. */
   renderCoach();
 }
 
@@ -4563,8 +4569,9 @@ function closeCoach(force) {
   coachLocked = false;
   $("#coach").hidden = true;
   $("#coach").classList.remove("locked");
-  document.body.style.overflow = "";
 }
+
+let coachSettle = null;     /* the re-measure above, cancelled if you move on */
 
 function coachSteps() { return COACH[view] || []; }
 
@@ -4598,9 +4605,40 @@ function renderCoach() {
     coachAt++; return renderCoach();
   }
 
-  const b = el.getBoundingClientRect(), pad = 8;
-  ring.style.cssText = `top:${b.top - pad}px; left:${b.left - pad}px;` +
-                       `width:${b.width + pad * 2}px; height:${b.height + pad * 2}px`;
+  /* Bring the target on screen before measuring it. The ring is positioned in
+     viewport coordinates, so the measurement has to happen after the page has
+     moved — and an instant scroll settles synchronously, where a smooth one
+     would hand back the rect from before it started. On a phone every step
+     after the first is below the fold; without this the ring was drawn around
+     whatever happened to be where the target is on a desktop. */
+  el.scrollIntoView({ block: "center", behavior: "instant" });
+
+  const place = () => {
+    const b = el.getBoundingClientRect(), pad = 8;
+    /* clamped to the viewport, so a target taller than the window gets a ring
+       that sits on screen rather than one that starts above it */
+    const top = Math.max(pad, b.top - pad);
+    ring.style.cssText = `top:${top}px; left:${Math.max(pad, b.left - pad)}px;` +
+      `width:${Math.min(b.width + pad * 2, innerWidth - pad * 2)}px;` +
+      `height:${Math.min(b.height + pad * 2, innerHeight - top - pad)}px`;
+  };
+  place();
+  /* Twice more, and the second one is the important one. A late web font can
+     reflow under us between the scroll and the paint, which the next frame
+     catches — but .learned-strip carries scroll-behavior: smooth, so when a
+     target sits inside it scrollIntoView animates for a few hundred
+     milliseconds and every measurement before that finishes is of a page still
+     moving.
+
+     KNOWN, and not fixed by this: on a phone some steps still draw the ring a
+     few dozen pixels off their target — the scroll and the skip-to-next-step
+     logic are both in play and I have not isolated which. The reported bug,
+     that the coach never moved the page at all, is fixed; this is the smaller
+     one left behind it. */
+  const settle = () => { if (coachSteps()[coachAt] === step) place(); };
+  requestAnimationFrame(settle);
+  clearTimeout(coachSettle);
+  coachSettle = setTimeout(settle, 420);
 
   card.innerHTML = `
     <div class="ch-top">
@@ -4616,7 +4654,10 @@ function renderCoach() {
       <button class="btn btn-sm" id="chNext">${last ? "Got it" : "Next"}</button>
     </div>`;
 
-  /* put the card beside what it is pointing at, and never off the screen */
+  /* put the card beside what it is pointing at, and never off the screen.
+     Measured after the scroll, like the ring — the two have to agree about
+     where the target is. */
+  const b = el.getBoundingClientRect();
   const cw = 310, gap = 14;
   let left = b.right + gap;
   if (left + cw > innerWidth - 12) left = Math.max(12, b.left - cw - gap);
