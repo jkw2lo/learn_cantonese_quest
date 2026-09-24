@@ -72,6 +72,7 @@ const blank = () => ({
   optCols: "auto",
   demo: false,
   sprint: { marks: {}, runs: [], best: {}, pick: {} },
+  spTell: true,          /* the verdict wash on a phone, see sprintTells */
   menuTaught: {},       /* the side quest's own books — see menuCanRead */
   hailed: [],           /* milestones already celebrated — see MILESTONES */
   name: "",
@@ -187,10 +188,19 @@ function mergeDay(x, y) {
   if (!x) return y;
   if (!y) return x;
   const out = Object.assign({}, x, y);
-  ["new", "rev", "ahead", "extra"].forEach(k => {
+  /* sp/spr (sprint reps/rounds, see tallySprint) used to be missing from this
+     list — they were written onto the day record but fell through to plain
+     Object.assign above, last-write-wins, so a sprint logged on one device
+     could vanish the moment another device's day record synced over it */
+  ["new", "rev", "ahead", "extra", "sp", "spr"].forEach(k => {
     if (x[k] !== undefined || y[k] !== undefined) out[k] = bigger(x[k], y[k]);
   });
   if (x.revC || y.revC) out.revC = unionKeys(x.revC, y.revC);
+  /* did (today's ticked-off tasks, see markDone) is the same shape as revC —
+     a keyed flag map, not a counter — and had the same gap: one device
+     finishing "read" and another finishing "menu" on the same day would
+     otherwise have one completion overwrite the other instead of unioning */
+  if (x.did || y.did) out.did = unionKeys(x.did, y.did);
   return out;
 }
 
@@ -512,6 +522,7 @@ function touchStreak() {
 
 /* Which of today's practice tasks are ticked off. */
 function markDone(id) {
+  if (typeof window !== "undefined" && window.CQDIAG) CQDIAG.note("did", id);
   const t = today();
   (t.did = t.did || {})[id] = true;
   save();

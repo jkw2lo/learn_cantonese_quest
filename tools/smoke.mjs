@@ -1411,6 +1411,24 @@ console.log('\nsprint: the record behind the sheets');
   ok('and gives it a tab in both navs', (read('index.html').match(/data-nav="sprint"/g) || []).length === 2);
   ok('the mistake notebook has somewhere to send you',
      /function startRepair/.test(appSrc) && /REPAIR_MODE/.test(appSrc));
+
+  /* Every session starter has to set every one of these four flags, even to
+     null/false — a starter that forgets one leaves it holding whatever the
+     previous session type left behind. That happened twice for real: a menu
+     lesson's session.menu bleeding into the next practice round, and a
+     repair round's session.repair bleeding into today's drill — both found
+     by hand, which is why this is worth a check rather than a memory. */
+  {
+    const starters = ['startPractice', 'teachOne', 'startRepair', 'startTodayDrill', 'buildSession'];
+    const flags = ['session.menu', 'session.practice', 'session.todo', 'session.repair'];
+    const missing = starters.flatMap(fn => {
+      const at = appSrc.indexOf('function ' + fn + '(');
+      if (at < 0) return [fn + ' not found'];
+      const body = appSrc.slice(at, appSrc.indexOf('\n}', at));
+      return flags.filter(f => !body.includes(f + ' =')).map(f => fn + ' misses ' + f);
+    });
+    ok('every session starter sets all four session flags', !missing.length, missing.join(', '));
+  }
 }
 
 
@@ -1594,6 +1612,22 @@ console.log('\ntwo devices, one record');
     first: '2026-01-01', last: '2026-01-01'
   }, o);
 
+  /* every counter a day record actually carries has to be in mergeDay's own
+     field list — sp/spr (sprint reps/rounds) were missing and fell through
+     to plain last-write-wins, so a sprint logged on one device could vanish
+     the moment another device's day record synced over it; did (today's
+     ticked-off tasks) had the same gap for a different reason — it's a keyed
+     map, not a counter, and needs unioning rather than maxing */
+  {
+    const x = { new: 2, rev: 3, sp: 10, spr: 1, did: { learn: true } };
+    const y = { new: 1, rev: 5, sp: 4, spr: 3, did: { menu: true } };
+    const m = mergeDay(x, y);
+    ok('the bigger side of every counter wins, sp/spr included',
+       m.new === 2 && m.rev === 5 && m.sp === 10 && m.spr === 3);
+    ok('  and today\'s ticked-off tasks are the union of both, not one side',
+       m.did.learn === true && m.did.menu === true);
+  }
+
   /* the counters only ever go up, so the union of two counts is the true count */
   {
     const a = ch({ seen: 5, right: 4, wrong: 1, skills: { r: 3, p: 0, c: 1, w: 0 }, last: '2026-01-05' });
@@ -1642,6 +1676,9 @@ console.log('\ntwo devices, one record');
        !!m.days['2026-01-05'].revC['一'] && !!m.days['2026-01-05'].revC['三']);
     ok('  and a day only one device knew about survives', m.days['2026-01-04'].new === 5);
     ok('a best streak cannot be undone by the other device not knowing', m.streak.best === 7);
+    ok('a merged list field in blank() always comes back as a list',
+       Object.keys(blank()).filter(k => Array.isArray(blank()[k]))
+         .every(k => Array.isArray(m[k])), 'checked: ' + Object.keys(blank()).filter(k => Array.isArray(blank()[k])).join(' '));
     ok('milestones already celebrated are never re-celebrated',
        m.hailed.length === 2 && m.hailed[0] === 50 && m.hailed[1] === 100);
     ok('a setting follows the clock, not the union', m.goalNew === 9);
