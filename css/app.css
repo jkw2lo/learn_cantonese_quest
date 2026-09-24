@@ -96,7 +96,7 @@ body {
    is invisible under light text in dark mode — that is what hid the
    unhighlighted half of every word in "Words you'll meet it in". Every button
    in the app that wants a background sets one. */
-button { font: inherit; color: inherit; cursor: pointer; background: none; }
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; }
 :focus-visible { outline: 2px solid var(--jade); outline-offset: 2px; border-radius: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -519,6 +519,26 @@ code {
 .verdict .han { font-family: var(--f-han-ui); font-size: 1.1rem; }
 .verdict b { font-weight: 600; }
 
+/* The verdict wash, phone only — see flashVerdict/holdWash in js/app.js.
+   Fixed and pointer-events: none so it tints the screen without ever being
+   in the way of the next tap; created once and never removed, so most of the
+   time it is a transparent, inert div doing nothing. */
+.vflash {
+  position: fixed; inset: 0; z-index: 70; pointer-events: none; opacity: 0;
+  background: var(--jade); transition: opacity .16s ease;
+}
+.vflash.no { background: var(--seal); }
+.vflash.on { animation: vflash .52s ease both; }
+@keyframes vflash { 0% { opacity: 0 } 18% { opacity: .22 } 100% { opacity: 0 } }
+/* A held wash is a declaration, not an animation holding its end frame — an
+   animation has to actually start, and can be throttled or dropped, and the
+   wash here is the entire feedback for a right answer on a phone. */
+.vflash.hold { opacity: .17; }
+@media (prefers-reduced-motion: reduce) {
+  .vflash { transition: none; }
+  .vflash.on { animation: none; opacity: .17; }
+}
+
 /* ---------- library ---------- */
 
 .filters { display: flex; gap: .4rem; overflow-x: auto; padding-bottom: .3rem; margin-bottom: .2rem; }
@@ -673,6 +693,10 @@ code {
 /* Settings lives in a 17rem rail on wide screens — a label, a dropdown and a
    button never fit on one line there, so this row stacks instead. */
 .settings-row.stacked { flex-direction: column; align-items: stretch; }
+/* the label's flex-basis above is a width, written for the row layout — in a
+   column flex container the same basis is read as a height, which pushed
+   this row far taller than its siblings */
+.settings-row.stacked > label { flex: none; }
 .settings-row.stacked .voice-pick { width: 100%; }
 .settings-row.stacked .voice-pick select { flex: 1 1 auto; min-width: 0; max-width: none; }
 .settings-row:last-of-type { border-bottom: 0; }
@@ -2155,13 +2179,24 @@ button.tier-head:hover { border-color: var(--ink-3); }
 }
 .sp-picker > .note:first-child { padding-top: .8rem; }
 .sp-warn { color: var(--seal); }
-.sp-style-note { margin-top: -.4rem; }
 .sp-row { display: flex; align-items: center; gap: .7rem; }
 .sp-row-lbl {
   font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
   font-weight: 600; width: 4.6rem; flex: none;
 }
 .sp-chips { display: flex; flex-wrap: wrap; gap: .3rem; flex: 1; }
+/* A row whose chips are the whole choice — how to write, how it marks itself
+   — rather than a shortcut to a number a stepper also reaches. The buttons
+   take what they need and the line beside them says what the one you picked
+   does, so the row reads across instead of explaining itself underneath. */
+.sp-row-wide .sp-chips { flex: none; }
+.sp-row-tip {
+  flex: 1; min-width: 0; font-size: .74rem; color: var(--ink-3);
+  /* one line, always: it is a reminder of the choice sitting next to it, not
+     a paragraph, and a second line would put this row out of step with every
+     other row in the picker */
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 /* the phone's stand-in for a row of chips — laid out in the phone layer at the
    foot of this file, and absent at every other width */
 .sp-step { display: none; align-items: center; gap: .1rem; border: 1px solid var(--rule);
@@ -3510,6 +3545,44 @@ button.tier-head:hover { border-color: var(--ink-3); }
   .opts .opt, .sp-opts .sp-opt { min-height: 4rem; }
   .opts.grid2 .opt, .sp-opts.grid2 .sp-opt { min-height: 5.6rem; font-size: 1.15rem; }
   .opts.grid2 .opt .big, .sp-opts.grid2 .sp-opt .big { font-size: 3.4rem; }
+  /* jyutping is the answer itself here, not an annotation of it */
+  .opts .opt .pin, .sp-opts .sp-opt .pin { font-size: 1.35rem; }
+
+  /* The prompt centres in the space above the options, the way the answers'
+     own margin-top: auto above already bottom-anchors them — both auto
+     margins share the same flex column, so the free space between splits
+     around the prompt instead of collecting under it.
+     :has, because a handwriting card has no options to be pushed away from
+     and would take its box down the page with it. */
+  .drill:has(> .opts) > .drill-prompt { margin-top: auto; }
+
+  /* ---------- two sizes, and only two ----------
+
+     A character is a picture and wants to be big; a word (a reading, a
+     sentence) is a line of text. Both stated once and used everywhere a
+     question is asked, rather than each kind of card picking its own. */
+  :root { --q-char: 5rem; --q-text: 1.5rem; }
+  .drill-char, .sp-char { font-size: var(--q-char); }
+  .drill-q, .drill-sen { font-size: var(--q-text); }
+  /* a two- or three-character word is a picture, not a line of text —
+     renderDrill marks it, because CSS cannot count what is inside a box */
+  .drill-sen.short { font-size: var(--q-char); line-height: 1.15; }
+  .drill-q .pin { font-size: inherit; }
+  .drill-hint { font-size: .86rem; }
+
+  /* ---------- the writing box ----------
+
+     268px is a desktop measurement and it was being used on a phone, where
+     it came out at half the width of the screen — a box drawn in with one
+     finger, sized for a trackpad. It takes the width now.
+
+     Three limits, smallest wins: the column it sits in, so it never pushes
+     the page sideways; 24rem, so it does not become absurd on a tablet; and
+     48dvh, which is the one that matters — .tian is square, so width is also
+     height, and a box that took the full width of a short phone would put
+     the prompt above it off the top of the screen. Every writing drill here
+     is one character, so there is no two-character case to fit. */
+  .writer-box { width: min(100%, 24rem, 48dvh); }
 
   /* One shape for the whole session.
 
@@ -3570,15 +3643,22 @@ button.tier-head:hover { border-color: var(--ink-3); }
      vertically centred beside them, so the label sat in the middle of its own
      control. A stepper is one row, and the chips stand down. */
   .sp-row { align-items: center; }
-  .sp-row .sp-chips { display: none; }
+  /* hide chips only in a row that actually has a stepper to fall back to —
+     a row whose chips ARE the choice (nothing to step through) keeps them */
+  .sp-row:has(.sp-step) .sp-chips { display: none; }
   .sp-row .sp-step { display: flex; }
-  /* the write-style row is named choices, not a number — it keeps its chips
-     and gets the room by stacking under its label */
-  .sp-row.sp-row-style { flex-direction: column; align-items: stretch; gap: .35rem; }
-  .sp-row.sp-row-style .sp-chips { display: flex; }
-  .sp-row.sp-row-style .sp-row-lbl { width: auto; }
   /* spot-the-character deals six, in 2 x 3 — shorter boxes, same reach */
   .sp-opts.grid3 .sp-opt { min-height: 4.6rem; }
+
+  /* ---------- the categories, flat ----------
+
+     Every panel is a .sheet, and a .sheet carries a border and a drop shadow.
+     Stacked down a narrow screen with nothing either side of them, the two
+     together read as a hard dark rim drawn around each category — an outline
+     on a page where nothing else is outlined. The fill already separates a
+     card from the page, so the rim does no work and is the only thing
+     anyone sees. */
+  .sp-panel, .sp-panel.open { box-shadow: none; border-color: transparent; }
 }
 
 /* ---------- what a finger can do that a mouse cannot, and the reverse ----------
@@ -3604,4 +3684,8 @@ button.tier-head:hover { border-color: var(--ink-3); }
 @media (max-width: 479.98px) {
   .brand-name { display: none; }
   .topbar { gap: .45rem; padding-left: .6rem; padding-right: .6rem; }
+  /* Below this the buttons have taken the row and the line beside them has
+     nothing left to say in — a truncated tip is worse than silence, and the
+     chip you picked is lit up anyway. */
+  .sp-row-tip { display: none; }
 }

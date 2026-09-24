@@ -63,6 +63,9 @@ const esc = s => String(s).replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;",
 const pick = (arr, n) => shuffle([...arr]).slice(0, n);
 const one = arr => arr[(Math.random() * arr.length) | 0];
 
+/* A breadcrumb for the black box (js/diag.js) — a no-op if it never loaded. */
+const cqNote = (kind, text) => { try { window.CQDIAG && CQDIAG.note(kind, text); } catch { /* never */ } };
+
 /* Jyutping is ASCII, so searching it needs none of the diacritic-stripping
    pinyin does — but it does carry a tone digit, and nobody types those when
    they are hunting for a character. "seoi" finds 水 seoi2; so does "seoi2" if
@@ -1038,6 +1041,7 @@ const ROUND = 10;
 const practiceRound = mode => practicePool(PRACTICE[mode].skill, ROUND, practiceChars(mode));
 
 function startPractice(mode) {
+  cqNote("start", "practice " + mode);
   const cfg = PRACTICE[mode];
   const pool = practiceRound(mode);
   if (!pool.length) return;
@@ -1051,6 +1055,7 @@ function startPractice(mode) {
   session.practice = mode;
   session.todo = null;
   session.repair = null;
+  session.menu = false;
   session.active = true;
   $("#session").classList.add("on");
   document.body.style.overflow = "hidden";
@@ -1089,6 +1094,7 @@ const REPAIR_MODE = { r: "r", d: "r", p: "l", l: "l", c: "w", s: "w", a: "w", w:
    the card, then ask for it back. */
 function teachOne(c, opts = {}) {
   if (!CHAR_INDEX[c]) return;
+  cqNote("start", "teachOne " + c + (opts.menu ? " menu" : ""));
   const menu = !!opts.menu;
   /* The menu's lesson is the card and nothing else. A drill would grade it,
      and grading is the schedule — which is exactly what this tab is being
@@ -1117,10 +1123,16 @@ function teachOne(c, opts = {}) {
 function startRepair(chars) {
   const cs = [...new Set(chars)].filter(c => CHAR_INDEX[c] && isKnown(c)).slice(0, REPAIR_SIZE);
   if (!cs.length) return;
+  cqNote("start", "repair " + cs.join(""));
   const items = [];
   cs.forEach(c => { items.push({ t: "intro", c }); items.push({ t: "drill", c, kind: "r" }); });
   shuffle([...cs]).forEach(c => items.push({ t: "drill", c, kind: state.audio ? "l" : "p" }));
   shuffle([...cs]).forEach(c => items.push({ t: "drill", c, kind: "c" }));
+  /* picking a character out of a row of four isn't writing it — a repair
+     round is meant to approach a character from every side, and producing
+     its strokes from nothing is the side the other three passes skip */
+  if (state.writeDrills)
+    shuffle(cs.filter(c => window.STROKE_DATA[c])).forEach(c => items.push({ t: "drill", c, kind: "w" }));
   session.queue = items;
   session.idx = 0;
   session.right = session.wrong = session.learned = session.reviewed = 0;
@@ -1200,12 +1212,15 @@ function drillKind(c) {
 
 function startSession() {
   if (!buildSession().length) return;
+  cqNote("start", "session " + session.queue.length);
   session.active = true;
   $("#session").classList.add("on");
   document.body.style.overflow = "hidden";
   renderStep();
 }
 function endSession() {
+  cqNote("end", "session " + session.idx + "/" + session.queue.length);
+  clearWash();
   padStop();
   clearAdvance();
   $("#qtimer") && ($("#qtimer").hidden = true);
@@ -1234,8 +1249,54 @@ function renderCombo() {
   el.title = `${n} correct in a row · best this session ${session.bestCombo}`;
 }
 
+/* A session is a full-screen overlay: a card that throws halfway through
+   drawing leaves no buttons and a page underneath that cannot be reached, so
+   the app looks frozen rather than merely wrong. drawStep is the real body;
+   renderStep is the guard around it, so one bad card can't take the whole
+   session with it. */
 function renderStep() {
+  try { drawStep(); }
+  catch (e) {
+    if (window.CQDIAG) CQDIAG.fail("error", "card " + session.idx + "/" + session.queue.length
+      + " " + JSON.stringify(session.queue[session.idx] || null) + "\n" + (e && e.stack || e));
+    stepCrashed(e);
+  }
+}
+
+/* The door out of a broken card. Deliberately built from a string and bound
+   by hand: it must not depend on anything that might be the thing that broke. */
+function stepCrashed(e) {
+  try { clearAdvance(); stopPhrase(); startQuestionTimer(false); } catch { /* best effort */ }
+  const body = $("#sesInner"), foot = $("#sesFoot");
+  body.innerHTML = `<div class="done-wrap">
+      <div class="grade-seal">故障</div>
+      <span class="grade-note">This card would not draw</span>
+      <div class="stack" style="gap:.3rem">
+        <h1>Something went wrong here.</h1>
+        <p class="muted" style="font-size:.9rem">Everything you have already answered is saved — this session is the
+          only thing lost. What happened has been written down, and Report it hands the whole trail over.</p>
+      </div>
+      <p class="note dim" style="font-size:.75rem">${esc(String(e && e.message || e))}</p>
+    </div>`;
+  foot.innerHTML = `<div class="split">
+      <button class="btn btn-ghost" id="crashSkip">Try the next card</button>
+      <button class="btn btn-ghost" id="crashOut">Close</button>
+      <button class="btn" id="crashTell">Report it</button>
+    </div>`;
+  $("#crashOut").onclick = endSession;
+  /* The session has to come down first: the report is a sheet, and a sheet
+     over a broken overlay is two things to get out of instead of one. */
+  $("#crashTell").onclick = () => { endSession(); setTimeout(openReport, 200); };
+  $("#crashSkip").onclick = () => {
+    if (session.idx >= session.queue.length) return endSession();
+    session.idx++;
+    renderStep();
+  };
+}
+
+function drawStep() {
   clearAdvance();
+  clearWash();                     /* the held wash belongs to the answer behind us */
   stopPhrase();                    /* the last card's audio does not belong to this one */
   const total = session.queue.length, done = session.idx;
   $("#sesProg").style.width = total ? `${(done / total) * 100}%` : "0%";
@@ -1246,6 +1307,7 @@ function renderStep() {
 
   const item = session.queue[session.idx];
   const ch = CHAR_INDEX[item.c];
+  cqNote("card", `${done + 1}/${total} ${item.t}${item.kind ? ":" + item.kind : ""}${item.again ? " again" : ""}`);
   const body = $("#sesInner"), foot = $("#sesFoot");
 
   /* handwriting is excluded: the input is slow by nature, and reaching for
@@ -1573,7 +1635,7 @@ function renderDrill(item, ch, body, foot) {
   } else if (kind === "d") {
     const mat = readingMaterial(ch);
     if (!mat) return renderDrill(Object.assign({}, item, { kind: "r" }), ch, body, foot);
-    prompt = `<div class="drill-sen">${renderZh(mat.zh)}</div>`;
+    prompt = `<div class="drill-sen ${cjkOf(mat.zh).length <= 2 ? "short" : ""}">${renderZh(mat.zh)}</div>`;
     spoken = mat.zh;
     correct = mat.en;
     /* distractors of the same shape — a sentence against sentences */
@@ -1587,7 +1649,7 @@ function renderDrill(item, ch, body, foot) {
     const readable = ch.words.filter(x => canRead(x[0]));
     if (!readable.length) return renderDrill(Object.assign({}, item, { kind: "r" }), ch, body, foot);
     const w = one(readable);
-    prompt = `<div class="drill-sen">${[...w[0]].map(x => x === ch.c ? `<span class="gap">?</span>` : esc(x)).join("")}</div>
+    prompt = `<div class="drill-sen ${cjkOf(w[0]).length <= 3 ? "short" : ""}">${[...w[0]].map(x => x === ch.c ? `<span class="gap">?</span>` : esc(x)).join("")}</div>
               <div class="drill-hint"><span class="pin">${esc(w[1])}</span> · ${esc(w[2])}</div>`;
     correct = ch.c;
     options = [ch.c, ...optionSet(ch.c, pool, x => x.c)]
@@ -1627,8 +1689,92 @@ function renderDrill(item, ch, body, foot) {
   });
 }
 
-/* Grade, show the verdict, offer the way forward. */
+/* ---------- the answer you feel, rather than the one you read ----------
+
+   On a phone the verdict was a bar that appeared in the footer after every
+   answer. The footer is outside the scrolling body, so it growing shoved the
+   options up the screen, and it shrinking on the next card dropped them back
+   down. Answer twenty questions quickly and the thing you are aiming at moves
+   twenty times — and it moves *between* you deciding and you tapping.
+
+   So on a phone a right answer no longer writes anything into the footer at
+   all. Nothing enters or leaves the layout; the option you chose turns green
+   where it already sits, the screen takes a wash of the same colour, and the
+   card advances on exactly the timing it always did.
+
+   The wash is the whole feedback, so it is bright briefly and gone: up in a
+   fifth of a second, out over the rest. Fixed and pointer-events: none, so it
+   tints a sprint mid-answer without ever being in the way of the next tap.
+
+   Matched to the CSS breakpoint by hand — 859.98px is where the mobile block
+   in css/app.css starts, and the two have to agree or a laptop gets the wash
+   and keeps the bar as well. */
+const PHONE_MQ = matchMedia("(max-width: 859.98px)");
+const FLASH_MS = 520;
+
+let flashEl = null, flashTimer = null;
+
+function washEl() {
+  if (!flashEl) {
+    flashEl = document.createElement("div");
+    flashEl.setAttribute("aria-hidden", "true");   /* decoration; the option already says it */
+    document.body.appendChild(flashEl);
+  }
+  return flashEl;
+}
+
+function clearWash() {
+  clearTimeout(flashTimer);
+  if (flashEl) flashEl.className = "vflash";
+}
+
+/* A sheet: a pulse, because the next question is already on screen. */
+function flashVerdict(ok) {
+  if (!PHONE_MQ.matches) return;
+  const el = washEl();
+  el.className = "vflash";
+  /* Reading offsetWidth between removing the class and adding it restarts the
+     animation. Without it a sheet answered faster than the wash lasts gets no
+     wash at all — which is precisely the run where you want one. */
+  void el.offsetWidth;
+  el.className = "vflash on" + (ok ? "" : " no");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { el.className = "vflash"; }, FLASH_MS);
+}
+
+/* A drill: held, for exactly as long as the wait lasts.
+
+   A pulse is wrong here. A sheet moves on the instant you tap, so a pulse is
+   the whole event; a drill waits — a second and a bit, or the length of a
+   sentence being read back — and a wash that has already faded leaves you
+   looking at a screen that is not telling you anything while nothing happens.
+   So it comes up and stays up, and what takes it away is the next card
+   arriving. The wait is the thing being shown. */
+function holdWash(ok) {
+  if (!PHONE_MQ.matches) return;
+  const el = washEl();
+  clearTimeout(flashTimer);
+  el.className = "vflash hold" + (ok ? "" : " no");
+}
+
+/* Grade, show the verdict, offer the way forward. A guarded wrapper: the
+   options are already disabled by the time this runs, so a throw here would
+   otherwise leave a question with no answer and nothing to press. */
 function settle(item, ch, ok, foot, extra, slips) {
+  try { grades(item, ch, ok, foot, extra, slips); }
+  catch (e) {
+    if (window.CQDIAG) CQDIAG.fail("error", "grading " + (item && item.kind) + "\n" + (e && e.stack || e));
+    foot.innerHTML = `<div class="verdict ${ok ? "ok" : "no"}">
+        <span class="han">${ok ? "答對" : "再嚟"}</span>
+        <span>The answer was <b>${esc(ch.c)}</b> · ${esc(ch.p)} · ${esc(ch.m)} — something went wrong marking it,
+          so this one may not have reached your record.</span>
+      </div>
+      <button class="btn btn-block" id="cont">Next</button>`;
+    $("#cont").onclick = next;
+  }
+}
+
+function grades(item, ch, ok, foot, extra, slips) {
   const writing = item.kind === "w";
   const elapsed = session.qStart ? Date.now() - session.qStart : 0;
   const quick = ok && !writing && elapsed > 0 && elapsed <= QUICK_MS;
@@ -1673,6 +1819,21 @@ function settle(item, ch, ok, foot, extra, slips) {
                   : " — you'll see it again shortly."}`;
   }
   const audible = ["p", "l", "r", "d"].includes(item.kind);
+
+  /* One rule on a phone, and it has no exceptions: right is a wash, wrong is
+     the bar. Carving out the kinds whose footer had something on it worth
+     keeping — the replay button, the handwriting note — meant Reading
+     practice alternates r and d, so the bar came back every second or third
+     card. Which is the same jumping layout, arriving less often and less
+     predictably, and harder to explain than simply never doing it. */
+  if (ok && PHONE_MQ.matches) {
+    holdWash(true);
+    foot.innerHTML = "";
+    armAdvance();
+    return;
+  }
+  flashVerdict(ok);
+
   foot.innerHTML = `
     <div class="verdict ${ok ? "ok" : "no"}">
       <span class="han">${ok ? "答對" : "再嚟"}</span>
@@ -1700,6 +1861,7 @@ function settle(item, ch, ok, foot, extra, slips) {
 }
 
 function renderDone() {
+  cqNote("done", session.right + "/" + (session.right + session.wrong));
   startQuestionTimer(false);              /* nothing left to time */
   const answered = session.right + session.wrong;
   const acc = answered ? Math.round((session.right / answered) * 100) : 100;
@@ -1812,7 +1974,9 @@ function openHail(m) {
   const h = HAIL[m];
   if (!h) return;
   const rads = new Set();
-  knownChars().forEach(c => CHAR_INDEX[c].comp.forEach(k => { if (RADICALS[k]) rads.add(k); }));
+  /* guarded: a character in the record but purged from a newer/older library
+     version would otherwise throw here and take the whole overlay with it */
+  knownChars().forEach(c => (CHAR_INDEX[c] || {}).comp?.forEach(k => { if (RADICALS[k]) rads.add(k); }));
   const tier = TIERS.filter(t => m >= t.to).pop();
   $("#hailCard").innerHTML = `
     <div class="hail-seal"><span class="han">${h.zh}</span></div>
@@ -1826,9 +1990,11 @@ function openHail(m) {
     ${tier ? `<div class="hail-tier">${tier.icon} <b>${esc(tier.name)}</b>
       <span class="han">${esc(tier.zh)}</span> — ${esc(tier.blurb)}</div>` : ""}
     <button class="btn btn-block" id="hailOk">${m === 300 ? "Close" : "Keep going"}</button>`;
+  /* bound before the overlay reveals itself — otherwise a tap in the instant
+     between the two landed on a close button that did nothing yet */
+  $("#hailOk").onclick = closeHail;
   $("#hail").hidden = false;
   document.body.style.overflow = "hidden";
-  $("#hailOk").onclick = closeHail;
   $("#hailOk").focus();
 }
 
@@ -1852,7 +2018,15 @@ function maybeHail(delay = 0) {
   const m = milestoneDue();
   if (m === null) return;
   markMilestone(m);
-  setTimeout(() => openHail(m), delay);
+  /* outside every other guard — a milestone is a bonus on top of a session
+     that already finished, and a failure here shouldn't undo that */
+  setTimeout(() => {
+    try { openHail(m); }
+    catch (e) {
+      if (window.CQDIAG) CQDIAG.fail("error", "openHail " + m + "\n" + (e && e.stack || e));
+      closeHail();
+    }
+  }, delay);
 }
 
 /* ============================================================
@@ -3288,6 +3462,7 @@ const taskAvailable = task => taskRound(task).length > 0;
 function startTodayDrill(task) {
   const pool = taskRound(task);
   if (!pool.length) return;
+  cqNote("start", "todayDrill " + task.id);
   /* alternate the kinds a task declares, so a pronunciation round actually
      plays characters aloud rather than only testing you on them silently */
   const kinds = task.kinds || [task.kind];
@@ -3301,6 +3476,7 @@ function startTodayDrill(task) {
   session.questAtStart = menuProgress().known;
   session.practice = "read";              /* graded gently, like any practice */
   session.todo = task.id;
+  session.repair = null;
   session.menu = false;
   session.active = true;
   $("#session").classList.add("on");
@@ -5140,6 +5316,15 @@ function openSettings() {
           <button class="btn btn-ghost btn-sm" id="tourBtn">Replay</button>
         </div>
         <div class="settings-row">
+          <label>Report a problem<small>${(() => {
+            const n = window.CQDIAG ? CQDIAG.runs().reduce((t, r) => t + r.log.filter(e => e[1] === "error").length, 0) : 0;
+            return n
+              ? `${n} error${n === 1 ? " has" : "s have"} been recorded since this page opened. `
+              : "Nothing has gone wrong since this page opened. ";
+          })()}Copies out what the app currently thinks is true, so somebody can read it back.</small></label>
+          <button class="btn btn-ghost btn-sm" id="reportBtn">Report</button>
+        </div>
+        <div class="settings-row">
           <label>Reset everything<small>Clears your streak and all progress.</small></label>
           <button class="btn btn-ghost btn-sm" id="resetBtn">Reset</button>
         </div>
@@ -5169,6 +5354,7 @@ function openSettings() {
   $("#syncIn")?.addEventListener("click", syncSignIn);
   $("#syncOut")?.addEventListener("click", syncSignOut);
   $("#backupBtn").onclick = openBackup;
+  $("#reportBtn").onclick = openReport;
   $("#profileBtn").onclick = () => openProfile(false);
   $("#placeBtn").onclick = () => { closeSheet(); setTimeout(openPlacement, 250); };
   $("#tourBtn").onclick = () => { closeSheet(); setTimeout(() => startTour(true), 250); };
@@ -5363,6 +5549,198 @@ function openBackup() {
   $("#bkImport").onclick = () => {
     const v = $("#bkPaste").value.trim();
     if (v) restore(v); else $("#bkMsg").textContent = "Choose a file or paste a backup first.";
+  };
+}
+
+/* ============================================================
+   Report a problem
+
+   The black box — the breadcrumbs and errors js/diag.js has been keeping
+   since the page loaded, and from the run before it, because a freeze is
+   usually reported from the reload that followed it.
+
+   A reading of the app's own arithmetic. Not the raw record: the numbers the
+   screens are actually drawn from. "The row is locked" and "learnedToday()
+   came back empty" are the same sentence, and only one of them can be
+   checked by somebody who isn't sitting at the machine.
+
+   And the shape of the window, because a decent number of these turn out to
+   be a phone.
+
+   What is deliberately left out: the answers, the diary, and the characters
+   themselves beyond the handful today turns on. A bug report is not a
+   backup — Save your progress upstairs is the thing for that.
+   ============================================================ */
+
+const REPORT_OVERLAYS = ["session", "charView", "flash", "notebook", "place", "ask", "tour", "hail", "coach", "drawer"];
+
+function problemReport(said) {
+  const k = dayKey();
+  /* Reported as raw class and hidden flags rather than as a verdict on which
+     are open: a stuck screen is very often an overlay that is half-dismissed,
+     and the half is the interesting part. */
+  const overlays = {};
+  REPORT_OVERLAYS.forEach(id => {
+    const el = $("#" + id);
+    overlays[id] = el ? (el.className || "—") + (el.hidden ? " [hidden]" : "") : "not in the page";
+  });
+
+  /* The day's characters in full — a dozen small records at most, and the
+     ones every row on today's list is computed from. */
+  const todays = {};
+  Object.keys(state.chars).forEach(c => { if (state.chars[c].first === k) todays[c] = state.chars[c]; });
+
+  /* A week of days, with the list of characters revised on each reduced to how
+     many there were: today's is printed in full below and the other six are
+     only ever read as "was anything done that day". Left whole they were half
+     the file. */
+  const recent = {};
+  Object.keys(state.days).sort().slice(-7).forEach(d => {
+    const { revC, ...rest } = state.days[d];
+    recent[d] = revC ? { ...rest, revised: Object.keys(revC).length } : rest;
+  });
+
+  const safe = fn => { try { return fn(); } catch (e) { return "threw: " + (e && e.message || e); } };
+
+  return {
+    app: "cantonese-quest",
+    kind: "problem-report",
+    wrote: new Date().toISOString(),
+    said: said || "",
+    env: {
+      version: appVersion(), built: appDate(),
+      url: location.origin + location.pathname,
+      ua: navigator.userAgent,
+      language: navigator.language,
+      window: `${innerWidth}x${innerHeight} @${devicePixelRatio}`,
+      theme: document.documentElement.dataset.theme || "system",
+      optCols: safe(optColsEffective),
+      online: navigator.onLine,
+      /* Three things that load late and can fail silently, each of which
+         looks like a different bug when it does. */
+      writerLoaded: typeof HanziWriter !== "undefined",
+      audioClips: safe(clipCount),
+      voices: safe(() => (speechSynthesis.getVoices() || []).length),
+      recordBytes: safe(() => (localStorage.getItem("cantonese-quest-v1") || "").length)
+    },
+    view: typeof view === "string" ? view : "?",
+    overlays,
+    bodyOverflow: document.body.style.overflow || "(none)",
+    session: {
+      active: session.active,
+      at: `${session.idx} of ${session.queue.length}`,
+      card: session.queue[session.idx] || null,
+      todo: session.todo, practice: session.practice, menu: session.menu,
+      repair: session.repair ? session.repair.length : null,
+      right: session.right, wrong: session.wrong, learned: session.learned, reviewed: session.reviewed
+    },
+    today: {
+      dayKey: k,
+      learnedToday: safe(learnedToday),
+      reviewedToday: safe(() => reviewedToday().length),
+      newLeftToday: safe(newLeftToday),
+      dueCount: safe(dueCount),
+      remainingNew: safe(remainingNew),
+      dayGoal: safe(dayGoal),
+      day: state.days[k] || null,
+      tasks: safe(() => TODAY_TASKS.map(t => ({
+        id: t.id, round: taskRound(t).length, pool: taskPool(t).length, done: didToday(t.id)
+      })))
+    },
+    record: {
+      characters: Object.keys(state.chars).length,
+      days: Object.keys(state.days).length,
+      streak: state.streak,
+      goalNew: state.goalNew,
+      level: state.level, placed: state.placed || null,
+      settings: { audio: state.audio, timer: state.timer, writeDrills: state.writeDrills,
+                  optCols: state.optCols, padAuto: state.padAuto, quest: state.quest },
+      sync: typeof sync === "undefined" ? "not loaded" : sync.status,
+      lastBackup: state.lastBackup || null,
+      todaysCharacters: todays,
+      recentDays: recent
+    },
+    blackBox: window.CQDIAG ? CQDIAG.runs() : "the recorder did not load"
+  };
+}
+
+/* Readable rather than minified: the whole point is that somebody reads it,
+   and a report that has to be reformatted before it can be looked at is a
+   report nobody looks at. */
+const reportText = said => JSON.stringify(problemReport(said), null, 1);
+
+function openReport() {
+  const errs = window.CQDIAG
+    ? CQDIAG.runs().reduce((n, r) => n + r.log.filter(e => e[1] === "error").length, 0)
+    : 0;
+  openSheet(`<span class="han">報告</span> Report a problem`, `<div class="wrap"><div class="section">
+    <div class="today-head">
+      <h1>Something went wrong?</h1>
+      <p class="note">This makes one block of text describing what the app currently thinks is true —
+        which cards are loaded, what today's list computes to, and every error the page has recorded
+        since it opened, including the run before this one if you have reloaded since.
+        ${errs ? `<b>${errs} error${errs === 1 ? " has" : "s have"} been recorded.</b>` : "No errors have been recorded so far."}
+        Copy it and send it on.</p>
+      <p class="note dim">It carries your settings, your streak, the day's counts and the characters you learned
+        today. It does not carry your answers, your diary, or the rest of your record — that's what
+        <b>Save your progress to a file</b> is for.</p>
+    </div>
+    <div class="sheet block">
+      <div class="block-head"><span class="k">經過</span><span class="t">What happened?</span></div>
+      <p class="note">In your own words — what you clicked, and what it did instead. This goes in at the top.</p>
+      <textarea id="rpSaid" class="search" rows="3"
+        placeholder="e.g. tapped Next on the last card of Today's practice and the screen stopped"></textarea>
+    </div>
+    <div class="sheet block">
+      <div class="block-head"><span class="k">副本</span><span class="t">The report</span></div>
+      <div class="split">
+        <button class="btn" id="rpCopy">Copy the report</button>
+        <button class="btn btn-ghost" id="rpSave">Save it as a file</button>
+      </div>
+      <div id="rpMsg" class="note"></div>
+      <textarea id="rpText" class="search" rows="8" readonly spellcheck="false"></textarea>
+    </div>
+    <div class="sheet block">
+      <div class="block-head"><span class="k">清除</span><span class="t">Start a fresh trail</span></div>
+      <p class="note">Clears the recorded errors and breadcrumbs — not your progress. Worth doing before
+        deliberately reproducing a problem, so the report is only about that.</p>
+      <button class="btn btn-ghost btn-block" id="rpClear">Clear the recorded trail</button>
+    </div>
+  </div></div>`);
+
+  /* Built once on open and again on each copy, because the trail keeps
+     running while the sheet is open and the second copy should be the newer
+     one — and because the sentence typed above it belongs in the file. */
+  const build = () => { const t = reportText($("#rpSaid").value.trim()); $("#rpText").value = t; return t; };
+  build();
+
+  $("#rpCopy").onclick = async () => {
+    const text = build();
+    const msg = $("#rpMsg");
+    try {
+      await navigator.clipboard.writeText(text);
+      msg.textContent = `Copied — ${(text.length / 1024).toFixed(1)} KB. Paste it wherever you're reporting this.`;
+    } catch {
+      /* Clipboard access is refused often enough — insecure origin, a browser
+         that wants a deeper gesture — that the fallback has to be a real one. */
+      const ta = $("#rpText");
+      ta.removeAttribute("readonly"); ta.focus(); ta.select();
+      msg.textContent = "Your browser wouldn't let the page use the clipboard — the report is selected below, copy it by hand.";
+    }
+  };
+
+  $("#rpSave").onclick = () => {
+    const text = build();
+    const name = `cantonese-quest-report-${dayKey()}.json`;
+    $("#rpMsg").textContent = blobDownload(name, text)
+      ? `Saved as ${name} — check your Downloads folder.`
+      : "Your browser wouldn't let the page save a file — copy the text below instead.";
+  };
+
+  $("#rpClear").onclick = () => {
+    if (window.CQDIAG) CQDIAG.clear();
+    build();
+    $("#rpMsg").textContent = "Cleared. Anything from here on is a fresh trail.";
   };
 }
 
@@ -6088,6 +6466,7 @@ const RENDER = { today: renderToday, sprint: renderSprint, menu: renderQuest,
                  record: renderRecord };
 
 function go(v) {
+  cqNote("go", v);
   view = v;
   syncHelp(v);
   const id = "view" + v[0].toUpperCase() + v.slice(1);

@@ -40,14 +40,19 @@ const SPRINT = {
 };
 
 /* Both are production — you are handed a meaning and have to come back with
-   a character — and neither asks you to draw a stroke. */
+   a character — and neither asks you to draw a stroke.
+   `blurb` is the sentence, `tip` is the same thing at the width of a line
+   that has two buttons in front of it — the row reads left to right (what
+   the choice is, the choice, what you just chose), so the tip has to finish
+   inside the space that's left rather than explain itself into a second
+   line. */
 const WRITE_STYLES = {
   type: { zh: "打字", name: "Type it", key: "type",
           blurb: "Type the pinyin, pick the character — how Chinese is actually written on a phone.",
-          par: 4.6 },
+          tip: "Type it, then pick it", par: 4.6 },
   spot: { zh: "辨形", name: "Spot it", key: "spot",
           blurb: "Pick it out of six look-alikes that share its parts.",
-          par: 3.0 }
+          tip: "One of six look-alikes", par: 3.0 }
 };
 
 const SPRINT_MINUTES = [1, 2, 3, 5];
@@ -387,6 +392,11 @@ function sprintTypeKey(e) {
 
 /* ---------- answering ---------- */
 
+/* Default on for a record written before the setting existed: the wash is
+   the thing somebody would have to go looking for, and !== false is what
+   makes an absent field mean yes. */
+const sprintTells = () => state.spTell !== false;
+
 function sprintAnswer(value) {
   const q = sp.queue[sp.idx];
   if (!q || q.got !== undefined || !sp.active) return;
@@ -395,6 +405,12 @@ function sprintAnswer(value) {
   q.ms = Date.now() - sp.qStart;
   grade(q.c, q.ok, SPRINT[sp.mode].skill, { speed: true });
   sprintMark(q.c, sp.mode, q.ok);
+  /* A sheet never stopped to say whether you were right — it moves to the
+     next question and the answer is a dot in the bar at the top, the wrong
+     end of the screen to be reading at this speed. The wash says it where
+     you're already looking, and costs nothing: it doesn't pause the sheet,
+     doesn't move anything, and on a laptop it doesn't happen. */
+  if (sprintTells()) flashVerdict(q.ok);
   sp.idx++;
   if (sp.idx >= sp.queue.length) return sprintFinish(true);
   sprintRenderQ();
@@ -540,6 +556,11 @@ function renderSprint() {
     save();
     renderSprint();
   });
+  $$("#viewSprint [data-sp-tell]").forEach(b => b.onclick = () => {
+    state.spTell = b.dataset.spTell === "1";
+    save();
+    renderSprint();
+  });
   $$("#viewSprint [data-sp-go]").forEach(b => b.onclick = () => {
     const m = b.dataset.spGo, p = sprintPick(m);
     sprintOpen(m, p.n, p.secs, p.style);
@@ -589,12 +610,12 @@ function sprintPanelHtml(mode, short) {
     ${open ? `<div class="sp-picker">
       <p class="note">${esc(cfg.long)}</p>
       ${silent ? `<p class="note sp-warn">Sound is off — turn it back on in Settings, or this mode has nothing to play.</p>` : ""}
-      ${mode === "w" ? `<div class="sp-row sp-row-style">
+      ${mode === "w" ? `<div class="sp-row sp-row-wide">
         <span class="sp-row-lbl">How</span>
         <div class="sp-chips">${Object.values(WRITE_STYLES).map(s => `<button class="sp-chip wide ${p.style === s.key ? "on" : ""}" data-sp-set="w:style:${s.key}">
           <span class="han">${esc(s.zh)}</span> ${esc(s.name)}</button>`).join("")}</div>
-      </div>
-      <p class="note sp-style-note">${esc(WRITE_STYLES[p.style].blurb)}</p>` : ""}
+        <span class="sp-row-tip">${esc(WRITE_STYLES[p.style].tip)}</span>
+      </div>` : ""}
       <div class="sp-row">
         <span class="sp-row-lbl">Questions</span>
         <div class="sp-chips">${SPRINT_COUNTS.map(n => `<button class="sp-chip ${p.n === n ? "on" : ""}"
@@ -610,6 +631,19 @@ function sprintPanelHtml(mode, short) {
         ${stepper(mode, "secs", p.secs / 60, SPRINT_STEP_MIN, SPRINT_MINUTES[0],
                   SPRINT_MINUTES[SPRINT_MINUTES.length - 1], 60)}
       </div>
+      ${/* Only where the wash can happen at all — on a laptop a sheet stays
+            unmarked until it's handed in, as it always was, and a switch that
+            did nothing would be worse than no switch. */
+        PHONE_MQ.matches ? `<div class="sp-row sp-row-wide">
+        <span class="sp-row-lbl">Marking</span>
+        <div class="sp-chips">
+          <button class="sp-chip wide ${sprintTells() ? "on" : ""}" data-sp-tell="1">
+            <span class="han">即時</span> As you go</button>
+          <button class="sp-chip wide ${sprintTells() ? "" : "on"}" data-sp-tell="0">
+            <span class="han">交卷</span> Handed in</button>
+        </div>
+        <span class="sp-row-tip">${sprintTells() ? "Washes as you answer" : "You find out at the end"}</span>
+      </div>` : ""}
       <div class="sp-verdict">
         <span class="sp-verdict-k han">${esc(g.zh)}</span>
         <span class="sp-verdict-body"><b>${esc(g.name)}</b>
