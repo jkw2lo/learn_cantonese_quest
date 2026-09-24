@@ -36,7 +36,11 @@ const SPRINT = {
   w: { zh: "默寫", name: "Writing", skill: "c", verb: "produce",
        blurb: "Produce the character from its meaning.",
        long: "Recall, not recognition — you are given the meaning and have to come up with the character. Two input styles, both faster than drawing strokes.",
-       par: 4.0 }
+       par: 4.0 },
+  a: { zh: "組詞", name: "Build the word", skill: "c", verb: "build",
+       blurb: "Assemble a word from tiles, against the clock.",
+       long: "The daily drill's favourite, timed: given a meaning, tap out the word one tile at a time from a row that includes a few characters that don't belong. Slower than picking one option, so the par is generous.",
+       par: 5.4 }
 };
 
 /* Both are production — you are handed a meaning and have to come back with
@@ -164,6 +168,16 @@ function sprintQuestion(c, mode, style, known) {
     q.correct = c;
     q.opts = shuffle([c, ...sprintDistractors(ch, known, 5, "spot")])
       .map(x => ({ v: x, html: `<span class="big">${esc(x)}</span>` }));
+  } else if (mode === "a") {
+    /* Built up front, same as every other mode's options — the sheet exists
+       before the clock starts, so no question is slower to appear than any
+       other. one(buildWords(ch)) is safe unguarded: sprintPool only ever
+       offers characters buildWords already found at least one word for. */
+    const w = one(buildWords(ch));
+    q.word = w;
+    q.correct = w[0];
+    const target = [...w[0]];
+    q.tiles = shuffle([...target, ...pick(known.filter(x => !target.includes(x)), 3)]);
   } else {
     q.correct = c;                     /* typed: the candidates are live */
   }
@@ -180,6 +194,9 @@ function sprintPool(mode) {
     const withClips = known.filter(c => clipFor(c));
     if (withClips.length >= SPRINT_MIN_POOL) return withClips;
   }
+  /* Only characters with an assemblable word — same filter buildWords uses
+     for the daily drill's own Build the word kind. */
+  if (mode === "a") return known.filter(c => buildWords(CHAR_INDEX[c]).length);
   return known;
 }
 
@@ -315,6 +332,29 @@ function sprintRenderQ() {
     </div>`;
     $("#spEar").onclick = () => say(ch.c, true);
     say(ch.c, true);
+  } else if (sp.mode === "a") {
+    const target = [...q.word[0]];
+    sp.filled = [];
+    body.innerHTML = `<div class="sp-q">
+      <div class="sp-prompt"><em class="lead">${esc(ch.m)}</em></div>
+      <div class="assemble">
+        <div class="slots">${target.map((_, i) => `<div class="slot" data-s="${i}"></div>`).join("")}</div>
+        <div class="tiles">${q.tiles.map((c2, i) => `<button class="tile" data-c="${esc(c2)}" data-i="${i}">${esc(c2)}</button>`).join("")}</div>
+      </div>
+    </div>`;
+    /* Tapped in order, not matched against the slot they land in — this is a
+       race, not the daily drill's retry-until-right version of the same
+       tiles, so a wrong tap still spends a slot and can still cost the
+       question. */
+    $$(".tile", body).forEach(t => t.onclick = () => {
+      if (t.disabled) return;
+      const i = sp.filled.length;
+      const slot = $(`.slot[data-s="${i}"]`, body);
+      slot.textContent = t.dataset.c; slot.classList.add("filled");
+      t.disabled = true; t.classList.add("used");
+      sp.filled.push(t.dataset.c);
+      if (sp.filled.length === target.length) sprintAnswer(sp.filled.join(""));
+    });
   } else if (sp.style === "spot") {
     body.innerHTML = `<div class="sp-q">
       <div class="sp-prompt"><span class="pin">${esc(ch.p)}</span> ${toneMark(ch.p)}<em>${esc(ch.m)}</em></div>
@@ -510,6 +550,10 @@ function sprintMarked(run, best, prev) {
    nothing; "事 shì · matter" says what the confusion was. */
 function sprintSaid(q) {
   if (q.got === null || q.got === undefined) return "nothing";
+  /* q.word: the assembled tiles are a word, not a single character — a fresh
+     CHAR_INDEX lookup on the whole string would find nothing and print it
+     raw, so show it directly instead. */
+  if (q.word) return `<b class="han">${esc(q.got)}</b>`;
   const other = CHAR_INDEX[q.got];
   return other ? `<b class="han">${esc(other.c)}</b> ${esc(other.p)} · ${esc(other.m)}` : esc(q.got);
 }
@@ -537,7 +581,7 @@ function renderSprint() {
         Learn a few more on <b>Today</b> and this opens up.</p></div>` : ""}
     <div class="cols">
       <div class="section">
-        <div class="sp-panels">${["l", "r", "w"].map(m => sprintPanelHtml(m, short)).join("")}</div>
+        <div class="sp-panels">${["l", "r", "w", "a"].map(m => sprintPanelHtml(m, short)).join("")}</div>
         ${sprintNotebookHtml(trouble, fluent)}
       </div>
       <div class="col-side">${sprintBoardHtml()}</div>
@@ -694,27 +738,95 @@ function sprintNotebookHtml(trouble, fluent) {
   </div>`;
 }
 
+/* One spoke per sprint mode, in SPRINT's own key order. Radius is the grade
+   index + 1 of SPRINT_GRADES.length rings — 0 (the centre) means never
+   attempted, which has to read as visually distinct from an attempted and
+   merely slow spoke at the first ring, or "never tried" and "tried and
+   struggled" would look the same. Named .sp-radar-* throughout rather than
+   the shorter .rad-* the radical-family grid already uses elsewhere in the
+   app for something unrelated. */
+const SPRINT_RADAR_MODES = Object.keys(SPRINT);
+
+function sprintRadarHtml() {
+  const modes = SPRINT_RADAR_MODES;
+  const rings = SPRINT_GRADES.length;
+  const R = 46, CX = 60, CY = 56;
+  const angle = i => (Math.PI * 2 * i) / modes.length - Math.PI / 2;
+  const pt = (i, frac) => [CX + Math.cos(angle(i)) * R * frac, CY + Math.sin(angle(i)) * R * frac];
+
+  const grid = Array.from({ length: rings }, (_, ri) => {
+    const frac = (ri + 1) / rings;
+    return `<polygon class="sp-radar-grid" points="${modes.map((_, i) => pt(i, frac).map(v => v.toFixed(1)).join(",")).join(" ")}"/>`;
+  }).join("");
+  const axes = modes.map((_, i) => {
+    const [x, y] = pt(i, 1);
+    return `<line class="sp-radar-axis" x1="${CX}" y1="${CY}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+  }).join("");
+  const levels = modes.map(m => {
+    const best = sprintBests(m)[0];
+    if (!best) return 0;
+    return SPRINT_GRADES.indexOf(sprintGrade(m, best.n, best.secs, best.style)) + 1;
+  });
+  const val = modes.length >= 3
+    ? `<polygon class="sp-radar-val" points="${modes.map((_, i) => pt(i, levels[i] / rings).map(v => v.toFixed(1)).join(",")).join(" ")}"/>`
+    : "";
+  const labels = modes.map((m, i) => {
+    const [x, y] = pt(i, 1.28);
+    return `<text class="sp-radar-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${esc(SPRINT[m].zh)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 120 112" class="sp-radar">${grid}${axes}${val}${labels}</svg>`;
+}
+
+/* Shared by the top-5 and latest-10 lists below, so the two can't drift
+   apart in formatting the way two hand-written row templates eventually do. */
+function sprintRowHtml(r, showAccuracy) {
+  const cfg = SPRINT[r.mode];
+  const b = sprintState().best[sheetKey(r)];
+  const isBest = !!b && b.at === r.at;
+  const pct = r.n ? Math.round((r.right / r.n) * 100) : 0;
+  return `<div class="sp-board-row ${isBest ? "best" : ""}">
+    <span class="sp-board-k han">${esc(cfg.zh)}</span>
+    <span class="sp-board-body"><b>${r.right} / ${r.n}</b>
+      <small>${showAccuracy ? `${pct}% · ` : ""}${fmtClock(r.secs * 1000)} sheet · ${esc(r.on)}${r.done ? " · finished" : ` · ${r.n - r.answered} blank`}</small></span>
+    ${isBest ? `<span class="sp-board-star" title="Your best on this sheet">★</span>` : ""}
+  </div>`;
+}
+
+/* Best-per-sheet-size, flattened across every mode and size and ranked by
+   how well each one actually went — accuracy first, then pace, so a
+   99% at a gentle pace outranks a rushed 60%. */
+function sprintTopHtml() {
+  const top = Object.values(sprintState().best)
+    .sort((a, b) => (b.right / b.n) - (a.right / a.n) || (a.secs / a.n) - (b.secs / b.n))
+    .slice(0, 5);
+  if (!top.length) return "";
+  return `<div class="stack" style="gap:.4rem">
+    <span class="eyebrow">Best ${hanLabel("最好")}</span>
+    <div class="sp-board">${top.map(r => sprintRowHtml(r, true)).join("")}</div>
+  </div>`;
+}
+
+function sprintRecentHtml() {
+  const runs = sprintRecent().slice(0, 10);
+  if (!runs.length) return "";
+  return `<div class="stack" style="gap:.4rem">
+    <span class="eyebrow">Latest ${hanLabel("最近")}</span>
+    <div class="sp-board sp-board-scroll">${runs.map(r => sprintRowHtml(r, false)).join("")}</div>
+  </div>`;
+}
+
 function sprintBoardHtml() {
-  const runs = sprintRecent().slice(0, 8);
+  const runs = sprintRecent();
   const total = sprintTotal();
   return `<div class="sheet" style="padding:1rem">
-    <div class="stack" style="gap:.7rem">
+    <div class="stack" style="gap:.9rem">
       <span class="eyebrow">The board ${hanLabel("記錄")}</span>
-      ${runs.length ? `<div class="sp-board">
-        ${runs.map(r => {
-          const cfg = SPRINT[r.mode];
-          const b = sprintState().best[sheetKey(r)];
-          const isBest = !!b && b.at === r.at;
-          return `<div class="sp-board-row ${isBest ? "best" : ""}">
-            <span class="sp-board-k han">${esc(cfg.zh)}</span>
-            <span class="sp-board-body"><b>${r.right} / ${r.n}</b>
-              <small>${fmtClock(r.secs * 1000)} sheet · ${esc(r.on)}${r.done ? " · finished" : ` · ${r.n - r.answered} blank`}</small></span>
-            ${isBest ? `<span class="sp-board-star" title="Your best on this sheet">★</span>` : ""}
-          </div>`;
-        }).join("")}
-      </div>
-      <p class="note">${total} question${total === 1 ? "" : "s"} answered against the clock, all told.
-        The times to beat are your own — nothing here leaves this device.</p>`
+      ${runs.length ? `
+        ${sprintRadarHtml()}
+        ${sprintTopHtml()}
+        ${sprintRecentHtml()}
+        <p class="note">${total} question${total === 1 ? "" : "s"} answered against the clock, all told.
+          The times to beat are your own — nothing here leaves this device.</p>`
       : `<p class="note">No sheets yet. The board fills with every run, and a ★ marks the best you've done on
         a given size.</p>`}
     </div>

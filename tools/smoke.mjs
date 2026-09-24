@@ -26,6 +26,7 @@ const CONTRACT = [
   'skillStanding', 'passesIn', 'PASSES_FOR_SOLID', 'reviewedToday', 'resetProgress',
   'tallyExtra', 'extraToday', 'extraTotal', 'extraBestDay', 'dayReps',
   'studyAhead', 'aheadToday', 'dayGoal', 'newLeftToday', 'goalMet', 'GOAL_MIN', 'GOAL_MAX',
+  'LENIENCY_LEVELS', 'SPRINT_MODES',
   'placeKnown', 'wasPlaced', 'PLACE_MISS_LIMIT', 'PLACED_REST',
   'wordOfWeek', 'weekKey', 'INTERESTS', 'INTEREST_KEYS', 'shownIn', 'shuffle',
   'FESTIVALS', 'festivalThisWeek', 'festivalDate', 'wotwEntry',
@@ -35,7 +36,8 @@ const CONTRACT = [
   'sprintState', 'sprintMark', 'sprintMarkOf', 'sprintHits', 'sprintMisses', 'sprintByMode',
   'sprintTrouble', 'sprintFluent', 'sprintForget', 'rightRun', 'troubleScore',
   'recordRun', 'sheetKey', 'sprintBests', 'sprintRecent', 'tallySprint', 'sprintTotal',
-  'SPRINT_WINDOW', 'SPRINT_TROUBLE', 'SPRINT_CLEAR', 'SPRINT_FLUENT'
+  'SPRINT_WINDOW', 'SPRINT_TROUBLE', 'SPRINT_CLEAR', 'SPRINT_FLUENT',
+  'tallyCharWeek', 'charWeekTrend', 'weaknessReport', 'WEAKNESS_SKILLS', 'WEAKNESS_MIN_SHOWN', 'WEAKNESS_MIN_GAP'
 ];
 
 /* typeof guards so a missing name reports cleanly instead of crashing */
@@ -1392,7 +1394,7 @@ console.log('\nsprint: the record behind the sheets');
   /* the cross-file contract, both ways */
   const needsFromApp = ['startRepair', 'REPAIR_SIZE', 'esc', 'bare', 'searchable', 'optionSet', 'hanLabel',
                         'say', 'stopPhrase', 'toneMark', 'clipFor', 'clipCount', 'openChar',
-                        'renderAll', 'celebrate', 'one', 'pick'];
+                        'renderAll', 'celebrate', 'one', 'pick', 'buildWords', 'cjkOf', 'canRead'];
   const missingInApp = needsFromApp.filter(n =>
     !new RegExp(`(const|let|function)\\s+${n}\\b`).test(appSrc));
   ok('everything sprint.js calls in app.js is declared there', !missingInApp.length, missingInApp.join(' '));
@@ -1429,6 +1431,28 @@ console.log('\nsprint: the record behind the sheets');
     });
     ok('every session starter sets all four session flags', !missing.length, missing.join(', '));
   }
+
+  /* Every .quiz({ call site has to pass leniency, or that writing surface is
+     silently stuck at fixed strictness while the rest of the app honours the
+     slider — a hand-maintained count of "four sites" would go stale the
+     moment a fifth writing entry point is added, so count both markers
+     instead of trusting a number. */
+  {
+    const quizSites = (appSrc.match(/\.quiz\(\{/g) || []).length;
+    const leniencySites = (appSrc.match(/leniency:\s*state\.writeLeniency/g) || []).length;
+    ok(`every .quiz({ call site passes leniency (${quizSites} found)`,
+       quizSites > 0 && quizSites === leniencySites,
+       `${leniencySites}/${quizSites} pass it`);
+  }
+
+  ok('write2Words and buildWords are both declared in app.js',
+     /const write2Words = ch =>/.test(appSrc) && /const buildWords = ch =>/.test(appSrc));
+  ok('write2Words requires stroke data on both characters, not just readability',
+     /write2Words[\s\S]{0,200}STROKE_DATA/.test(appSrc));
+
+  ok('SPRINT.a (build the word) exists alongside l/r/w', !!fresh.SPRINT.a && !!fresh.SPRINT.l);
+  ok('sprintPool and sprintQuestion both branch on mode "a"',
+     /mode === "a"/.test(sprintSrc) && (sprintSrc.match(/mode === "a"/g) || []).length >= 2);
 }
 
 
@@ -1686,6 +1710,30 @@ console.log('\ntwo devices, one record');
        JSON.stringify(mergeState(afternoon, morning)) === JSON.stringify(m));
   }
 
+  /* charWeeks is two levels of the same shape mergeDay's sp/spr fix and
+     mergeChar's counts already rely on — nested one level deeper. Three
+     cases in one week: a character both sides answered (sums per field), a
+     character only one side ever saw (unions in whole), and a second week
+     only one side has anything in at all (survives whole). */
+  {
+    const a = Object.assign(blank(), { updated: 1000,
+      charWeeks: { '2026-W10': { 你: { seen: 3, right: 2, wrong: 1 }, 好: { seen: 1, right: 1, wrong: 0 } } } });
+    const b = Object.assign(blank(), { updated: 2000,
+      charWeeks: {
+        '2026-W10': { 你: { seen: 2, right: 2, wrong: 0 } },
+        '2026-W11': { 早: { seen: 4, right: 3, wrong: 1 } }
+      } });
+    const m = mergeState(a, b);
+    ok('charWeeks keeps the bigger side of a character both devices answered, per field',
+       m.charWeeks['2026-W10']['你'].seen === 3 && m.charWeeks['2026-W10']['你'].right === 2
+         && m.charWeeks['2026-W10']['你'].wrong === 1,
+       JSON.stringify(m.charWeeks['2026-W10']['你']));
+    ok('  and keeps a character only one device ever saw that week',
+       m.charWeeks['2026-W10']['好'].seen === 1);
+    ok('  and a week only one device has anything in survives whole',
+       m.charWeeks['2026-W11']['早'].seen === 4);
+  }
+
   /* the trivial cases, which are the ones that actually run on day one */
   {
     const fresh = blank();
@@ -1704,6 +1752,20 @@ console.log('\ntwo devices, one record');
        m.runs.length === 3 && m.runs[0].at === 3 && m.runs[2].at === 1);
     ok('  the same sheet is not counted twice', m.runs.filter(r => r.at === 1).length === 1);
     ok('  and the better best wins', m.best['l:20'].right === 18);
+  }
+
+  /* Marks are per-mode [right,wrong] pairs on one character, and the merge
+     used to hardcode which modes it looked at — "a" (build the word) was
+     added to SPRINT after that list was written, and a mode missing from it
+     is a mode whose marks silently vanish on the next sync, the same shape
+     as the mergeDay bug fixed for sp/spr/did. */
+  {
+    const m = mergeSprint(
+      { marks: { 你: { l: [3, 1], s: '101' } }, best: {}, pick: {}, cleared: {} },
+      { marks: { 你: { a: [2, 0], s: '11' } }, best: {}, pick: {}, cleared: {} });
+    ok('a sprint mode merge does not drop a mode the other side never touched',
+       m.marks['你'].l[0] === 3 && m.marks['你'].a[0] === 2,
+       JSON.stringify(m.marks['你']));
   }
 
   /* the plumbing around it */
