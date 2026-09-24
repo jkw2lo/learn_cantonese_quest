@@ -707,6 +707,20 @@ code {
 .stepper button:hover { background: var(--sunken); color: var(--ink); }
 .stepper span { width: 2.4rem; text-align: center; font-size: .88rem; font-variant-numeric: tabular-nums; }
 
+/* The writing-strictness slider — the only range input in the app so far. */
+input[type="range"] {
+  width: 100%; height: 4px; margin: .3rem 0;
+  -webkit-appearance: none; appearance: none; background: var(--rule); border-radius: 2px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--jade); border: 2px solid var(--sheet); box-shadow: 0 0 0 1px var(--rule); cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--jade); border: 2px solid var(--sheet); box-shadow: 0 0 0 1px var(--rule); cursor: pointer;
+}
+
 /* ============================================================
    Quests
    ============================================================ */
@@ -1365,6 +1379,11 @@ code {
 .wp-foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .7rem; }
 #wpPad.on { border-color: var(--jade); color: var(--jade); background: var(--jade-wash); }
 
+/* The mobile writer box — one square, not a page. Hidden here; the mobile
+   layer at the foot of this file swaps it in for .wp-page/.wp-tools/.wp-foot. */
+#wpmInk { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+.wp-mobile, .wp-mobile-status, .wp-note-mobile { display: none; }
+
 /* ============================================================
    Today's practice list
    ============================================================ */
@@ -1622,6 +1641,11 @@ button.todo:hover:not(:disabled) { background: var(--sunken); }
 }
 .leech .z { font-family: var(--f-han); font-size: 1.3rem; line-height: 1; color: var(--seal); }
 .leech .n { font-variant-numeric: tabular-nums; color: var(--seal); font-weight: 600; }
+
+/* the weekly-activity bar chart on the Record page — see weeklyRepsChartHtml */
+.wk-chart { width: 100%; height: 3.75rem; display: block; }
+.wk-bar { fill: var(--rule-2); }
+.wk-bar.cur { fill: var(--jade); }
 
 textarea.search { font-family: var(--f-pin); font-size: .72rem; resize: vertical; line-height: 1.4; }
 input[type="file"].search { padding: .5rem; font-size: .8rem; }
@@ -2283,6 +2307,19 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .sp-board-body b { font-size: .88rem; font-variant-numeric: tabular-nums; }
 .sp-board-body small { font-size: .7rem; color: var(--ink-3); }
 .sp-board-star { color: var(--gold); font-size: .85rem; flex: none; }
+
+/* the latest-10 list scrolls in place rather than growing the sidebar past
+   the top-5 list and the radar above it */
+.sp-board-scroll { max-height: 15rem; overflow-y: auto; }
+
+/* the spider chart — see sprintRadarHtml. Named .sp-radar-* throughout,
+   deliberately not .rad-*, which the radical-family grid elsewhere in the
+   app already uses for something unrelated. */
+.sp-radar { width: 100%; height: auto; overflow: visible; }
+.sp-radar-grid { fill: none; stroke: var(--rule-2); stroke-width: .5; }
+.sp-radar-axis { stroke: var(--rule-2); stroke-width: .5; }
+.sp-radar-val { fill: color-mix(in srgb, var(--jade) 22%, transparent); stroke: var(--jade); stroke-width: 1.4; stroke-linejoin: round; }
+.sp-radar-label { font-size: 7px; fill: var(--ink-3); text-anchor: middle; dominant-baseline: middle; font-family: var(--f-han-ui); }
 
 @media (min-width: 860px) {
   .sp-inner { max-width: 44rem; }
@@ -3580,9 +3617,33 @@ button.tier-head:hover { border-color: var(--ink-3); }
      the page sideways; 24rem, so it does not become absurd on a tablet; and
      48dvh, which is the one that matters — .tian is square, so width is also
      height, and a box that took the full width of a short phone would put
-     the prompt above it off the top of the screen. Every writing drill here
-     is one character, so there is no two-character case to fit. */
+     the prompt above it off the top of the screen. The two-character writing
+     drill (kind "x") writes both characters into this same one box in turn
+     rather than putting two squares side by side, specifically so this rule
+     never has to fit two of them at once. */
   .writer-box { width: min(100%, 24rem, 48dvh); }
+
+  /* ---------- the exercise book, on a phone ----------
+
+     The desktop page assumes a trackpad or a mouse filling one square at a
+     time inside a much larger canvas — on a finger that canvas is a page you
+     can't see all of at once. Swaps it for one box and "Add to page" (see
+     wpmAdd in js/app.js), which finds or starts today's page and places the
+     box's ink at the next open square itself. */
+  .wp-tools, .wp-page, .wp-foot, .wp-note-desktop { display: none; }
+  .wp-mobile { display: flex; flex-direction: column; align-items: center; gap: .7rem; margin-bottom: .5rem; }
+  /* Without this a drag that starts on the canvas can also be read as a page
+     scroll — the same trap the desktop page and the drill's own writer-box
+     already avoid, see .wp-page/.writer-box .tian above. */
+  .wp-mobile .writer-box .tian { touch-action: none; }
+  .wp-mobile-tools { display: flex; width: 100%; max-width: 24rem; gap: .5rem; }
+  .wp-mobile-tools .wp-field { flex: 1; justify-content: center; }
+  .wp-mobile-tools .wp-field select { flex: 1; min-width: 0; }
+  .wp-mobile-actions { display: flex; width: 100%; max-width: 24rem; gap: .5rem; }
+  .wp-mobile-actions .btn { flex: 1; }
+  .wp-mobile-actions .btn#wpmAdd { flex: 2; }
+  .wp-mobile-status, .wp-note-mobile { display: block; }
+  .wp-mobile-status { text-align: center; margin: 0 0 .9rem; }
 
   /* One shape for the whole session.
 

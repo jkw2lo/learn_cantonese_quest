@@ -53,6 +53,7 @@ const blank = () => ({
   v: 1,
   chars: {},
   days: {},
+  charWeeks: {},         /* week -> char -> {seen,right,wrong}, see tallyCharWeek */
   streak: { cur: 0, best: 0, last: null },
   goalNew: 5,
   quest: "menu",
@@ -66,6 +67,7 @@ const blank = () => ({
   level: null,          /* how much Cantonese they arrived with — see LEVELS */
   levelAsked: false,    /* whether the first session has offered placement yet */
   writeDrills: true,
+  writeLeniency: 1,      /* HanziWriter's own quiz leniency, scaled — see LENIENCY_LEVELS */
   padAuto: false,
   /* how the four answers are laid out: "auto" lets the window decide, "row"
      and "grid" overrule it — see optColsEffective in app.js */
@@ -204,6 +206,20 @@ function mergeDay(x, y) {
   return out;
 }
 
+/* charWeeks is two levels of the same "counters only ever go up" shape
+   mergeChar already relies on: a week merges character by character, and a
+   character within a week merges field by field. Left as a plain
+   Object.assign in mergeState (the way an ordinary settings field is
+   merged) this would have the exact shape of the mergeDay bug above — a
+   week only one device logged answers in would win or lose wholesale
+   instead of unioning per character. */
+function mergeCharWeek(x, y) {
+  if (!x) return y;
+  if (!y) return x;
+  return { seen: bigger(x.seen, y.seen), right: bigger(x.right, y.right), wrong: bigger(x.wrong, y.wrong) };
+}
+const mergeWeek = (x, y) => mergeBy(x, y, mergeCharWeek);
+
 /* Every key from both sides, in a fixed order.
 
    Sorted, and not for tidiness: the merged record is serialised to compare it
@@ -220,6 +236,10 @@ const mergeBy = (x = {}, y = {}, f) => {
    would keep whichever order the arguments arrived in */
 const unionKeys = (x, y) => mergeBy(x, y, (a, b) => (b === undefined ? a : b));
 
+/* Every mode a sprint mark can be keyed by — see js/sprint.js's SPRINT
+   object, which this file cannot import (see mergeSprint's mark merge). */
+const SPRINT_MODES = ["l", "r", "w", "a"];
+
 /* x is the older record and y the newer, so the preferences in here resolve by
    the clock rather than by which way round the caller happened to pass them */
 function mergeSprint(x = {}, y = {}) {
@@ -230,10 +250,14 @@ function mergeSprint(x = {}, y = {}) {
   out.marks = mergeBy(x.marks, y.marks, (a, b) => {
     if (!a) return b;
     if (!b) return a;
-    const total = m => ["l", "r", "w"].reduce((n, k) => n + ((m[k] || [0, 0])[0] + (m[k] || [0, 0])[1]), 0);
+    /* every sprint mode this record's marks can carry — kept as a literal
+       list rather than read off SPRINT (js/sprint.js) because this file has
+       to stay usable on its own, with no DOM and no sprint.js loaded, which
+       is exactly the shape the smoke suite runs it in */
+    const total = m => SPRINT_MODES.reduce((n, k) => n + ((m[k] || [0, 0])[0] + (m[k] || [0, 0])[1]), 0);
     const lead = total(b) >= total(a) ? b : a;
     const m = Object.assign({}, lead);
-    ["l", "r", "w"].forEach(k => {
+    SPRINT_MODES.forEach(k => {
       if (a[k] || b[k]) m[k] = [bigger((a[k] || [])[0], (b[k] || [])[0]),
                                 bigger((a[k] || [])[1], (b[k] || [])[1])];
     });
@@ -266,6 +290,7 @@ function mergeState(a, b) {
 
   out.chars = mergeBy(a.chars, b.chars, mergeChar);
   out.days = mergeBy(a.days, b.days, mergeDay);
+  out.charWeeks = mergeBy(a.charWeeks, b.charWeeks, mergeWeek);
   out.sprint = mergeSprint(older.sprint, newer.sprint);
   out.menuTaught = unionKeys(a.menuTaught, b.menuTaught);
   out.hailed = [...new Set([...(a.hailed || []), ...(b.hailed || [])])].sort((x, y) => x - y);
@@ -386,6 +411,7 @@ function grade(c, correct, skill, opts = {}) {
   const extra = opts.practice || opts.speed;
   r.seen++;
   r.last = dayKey();
+  tallyCharWeek(c, correct);
   if (skill && r.shown[skill] !== undefined) r.shown[skill]++;
   if (correct) {
     r.right++;
@@ -506,6 +532,19 @@ const newLeftToday = () =>
    goes back to the default on load rather than sitting at a number nobody
    chose and the stepper cannot walk back down to. */
 const GOAL_MIN = 1, GOAL_MAX = 30;
+
+/* HanziWriter's own quiz option is a raw multiplier on averageDistanceThreshold
+   (default 350; leniency 1 is that default) — not a number anyone picks by
+   feel. Five named steps stand in for it in Settings; the strictness itself
+   doesn't move by default, only how forgiving of a wobbly trackpad stroke it
+   is willing to be. */
+const LENIENCY_LEVELS = [
+  { v: 0.7,  label: "Strict" },
+  { v: 0.85, label: "A little stricter" },
+  { v: 1,    label: "As it's always been" },
+  { v: 1.3,  label: "A little more forgiving" },
+  { v: 1.6,  label: "Forgiving" }
+];
 const extraTotal = () => Object.values(state.days).reduce((a, d) => a + (d.extra || 0), 0);
 const extraBestDay = () => Object.values(state.days).reduce((a, d) => Math.max(a, d.extra || 0), 0);
 const extraDays = () => Object.values(state.days).filter(d => d.extra > 0).length;
@@ -594,6 +633,68 @@ function weekKey(d = new Date()) {
   const jan1 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((t - jan1) / 864e5 + 1) / 7);
   return `${t.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+/* A per-character-per-week tally, aggregated rather than logged event by
+   event — a full per-answer history was ruled out as unbounded and not
+   worth the storage, so this is the one bucket both the weekly trend chart
+   and the weakness report are built from. Called from exactly one place,
+   grade(), the single choke-point every drill and every sprint answer
+   already funnels through — so every answer anywhere in the app lands here
+   without needing a second call site. */
+function tallyCharWeek(c, ok) {
+  const wk = weekKey();
+  const w = state.charWeeks[wk] || (state.charWeeks[wk] = {});
+  const r = w[c] || (w[c] = { seen: 0, right: 0, wrong: 0 });
+  r.seen++; ok ? r.right++ : r.wrong++;
+}
+
+/* The last `weeks` weeks, oldest first, every one present even with nothing
+   in it — a chart with a gap where a quiet week should be reads as missing
+   data, not as a quiet week. Summed across every character: this is weekly
+   activity, not a per-character breakdown — that detail stays in
+   charWeeks itself, for weaknessReport below. */
+function charWeekTrend(weeks = 8) {
+  const now = new Date();
+  const out = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i * 7);
+    const wk = weekKey(d);
+    const vals = Object.values(state.charWeeks[wk] || {});
+    out.push({
+      week: wk,
+      seen: vals.reduce((a, r) => a + r.seen, 0),
+      right: vals.reduce((a, r) => a + r.right, 0),
+      wrong: vals.reduce((a, r) => a + r.wrong, 0),
+      chars: vals.length
+    });
+  }
+  return out;
+}
+
+/* "Reads fine, writes badly" is this shape: a character attempted enough on
+   at least two of the four skills for the numbers to mean something, where
+   one skill's accuracy trails another's by more than a coincidence. Reuses
+   state.chars[c].skills/.shown — lifetime per-skill counts the scheduler
+   already keeps for its own reasons — rather than a new bucket. */
+const WEAKNESS_SKILLS = ["r", "p", "c", "w"];
+const WEAKNESS_MIN_SHOWN = 3;
+const WEAKNESS_MIN_GAP = 0.34;
+
+function weaknessReport(limit = 10) {
+  const out = [];
+  Object.keys(state.chars).forEach(c => {
+    const r = state.chars[c];
+    const rates = WEAKNESS_SKILLS
+      .filter(k => (r.shown[k] || 0) >= WEAKNESS_MIN_SHOWN)
+      .map(k => ({ skill: k, rate: r.skills[k] / r.shown[k] }));
+    if (rates.length < 2) return;
+    const best = rates.reduce((a, b) => (b.rate > a.rate ? b : a));
+    const worst = rates.reduce((a, b) => (b.rate < a.rate ? b : a));
+    const gap = best.rate - worst.rate;
+    if (gap > WEAKNESS_MIN_GAP) out.push({ c, best: best.skill, worst: worst.skill, gap });
+  });
+  return out.sort((a, b) => b.gap - a.gap).slice(0, limit);
 }
 
 /* The Monday and Sunday bounding a date, so "is the festival this week"
@@ -1224,11 +1325,11 @@ function sprintMark(c, mode, ok) {
 
 const sprintMarkOf = c => sprintState().marks[c] || null;
 
-/* Summed across the three modes. */
+/* Summed across every sprint mode. */
 function sprintCount(c, i) {
   const m = sprintMarkOf(c);
   if (!m) return 0;
-  return ["r", "w", "l"].reduce((a, k) => a + (m[k] ? m[k][i] : 0), 0);
+  return SPRINT_MODES.reduce((a, k) => a + (m[k] ? m[k][i] : 0), 0);
 }
 const sprintHits = c => sprintCount(c, 0);
 const sprintMisses = c => sprintCount(c, 1);
@@ -1248,7 +1349,7 @@ function rightRun(c) {
    hear it" is the useful sentence, and it needs the per-mode split. */
 function sprintByMode(c) {
   const m = sprintMarkOf(c);
-  return ["r", "w", "l"].map(k => ({ mode: k, hit: m && m[k] ? m[k][0] : 0, miss: m && m[k] ? m[k][1] : 0 }));
+  return SPRINT_MODES.map(k => ({ mode: k, hit: m && m[k] ? m[k][0] : 0, miss: m && m[k] ? m[k][1] : 0 }));
 }
 
 /* Recent misses weigh more than old ones: a character missed three times last

@@ -957,6 +957,7 @@ function bindCard(root, ch, writerId) {
     writer.hideCharacter();
     writer.quiz({
       showHintAfterMisses: 2,
+      leniency: state.writeLeniency,
       /* finishing releases the trackpad and gives the cursor back, so a
          completed character doesn't leave you pressing Escape */
       onComplete: () => { padStop(); say(ch.c, true); }
@@ -1020,7 +1021,7 @@ function startQuestionTimer(run) {
 const PRACTICE = {
   read:  { k: "認讀", name: "Reading",       blurb: "Do you know what it means?", kinds: ["r", "d"], skill: "r" },
   say:   { k: "聽力", name: "Listening",     blurb: "Hear it, name it",          kinds: ["l", "p"], skill: "p" },
-  write: { k: "默寫", name: "Writing",       blurb: "Draw it from memory",        kinds: ["w"],      skill: "w" }
+  write: { k: "默寫", name: "Writing",       blurb: "Draw it from memory",        kinds: ["w", "x"], skill: "w" }
 };
 
 /* Every character this mode could ever ask you about — the honest denominator
@@ -1084,7 +1085,7 @@ const REPAIR_SIZE = 5;
 
 /* Which sprint mode a drill kind speaks for, so answers in a repair round
    count towards clearing the same character they would in a sprint. */
-const REPAIR_MODE = { r: "r", d: "r", p: "l", l: "l", c: "w", s: "w", a: "w", w: "w" };
+const REPAIR_MODE = { r: "r", d: "r", p: "l", l: "l", c: "w", s: "w", a: "w", w: "w", x: "w" };
 
 /* Teach one named character, then check it landed.
 
@@ -1186,6 +1187,16 @@ function buildSession() {
    character has had one writing drill, it keeps getting them until three
    land — otherwise the reps scatter across the whole library and no single
    character ever becomes solid. */
+/* Every tile has to be a character you've actually learnt — see the note by
+   kind "a"'s drill render, where this filter first lived inline. */
+const buildWords = ch => (ch.words || []).filter(w => cjkOf(w[0]).length > 1 && canRead(w[0]));
+
+/* A two-character word whose halves you can both read and have stroke data
+   for — writing what you can't yet reliably draw one character at a time
+   isn't a two-character writing drill, it's two different problems at once. */
+const write2Words = ch => (ch.words || []).filter(w =>
+  cjkOf(w[0]).length === 2 && [...w[0]].every(c => canRead(c) && window.STROKE_DATA[c]));
+
 function drillKind(c) {
   const r = rec(c);
   const lvl = r?.lvl || 0;
@@ -1204,9 +1215,12 @@ function drillKind(c) {
   if (lvl >= 3) {
     const readable = ch.words.filter(w => canRead(w[0]));
     if (readable.length) bag.push("s");
-    if (readable.some(w => cjkOf(w[0]).length > 1)) bag.push("a");
+    if (buildWords(ch).length) bag.push("a");
   }
-  if (lvl >= 4) { if (readingMaterial(ch)) bag.push("d"); if (canWrite) bag.push("w", "w"); }
+  if (lvl >= 4) {
+    if (readingMaterial(ch)) bag.push("d");
+    if (canWrite) { bag.push("w", "w"); if (write2Words(ch).length) bag.push("x"); }
+  }
   return one(bag);
 }
 
@@ -1312,7 +1326,7 @@ function drawStep() {
 
   /* handwriting is excluded: the input is slow by nature, and reaching for
      the Trackpad button shouldn't look like hesitation */
-  startQuestionTimer(item.t === "drill" && item.kind !== "w");
+  startQuestionTimer(item.t === "drill" && item.kind !== "w" && item.kind !== "x");
 
   if (item.t === "intro") {
     const isNew = !isKnown(item.c);
@@ -1401,9 +1415,10 @@ const KIND_LABEL = {
   w: ["筆順", "Write it from memory"],
   l: ["聽力", "Listen — which character?"],
   a: ["組詞", "Build the word"],
-  d: ["閱讀", "Read the sentence"]
+  d: ["閱讀", "Read the sentence"],
+  x: ["雙字默寫", "Write the word from memory"]
 };
-const SKILL_OF = { r:"r", p:"p", l:"p", c:"c", s:"c", a:"c", d:"r", w:"w" };
+const SKILL_OF = { r:"r", p:"p", l:"p", c:"c", s:"c", a:"c", d:"r", w:"w", x:"w" };
 
 /* Four options that are genuinely four options.
 
@@ -1501,6 +1516,7 @@ function renderDrill(item, ch, body, foot) {
       autoPad();
       w.quiz({
         showHintAfterMisses: 2,
+        leniency: state.writeLeniency,
         onMistake: () => missed++,
         onComplete: () => {
           padStop();
@@ -1515,6 +1531,98 @@ function renderDrill(item, ch, body, foot) {
     return;
   }
 
+  /* --- write both characters of a word from memory ---
+
+     One canvas, not two. Both characters of the word are written in turn in
+     the same box — the writer is simply re-created for the second character
+     once the first completes — rather than two 田字格 side by side, which is
+     the shape a phone at the mobile writer-box width (min(100%, 24rem, 48dvh),
+     sized for exactly one square) cannot fit. */
+  if (kind === "x") {
+    const words = write2Words(ch);
+    if (!words.length) return renderDrill(Object.assign({}, item, { kind: "w" }), ch, body, foot);
+    const w0 = one(words);
+    const chars = [...w0[0]];
+    const wid = "q" + Math.random().toString(36).slice(2, 8);
+    const nAllowed = c => Math.max(1, Math.ceil(((window.STROKE_DATA[c]?.strokes || []).length || 1) / 3));
+    const allowed = nAllowed(chars[0]) + nAllowed(chars[1]);
+    body.innerHTML = `<div class="drill">
+      <div class="drill-prompt sheet">${head}
+        <div class="drill-q">${esc(w0[2])}</div>
+        <div class="drill-hint"><span class="pin">${esc(w0[1])}</span></div>
+      </div>
+      ${writerBox(chars[0], wid)}
+      <p class="note" style="text-align:center">Write both characters in order, in the same box. A hint appears if
+        you miss twice on either one — some slips still count, since a trackpad isn't a brush.</p>
+    </div>`;
+    $(".writer-box", body).style.margin = "0 auto";
+    $(".writer-box", body).insertAdjacentHTML("afterend", `<div class="write-tools"></div>`);
+    const tools = $(".write-tools", body);
+    foot.innerHTML = "";
+
+    let idx = 0, missed = 0, peeked = false, totalMissed = 0, anyPeeked = false, writer = null;
+
+    const bindPad = () => $("#padW")?.addEventListener("click", () => {
+      const btn = $("#padW");
+      btn.disabled = true;
+      if (!padStart($(".tian", body), $("#" + wid, body), () => { btn.disabled = false; })) btn.disabled = false;
+    });
+    const autoPad = () => padHandoff($(".tian", body), $("#" + wid, body), () => {
+      const btn = $("#padW"); if (btn) btn.disabled = false;
+    });
+
+    const showStrokes = () => {
+      padStop();
+      peeked = true; anyPeeked = true;
+      writer.cancelQuiz();
+      writer.showCharacter();
+      writer.animateCharacter();
+      tools.innerHTML = `
+        <button class="btn btn-sm" id="tryW">Now you try <kbd class="opt-n">T</kbd></button>
+        <button class="btn btn-ghost btn-sm" id="againW">Show again <kbd class="opt-n">S</kbd></button>
+        <button class="btn btn-ghost btn-sm" id="moveW">Move on</button>`;
+      $("#againW").onclick = () => writer.animateCharacter();
+      $("#moveW").onclick = () => settle(item, ch, false, foot, null, -1);
+      $("#tryW").onclick = arm;
+    };
+
+    const arm = () => {
+      missed = 0;
+      writer.cancelQuiz();
+      writer.hideCharacter();
+      tools.innerHTML = `
+        ${padSupported() ? `<button class="btn btn-ghost btn-sm" id="padW"><span class="han">觸控</span> Trackpad <kbd class="opt-n">T</kbd></button>` : ""}
+        <button class="btn btn-ghost btn-sm" id="skipW">${peeked ? "Show me again" : "Show me the strokes"} <kbd class="opt-n">S</kbd></button>`;
+      bindPad();
+      const skip = $("#skipW", tools);
+      if (skip) skip.onclick = showStrokes;
+      autoPad();
+      writer.quiz({
+        showHintAfterMisses: 2,
+        leniency: state.writeLeniency,
+        onMistake: () => missed++,
+        onComplete: () => {
+          padStop();
+          say(chars[idx]);
+          totalMissed += missed;
+          if (idx === chars.length - 1) {
+            sayPhrase(w0[0]);
+            settle(item, ch, !anyPeeked && totalMissed <= allowed, foot, null, anyPeeked ? -1 : totalMissed);
+            return;
+          }
+          idx++;
+          peeked = false;
+          writer = makeWriter($("#" + wid, body), chars[idx], { showCharacter: false, showOutline: false });
+          if (writer) arm(); else settle(item, ch, false, foot, null, -1);
+        }
+      });
+    };
+
+    writer = makeWriter($("#" + wid, body), chars[0], { showCharacter: false, showOutline: false });
+    if (writer) arm(); else settle(item, ch, false, foot, null, -1);
+    return;
+  }
+
   /* --- build the word from tiles --- */
   if (kind === "a") {
     /* Every tile has to be a character you have actually learnt.
@@ -1525,7 +1633,7 @@ function renderDrill(item, ch, body, foot) {
        out of 笑, 完 and 便. Ninety-nine rounds in a hundred showed at least one
        character the learner had never seen, which makes the wrong answers
        noise rather than choices. */
-    const readable = ch.words.filter(x => cjkOf(x[0]).length > 1 && canRead(x[0]));
+    const readable = buildWords(ch);
     if (!readable.length) return renderDrill(Object.assign({}, item, { kind: "r" }), ch, body, foot);
     const w = one(readable);
     const target = [...w[0]];
@@ -1775,7 +1883,7 @@ function settle(item, ch, ok, foot, extra, slips) {
 }
 
 function grades(item, ch, ok, foot, extra, slips) {
-  const writing = item.kind === "w";
+  const writing = item.kind === "w" || item.kind === "x";
   const elapsed = session.qStart ? Date.now() - session.qStart : 0;
   const quick = ok && !writing && elapsed > 0 && elapsed <= QUICK_MS;
   if (elapsed > 0 && !writing) session.times.push(elapsed);
@@ -2668,6 +2776,7 @@ function startSquare(i) {
   w.cancelQuiz();
   w.quiz({
     showHintAfterMisses: 2,
+    leniency: state.writeLeniency,
     onComplete: () => {
       nb.done[i] = true;
       say(nb.chars[i]);
@@ -2757,7 +2866,42 @@ function renderNotebookPadState() {
    ============================================================ */
 
 const wp = { built: false, rows: 6, guide: null, pen: 6, cell: 84, strokes: [], cur: null,
-             sort: "day", find: "", brush: true, w: 6, n: 0 };
+             sort: "day", find: "", brush: true, w: 6, n: 0, penStyle: "pen" };
+
+/* Four looks for the same nib, layered on top of the brush-taper toggle
+   above rather than replacing it — brush/pencil/marker are all still
+   speed-tapered when 毛筆 brush is on, and flat when it's off. widthMul
+   scales the chosen nib size rather than replacing it, so "broad" and
+   "fine" both still mean something whichever style is picked. cap "square"
+   on the marker is what actually reads as a flat chisel tip; every other
+   style keeps the round cap ink already draws with. */
+const PEN_STYLES = {
+  pen:    { zh: "鋼筆",  name: "Pen",    alpha: 1,   widthMul: 1,    cap: "round" },
+  brush:  { zh: "毛筆",  name: "Brush",  alpha: .92, widthMul: 1.7,  cap: "round" },
+  pencil: { zh: "鉛筆",  name: "Pencil", alpha: .62, widthMul: .65,  cap: "round" },
+  marker: { zh: "馬克筆", name: "Marker", alpha: .4,  widthMul: 2.4,  cap: "square" }
+};
+
+const WP_COLS_DEFAULT = 6;
+
+/* A page's own shape, reconstructed from what it was saved at — not assumed
+   to be today's default, because a page started on the wide desktop canvas
+   may have laid out a different column count than a phone would choose. */
+const wpPageCols = page => Math.max(1, Math.round((page.w || WP_COLS_DEFAULT * wp.cell) / wp.cell));
+const wpPageCap = page => (page.rows || wp.rows) * wpPageCols(page);
+
+/* Today's page that still has room, or none — never a page from another
+   day, and never one already full. Guarded on typeof p.count === "number"
+   so a page saved before this mobile flow existed (no count field) is never
+   mistaken for one this flow can keep adding to. */
+async function wpTodayPage() {
+  const t = dayKey();
+  const mine = (await diaryAll())
+    .filter(p => p.date === t && typeof p.count === "number")
+    .sort((a, b) => a.id - b.id);
+  const open = mine.find(p => p.count < wpPageCap(p));
+  return { page: open || null, seq: mine.length + (open ? 0 : 1) };
+}
 
 /* ---------- the practice diary ----------
    Pages are stored as stroke vectors, not pictures: a densely filled page is
@@ -2806,7 +2950,8 @@ function buildWritePage() {
                already on the nav tab above. -->
           <div class="wp-title">
             <h1>Exercise book</h1>
-            <p class="note">A blank page. Nothing is checked here — fill it, scrawl on it, clear it and go again.</p>
+            <p class="note wp-note-desktop">A blank page. Nothing is checked here — fill it, scrawl on it, clear it and go again.</p>
+            <p class="note wp-note-mobile">Nothing is checked here. Write a character, tap Add to page, and the box clears for the next one.</p>
           </div>
           <div class="wp-tools">
             <label class="wp-field">Nib
@@ -2821,8 +2966,13 @@ function buildWritePage() {
             </label>
             <label class="wp-field wp-brush">
               <select id="wpNib">
-                <option value="brush" selected>毛筆 brush</option>
-                <option value="pen">原子筆 even</option>
+                <option value="brush" selected>Tapered</option>
+                <option value="pen">Even</option>
+              </select>
+            </label>
+            <label class="wp-field">Pen
+              <select id="wpStyle">
+                ${Object.entries(PEN_STYLES).map(([id, s]) => `<option value="${id}" ${id === wp.penStyle ? "selected" : ""}>${esc(s.zh)} ${esc(s.name)}</option>`).join("")}
               </select>
             </label>
             <label class="wp-field">Square
@@ -2846,6 +2996,37 @@ function buildWritePage() {
           <button class="btn btn-ghost btn-sm" id="wpMore">Add more rows</button>
           <span class="note" id="wpCount"></span>
         </div>
+        <!-- Mobile only (see the phone layer in css/app.css): one box, sized
+             the way a drill's writer-box already is, instead of a page a
+             finger can't fill a square at a time the way a trackpad can. Add
+             to page does the page-finding and square-placing that a free
+             canvas never needed — see wpmAdd. -->
+        <div class="wp-mobile">
+          <div class="wp-mobile-tools">
+            <label class="wp-field">Nib
+              <select id="wpmPen">
+                <option value="1.5">hairline</option>
+                <option value="2.5">extra fine</option>
+                <option value="4">fine</option>
+                <option value="6" selected>medium</option>
+                <option value="9">broad</option>
+                <option value="13">very broad</option>
+              </select>
+            </label>
+            <label class="wp-field">Pen
+              <select id="wpmStyle">
+                ${Object.entries(PEN_STYLES).map(([id, s]) => `<option value="${id}" ${id === wp.penStyle ? "selected" : ""}>${esc(s.zh)} ${esc(s.name)}</option>`).join("")}
+              </select>
+            </label>
+          </div>
+          <div class="writer-box"><div class="tian">${TIAN_SVG}<canvas id="wpmInk"></canvas></div></div>
+          <div class="wp-mobile-actions">
+            <button class="btn btn-seal" id="wpmAdd">Add to page</button>
+            ${padSupported() ? `<button class="btn btn-ghost btn-sm" id="wpmPad">觸控 Trackpad</button>` : ""}
+            <button class="btn btn-ghost btn-sm" id="wpmClear">Clear</button>
+          </div>
+        </div>
+        <p class="note wp-mobile-status" id="wpmStatus"></p>
         <div class="sheet wp-diary" id="wpDiary"></div>
         ${noteCard(["traditional"])}
       </div>
@@ -2859,9 +3040,15 @@ function buildWritePage() {
   wpSizePage();
   wpBindInk();
   wpAutoPad();
+  wpmSizeInk();
+  wpmBindInk();
 
-  $("#wpPen").onchange  = e => { wp.pen = +e.target.value; wpSetPen(); };
+  /* wp.pen and wp.penStyle are each one shared field, not one per surface —
+     see applyPenSettings, which keeps both selects and both canvases
+     showing the same thing whichever one just changed it. */
+  $("#wpPen").onchange  = e => { wp.pen = +e.target.value; applyPenSettings(); };
   $("#wpNib").onchange  = e => { wp.brush = e.target.value === "brush"; wpSetPen(); };
+  $("#wpStyle").onchange = e => { wp.penStyle = e.target.value; applyPenSettings(); };
   /* Bigger squares mean fewer of them, so the ink has to be repainted at the
      new geometry rather than left where the old grid put it. */
   $("#wpSquare").onchange = e => {
@@ -2873,7 +3060,12 @@ function buildWritePage() {
   $("#wpSave").onclick  = () => wpSave();
   $("#wpPad")?.addEventListener("click", () => wpPad());
   $("#wpMore").onclick  = () => { wp.rows += 4; wpSizePage(); };
-  addEventListener("resize", wpSizePage);
+  $("#wpmPen").onchange = e => { wp.pen = +e.target.value; applyPenSettings(); };
+  $("#wpmStyle").onchange = e => { wp.penStyle = e.target.value; applyPenSettings(); };
+  $("#wpmAdd").onclick  = () => wpmAdd();
+  $("#wpmClear").onclick = () => wpmClear();
+  $("#wpmPad")?.addEventListener("click", () => wpmPad());
+  addEventListener("resize", () => { wpSizePage(); wpmSizeInk(); });
   wpDiary();
 }
 
@@ -3044,15 +3236,46 @@ function wpSizeInk() {
   const ctx = c.getContext("2d");
   ctx.scale(dpr, dpr);
   wpSetPen();
-  if (keep) ctx.drawImage(keep, 0, 0, keep.width / dpr, keep.height / dpr);
+  if (keep) {
+    /* wpSetPen just set globalAlpha to the current style's — a translucent
+       style would otherwise make the already-drawn ink a little more
+       transparent on top of itself with every resize. Blit the preserved
+       page at full alpha, then restore the pen's actual alpha after. */
+    const a = ctx.globalAlpha;
+    ctx.globalAlpha = 1;
+    ctx.drawImage(keep, 0, 0, keep.width / dpr, keep.height / dpr);
+    ctx.globalAlpha = a;
+  }
+}
+
+/* Shared by the desktop canvas and the mobile box, so nib and style read the
+   same on whichever one happens to be open — see wp.pen/wp.penStyle. */
+function applyPenTo(ctx) {
+  const s = PEN_STYLES[wp.penStyle] || PEN_STYLES.pen;
+  /* the baseline width for a canvas with no per-segment sizing of its own
+     (the mobile box, and the desktop canvas before its first stroke) —
+     wpWidth overrides this per segment once brush-taper strokes are drawn */
+  ctx.lineWidth = wp.pen * s.widthMul;
+  ctx.lineCap = s.cap; ctx.lineJoin = s.cap === "square" ? "miter" : "round";
+  ctx.globalAlpha = s.alpha;
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#17211E";
 }
 
 function wpSetPen() {
   const c = $("#wpInk");
   if (!c) return;
-  const ctx = c.getContext("2d");
-  ctx.lineWidth = wp.pen; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#17211E";
+  applyPenTo(c.getContext("2d"));
+}
+
+/* Both selects (desktop and mobile) and both canvases move together, so
+   whichever one you weren't just looking at is still correct when it next
+   shows — see the phone layer's swap that hides one and shows the other. */
+function applyPenSettings() {
+  wpSetPen();
+  wpmSetPen();
+  const pen = String(wp.pen), style = wp.penStyle;
+  [$("#wpPen"), $("#wpmPen")].forEach(el => { if (el) el.value = pen; });
+  [$("#wpStyle"), $("#wpmStyle")].forEach(el => { if (el) el.value = style; });
 }
 
 /* ---------- the nib ----------
@@ -3076,10 +3299,12 @@ const BRUSH_EASE = 0.28;   /* how fast the width chases the speed, 0..1 */
 const BRUSH_TIP = 4;       /* points over which 落筆 comes up to full width */
 
 function wpWidth(dist, first) {
-  if (!wp.brush) return wp.pen;
+  const mul = (PEN_STYLES[wp.penStyle] || PEN_STYLES.pen).widthMul;
+  const pen = wp.pen * mul;
+  if (!wp.brush) return pen;
   const fast = Math.min(1, dist / BRUSH_FAST);
-  const target = wp.pen * (BRUSH_FAT + (BRUSH_THIN - BRUSH_FAT) * fast);
-  wp.w = first ? wp.pen * 0.5 : wp.w + (target - wp.w) * BRUSH_EASE;
+  const target = pen * (BRUSH_FAT + (BRUSH_THIN - BRUSH_FAT) * fast);
+  wp.w = first ? pen * 0.5 : wp.w + (target - wp.w) * BRUSH_EASE;
   /* 落筆: the tip lands and spreads over the first few points */
   const tip = Math.min(1, (wp.n + 1) / BRUSH_TIP);
   return Math.max(0.6, wp.w * (0.45 + 0.55 * tip));
@@ -3109,14 +3334,18 @@ function wpDraw(type, x, y) {
   } else if (type === "mouseup") {
     wp.cur = null;
     wp.n = 0;
-    ctx.lineWidth = wp.pen;
+    ctx.lineWidth = wp.pen * (PEN_STYLES[wp.penStyle] || PEN_STYLES.pen).widthMul;
   }
 }
 
 /* Repaint a page from its vectors — used when loading from the diary. */
+/* Cap and join are the caller's to set now — the caller has its own pen
+   state (wpLoad just ran applyPenTo; the diary thumbnails have no state of
+   their own to inherit and set the round cap explicitly for exactly that
+   reason) and this function used to overwrite it unconditionally, which
+   meant a marker's square cap never survived a reload. */
 function wpPaint(strokes, ctx, scale) {
   ctx.save();
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
   const flat = ctx.lineWidth;
   strokes.forEach(pts => {
     if (!pts.length) return;
@@ -3217,6 +3446,7 @@ function wpClear() {
 function wpReset() {
   if (!wp.built) return;
   wpClear();
+  wpmClear();
   wpDiary();
 }
 
@@ -3241,6 +3471,121 @@ function wpPad() {
 
 function wpAutoPad() {
   if (padAuto($("#wpPage"), null, wpControls, wpDraw)) setTimeout(wpControls, 50);
+}
+
+/* ---------- the mobile box ----------
+
+   One character's ink at a time, captured the same way the desktop canvas
+   captures its whole page — pointer events turned into point paths — except
+   there is nothing to load or resume here: the box always starts empty, and
+   Add to page is the only thing that ever empties it again. No brush taper
+   either (contrast wpDraw's [x,y,width] points) — flat width only, which is
+   the steadier thing to capture off a touchscreen. */
+const wpm = { strokes: [], cur: null };
+
+function wpmSizeInk() {
+  const c = $("#wpmInk"), tian = c && c.closest(".tian");
+  if (!c || !tian) return;
+  const dpr = wpDPR(), w = tian.clientWidth, h = tian.clientHeight;
+  if (!w || !h) return;                     /* hidden tab, or the desktop layer is the one showing */
+  if (c.width === w * dpr && c.height === h * dpr) return;
+  c.width = w * dpr; c.height = h * dpr;
+  c.getContext("2d").scale(dpr, dpr);
+  wpmSetPen();
+}
+
+function wpmSetPen() {
+  const c = $("#wpmInk");
+  if (!c) return;
+  applyPenTo(c.getContext("2d"));
+}
+
+function wpmDraw(type, x, y) {
+  const c = $("#wpmInk");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  if (type === "mousedown") {
+    ctx.beginPath(); ctx.moveTo(x, y);
+    wpm.cur = [[Math.round(x), Math.round(y)]];
+    wpm.strokes.push(wpm.cur);
+  } else if (type === "mousemove" && wpm.cur) {
+    ctx.lineTo(x, y); ctx.stroke();
+    wpm.cur.push([Math.round(x), Math.round(y)]);
+  } else if (type === "mouseup") {
+    wpm.cur = null;
+  }
+}
+
+function wpmBindInk() {
+  const c = $("#wpmInk");
+  if (!c || c.dataset.bound) return;
+  c.dataset.bound = "1";
+  let drawing = false;
+  const at = e => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  c.addEventListener("pointerdown", e => {
+    if (pad.active) return;
+    drawing = true; const p = at(e); wpmDraw("mousedown", p.x, p.y);
+    c.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  c.addEventListener("pointermove", e => { if (drawing && !pad.active) { const p = at(e); wpmDraw("mousemove", p.x, p.y); } });
+  c.addEventListener("pointerup", () => { if (drawing) wpmDraw("mouseup"); drawing = false; });
+  c.addEventListener("pointercancel", () => { if (drawing) wpmDraw("mouseup"); drawing = false; });
+}
+
+function wpmClear() {
+  const c = $("#wpmInk");
+  if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height);
+  wpm.strokes = []; wpm.cur = null;
+}
+
+function wpmControls() {
+  const b = $("#wpmPad");
+  if (b) { b.innerHTML = pad.active ? "觸控 Trackpad on" : "觸控 Trackpad"; b.classList.toggle("on", pad.active); }
+}
+
+function wpmPad() {
+  if (pad.active) { padStop(); wpmControls(); return; }
+  const tian = $("#wpmInk")?.closest(".tian");
+  if (tian && padStart(tian, null, wpmControls, wpmDraw)) setTimeout(wpmControls, 50);
+}
+
+/* Add to page: find or start today's page, work out which square is next,
+   move this box's ink onto it at that square's position, and save the whole
+   page back — the same record wpSave writes, just grown by one square
+   instead of replaced. wp.cell is the fixed size a square is recorded at
+   regardless of how big the box is drawn on screen, so the only conversion
+   needed is the scale between this box's actual pixels and that. */
+async function wpmAdd() {
+  if (!wpm.strokes.length) return;
+  const tian = $("#wpmInk")?.closest(".tian");
+  const boxPx = tian ? tian.clientWidth : wp.cell;
+  const { page: existing, seq } = await wpTodayPage();
+  const page = existing || {
+    id: Date.now(), date: dayKey(), rows: wp.rows,
+    w: WP_COLS_DEFAULT * wp.cell, h: wp.rows * wp.cell,
+    guide: null, strokes: [], count: 0
+  };
+  const cols = wpPageCols(page);
+  const idx = page.count || 0;
+  const col = idx % cols, row = Math.floor(idx / cols);
+  const scale = wp.cell / boxPx;
+  const placed = wpm.strokes.map(pts => pts.map(([x, y]) => [
+    Math.round(col * wp.cell + x * scale), Math.round(row * wp.cell + y * scale)
+  ]));
+  page.strokes = [...(page.strokes || []), ...placed];
+  page.count = idx + 1;
+  await diaryPut(page);
+  wpmClear();
+  wpmStatus(page, existing ? seq || 1 : seq);
+  wpDiary();
+}
+
+function wpmStatus(page, seq) {
+  const el = $("#wpmStatus");
+  if (!el) return;
+  const cap = wpPageCap(page);
+  const full = page.count >= cap;
+  el.textContent = `Page ${seq || 1} today · ${page.count} of ${cap} squares${full ? " · full, next one starts a new page" : ""}`;
 }
 
 async function wpSave() {
@@ -3296,7 +3641,7 @@ async function wpDiary() {
   const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#17211E";
   $$("#wpDiary .diary-thumb").forEach((b, i) => {
     const cv = b.querySelector("canvas"), ctx = cv.getContext("2d");
-    ctx.strokeStyle = ink; ctx.lineWidth = 1.6;
+    ctx.strokeStyle = ink; ctx.lineWidth = 1.6; ctx.lineCap = "round"; ctx.lineJoin = "round";
     wpPaint(all[i].strokes, ctx, cv.width / (all[i].w || 1));
     b.onclick = () => wpLoad(all[i].id);
   });
@@ -5045,11 +5390,56 @@ function renderTones() {
 
 /* ---------- record ---------- */
 
+/* Eight weeks of activity, as a plain SVG bar chart — same idiom as ringSvg
+   above: a template string, no charting library, CSS variables for colour.
+   Total answers per week, not a per-character breakdown; charWeeks keeps
+   the per-character detail for weaknessesHtml below. */
+function weeklyRepsChartHtml() {
+  const weeks = charWeekTrend(8);
+  const max = Math.max(1, ...weeks.map(w => w.seen));
+  const W = 280, H = 60, gap = 4;
+  const barW = (W - gap * (weeks.length - 1)) / weeks.length;
+  const bars = weeks.map((w, i) => {
+    const h = w.seen ? Math.max(2, Math.round((w.seen / max) * (H - 2))) : 0;
+    const x = i * (barW + gap), y = H - h;
+    return `<rect class="wk-bar ${i === weeks.length - 1 ? "cur" : ""}"
+      x="${x.toFixed(1)}" y="${y}" width="${barW.toFixed(1)}" height="${h}" rx="2">
+      <title>${esc(w.week)}: ${w.seen} answer${w.seen === 1 ? "" : "s"}${w.chars ? ` across ${w.chars} character${w.chars === 1 ? "" : "s"}` : ""}</title>
+    </rect>`;
+  }).join("");
+  const total = weeks.reduce((a, w) => a + w.seen, 0);
+  return `<div class="stack" style="gap:.5rem">
+    <span class="eyebrow">Weekly ${hanLabel("每週")}</span>
+    <svg viewBox="0 0 ${W} ${H}" class="wk-chart" preserveAspectRatio="none">${bars}</svg>
+    <p class="note">${total ? `${total} answer${total === 1 ? "" : "s"} over the last ${weeks.length} weeks.`
+      : "Nothing yet — this fills in as the weeks go by."}</p>
+  </div>`;
+}
+
+/* "Reads fine, writes badly" is the shape weaknessReport finds: a character
+   solid on one skill and shaky on another. SKILL_NAME is the same four
+   labels the Skills section above already uses, so the two read as one
+   vocabulary rather than two different ways of naming the same thing. */
+const SKILL_NAME = { p: "hearing", r: "recognising", c: "recall", w: "writing" };
+
+function weaknessesHtml() {
+  const items = weaknessReport(8);
+  if (!items.length) return "";
+  return `<div class="stack" style="gap:.6rem">
+    <span class="eyebrow">Uneven skills ${hanLabel("落後")}</span>
+    <p class="note">Solid on one skill, shaky on another — the same repetition that built the strong one won't
+      by itself fix the weak one, since a different skill is what's actually being asked for.</p>
+    <div class="leech-list">${items.map(it => `<button class="leech" data-c="${esc(it.c)}">
+      <span class="z">${esc(it.c)}</span><span class="n">${esc(SKILL_NAME[it.worst])}</span> lags</button>`).join("")}</div>
+  </div>`;
+}
+
 function renderRecord() {
   const known = Object.keys(state.chars).length;
   const strong = Object.keys(state.chars).filter(c => strength(c) === "strong").length;
   const totalCards = Object.values(state.days).reduce((a, d) => a + d.new + d.rev, 0);
   const activeDays = Object.keys(state.days).length;
+  const weaknesses = weaknessesHtml();
   /* Sound first: hearing and saying lead, because that is the order Cantonese
      is actually acquired in and the order this app teaches. */
   const skills = [["聽","Hear it","p"],["認","Recognise","r"],["寫","Recall the form","c"],["筆","Write from memory","w"]];
@@ -5165,6 +5555,9 @@ function renderRecord() {
           </div>
         </div>
 
+        <div class="sheet" style="padding:1rem">${weeklyRepsChartHtml()}</div>
+        ${weaknesses ? `<div class="sheet" style="padding:1rem">${weaknesses}</div>` : ""}
+
       </div>
     </div>
   </div>`;
@@ -5219,6 +5612,13 @@ function openSettings() {
         <div class="settings-row">
           <label>Include writing drills<small>Trace from memory once a character is solid.</small></label>
           <button class="btn btn-ghost btn-sm" id="writeTgl">${state.writeDrills ? "On" : "Off"}</button>
+        </div>
+        <div class="settings-row stacked">
+          <label>Writing strictness<small id="leniencyLabel">${LENIENCY_LEVELS.find(l => l.v === state.writeLeniency)?.label
+            || LENIENCY_LEVELS[2].label}</small></label>
+          <input type="range" id="leniencySlider" min="0" max="${LENIENCY_LEVELS.length - 1}" step="1"
+            value="${Math.max(0, LENIENCY_LEVELS.findIndex(l => l.v === state.writeLeniency))}"
+            aria-label="Writing strictness">
         </div>
         <div class="settings-row">
           <label>Answer buttons<small>One row matches the keyboard, where 1-2-3-4 runs left to right.
@@ -5343,6 +5743,12 @@ function openSettings() {
   });
   $("#timerTgl").onclick = () => { state.timer = !state.timer; save(); openSettings(); };
   $("#writeTgl").onclick = () => { state.writeDrills = !state.writeDrills; save(); openSettings(); };
+  $("#leniencySlider").oninput = e => {
+    const lvl = LENIENCY_LEVELS[+e.target.value] || LENIENCY_LEVELS[2];
+    state.writeLeniency = lvl.v;
+    $("#leniencyLabel").textContent = lvl.label;
+    save();
+  };
   $$("#optColsPick button").forEach(b => b.onclick = () => {
     state.optCols = b.dataset.oc; save(); applyOptCols(); openSettings();
   });
