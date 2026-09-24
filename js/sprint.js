@@ -59,7 +59,15 @@ const WRITE_STYLES = {
   type: { zh: "打字", name: "Type it", key: "type",
           blurb: "Type the pinyin, pick the character — how Chinese is actually written on a phone.",
           tip: "Type it, then pick it", par: 4.6 },
-  spot: { zh: "辨形", name: "Spot it", key: "spot",
+  /* Disabled for now, not removed — hidden is a comment, so `hidden: true`
+     is what sprintPanelHtml's "How" row filters on, and it stays a real
+     entry in this table so grading, past sheets with this style, and
+     sprintPar/STYLE_OF lookups all still work if it comes back. Turned off
+     because it overlaps too much with the Reading sprint: both boil down to
+     "look at a character, pick it out of a few that share its shape or
+     sound," and running them as separate sprint modes was diluting one
+     skill across two menu entries rather than actually testing two. */
+  spot: { zh: "辨形", name: "Spot it", key: "spot", hidden: true,
           blurb: "Pick it out of six look-alikes that share its parts.",
           tip: "One of six look-alikes", par: 3.0 },
   write: { zh: "手寫", name: "Write it", key: "write",
@@ -69,16 +77,17 @@ const WRITE_STYLES = {
 
 /* Two ways to hand in a tile: the row, or the wheel. The wheel is the
    ergonomic pitch — a thumb resting near the middle of the screen doesn't
-   have to travel out to whichever corner a tile landed in, it just leans
-   the direction of the one it wants — so it earns a slightly longer par
-   than the row it's standing in for. */
+   have to travel far to whichever character it wants next, and the whole
+   word can be laid down in one continuous motion instead of four separate
+   taps — so it earns a slightly longer par than the row it's standing in
+   for. */
 const ASSEMBLE_STYLES = {
   tap:    { zh: "格仔", name: "Grid", key: "tap",
             blurb: "Tap the tiles in a row, in order.",
             tip: "Tap in a row", par: 5.4 },
-  radial: { zh: "轉揀", name: "Radial", key: "radial",
-            blurb: "Swipe out from the centre toward the character you want — pulling back to the middle before letting go cancels the pick.",
-            tip: "Swipe out to pick", par: 6.2 }
+  radial: { zh: "連線", name: "Connect", key: "radial",
+            blurb: "Press the character you think comes first, then drag through the rest without lifting your finger.",
+            tip: "Press, then drag through", par: 6.2 }
 };
 
 /* Which style table a mode's `style` field is drawn from — the two lookups
@@ -431,7 +440,6 @@ function sprintRenderQ() {
       sp.filled.push(c);
       if (sp.filled.length === target.length) {
         $$(radial ? ".radial-opt" : ".tile", body).forEach(x => x.disabled = true);
-        if (radial) { const hub = $(".radial-hub", body); if (hub) hub.disabled = true; }
         sprintAnswer(sp.filled.join(""));
       }
     };
@@ -567,18 +575,18 @@ function sprintCandidates() {
 
 /* ---------- the radial input style ----------
 
-   A pie/marking-menu gesture: press the hub, drag outward, and the
-   direction — not any particular thing under the finger — decides which
-   option fires. Letting the drag settle back inside the dead zone before
-   release cancels it, so aiming can be corrected without spending a tile
-   the way a mis-tap on the grid always does. */
+   Connect the dots: press whichever character you think comes first, then
+   — the same unbroken gesture, finger never lifting — drag through the
+   rest in the order they belong. Touching a dot is the pick, the same
+   instant a tap would be on the grid: there is no separate confirm step
+   and no way to back out of one once the finger has crossed it, matching
+   how a wrong tap on the grid already spends a slot rather than being
+   forgiving about it. */
 
 function sprintRadialHtml(tiles) {
   const n = tiles.length;
   return `<div class="radial-wheel">
     <div class="radial-ring" aria-hidden="true"></div>
-    <div class="radial-needle" aria-hidden="true"></div>
-    <button class="radial-hub" aria-label="Press and drag outward toward the character you want"></button>
     ${tiles.map((c, i) => {
       const ang = Math.round((360 / n) * i - 90);
       return `<button class="radial-opt" data-c="${esc(c)}" data-i="${i}" data-ang="${ang}" style="--ang:${ang}deg">${esc(c)}</button>`;
@@ -586,80 +594,77 @@ function sprintRadialHtml(tiles) {
   </div>`;
 }
 
-/* How far out, as a fraction of the wheel's own radius, a drag has to reach
-   before a direction counts as aimed rather than still hovering near the
-   hub it started from. */
-const RADIAL_DEAD_ZONE = 0.4;
-
 function sprintBindRadial(body, onPick) {
   const wheel = $(".radial-wheel", body);
-  const hub = $(".radial-hub", body);
-  const needle = $(".radial-needle", body);
-  const firstOpt = $(".radial-opt", wheel);
-  if (!wheel || !hub || !firstOpt) return;
-  /* --r is set in rem, and getComputedStyle never resolves a custom
-     property's unit the way it resolves an ordinary one — reading it back
-     as a number silently drops the "rem" and undersizes everything that
-     follows by ~16x. Measuring the real gap between the hub and a rendered
-     option is unit-agnostic and stays correct if the CSS radius ever
-     changes (see the #sprintRun override for the phone-sized wheel). */
-  const hr0 = hub.getBoundingClientRect(), or0 = firstOpt.getBoundingClientRect();
-  const r = Math.hypot((or0.left + or0.width / 2) - (hr0.left + hr0.width / 2),
-                        (or0.top + or0.height / 2) - (hr0.top + hr0.height / 2)) || 90;
-  const selectAt = r * RADIAL_DEAD_ZONE;
-  let armed = null, pid = null;
-
+  if (!wheel) return;
   const live = () => $$(".radial-opt", wheel).filter(b => !b.disabled);
-  const setArmed = b => {
-    if (armed === b) return;
-    if (armed) armed.classList.remove("armed");
-    armed = b;
-    if (armed) armed.classList.add("armed");
+  /* A dot's centre in coordinates relative to the wheel itself — the same
+     space every connecting line is drawn in below. */
+  const centre = b => {
+    const wr = wheel.getBoundingClientRect(), r = b.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - wr.left, y: r.top + r.height / 2 - wr.top };
   };
-  /* Shortest signed distance around the circle between two angles, so an
-     option at -170° still reads as close to a drag at 175°. */
-  const nearest = angleDeg => {
-    let best = null, bestDiff = Infinity;
+  /* Which dot, if any, the finger is currently over — a bit more forgiving
+     than the dot's own edge, since the point of a physical dot is not to
+     demand a pixel-perfect touch on something the size of a fingertip. */
+  const hitTest = (x, y) => {
+    let best = null, bestD = Infinity;
     live().forEach(b => {
-      const diff = Math.abs(((angleDeg - (+b.dataset.ang) + 540) % 360) - 180);
-      if (diff < bestDiff) { bestDiff = diff; best = b; }
+      const c = centre(b), r = b.getBoundingClientRect();
+      const d = Math.hypot(x - c.x, y - c.y);
+      if (d <= r.width * 0.65 && d < bestD) { bestD = d; best = b; }
     });
     return best;
   };
-  const relativeTo = e => {
-    const hr = hub.getBoundingClientRect();
-    return { dx: e.clientX - (hr.left + hr.width / 2), dy: e.clientY - (hr.top + hr.height / 2) };
+  /* One div per confirmed segment, positioned and rotated like the old
+     needle was — left/top at the start point, width the distance to the
+     end, rotate to the angle between them. */
+  const segment = (a, b, cls) => {
+    const el = document.createElement("div");
+    el.className = "radial-line" + (cls ? " " + cls : "");
+    const dx = b.x - a.x, dy = b.y - a.y;
+    el.style.left = a.x + "px";
+    el.style.top = (a.y - 1.5) + "px";
+    el.style.width = Math.hypot(dx, dy) + "px";
+    el.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
+    wheel.appendChild(el);
+    return el;
   };
 
-  hub.addEventListener("pointerdown", e => {
-    if (hub.disabled) return;
-    pid = e.pointerId;
-    hub.setPointerCapture(pid);
-    needle.style.opacity = "1";
+  let pid = null, from = null, liveLine = null;
+
+  const pick = b => {
+    const pt = centre(b);
+    if (from) segment(from, pt);
+    b.disabled = true; b.classList.add("used");
+    from = pt;
+    onPick(b.dataset.c);
+  };
+
+  wheel.addEventListener("pointerdown", e => {
+    const b = e.target.closest(".radial-opt");
+    if (!b || b.disabled) return;
+    pid = e.pointerId; from = null;
+    wheel.setPointerCapture(pid);
+    pick(b);
     e.preventDefault();
   });
-  hub.addEventListener("pointermove", e => {
-    if (pid === null || e.pointerId !== pid) return;
-    const { dx, dy } = relativeTo(e);
-    const mag = Math.hypot(dx, dy);
-    const ang = Math.atan2(dy, dx) * 180 / Math.PI;
-    needle.style.transform = `rotate(${ang}deg) scaleX(${Math.min(mag, r) / r})`;
-    setArmed(mag > selectAt ? nearest(ang) : null);
+  wheel.addEventListener("pointermove", e => {
+    if (pid === null || e.pointerId !== pid || !from) return;
+    const wr = wheel.getBoundingClientRect();
+    const cur = { x: e.clientX - wr.left, y: e.clientY - wr.top };
+    if (liveLine) liveLine.remove();
+    liveLine = segment(from, cur, "live");
+    const hit = hitTest(cur.x, cur.y);
+    if (hit) pick(hit);
   });
   const release = e => {
     if (pid === null || (e && e.pointerId !== pid)) return;
     pid = null;
-    needle.style.opacity = "0";
-    needle.style.transform = "scaleX(0)";
-    if (armed) {
-      const b = armed;
-      setArmed(null);
-      b.disabled = true; b.classList.add("used");
-      onPick(b.dataset.c);
-    }
+    if (liveLine) { liveLine.remove(); liveLine = null; }
   };
-  hub.addEventListener("pointerup", release);
-  hub.addEventListener("pointercancel", release);
+  wheel.addEventListener("pointerup", release);
+  wheel.addEventListener("pointercancel", release);
 }
 
 function sprintTypeKey(e) {
@@ -885,7 +890,11 @@ function renderSprint() {
 function sprintPick(mode) {
   const held = sprintState().pick[mode];
   const p = { n: 40, secs: 120, style: mode === "w" ? "type" : mode === "a" ? "tap" : null, tiles: 5, ...(held || {}) };
-  if (mode === "w" && !WRITE_STYLES[p.style]) p.style = "type";
+  /* A style hidden from the "How" row (see WRITE_STYLES.spot) is treated
+     the same as one that no longer exists — nobody can land on it fresh,
+     and a sheet held from before it was hidden quietly falls back rather
+     than opening on a chip that isn't there to show as selected. */
+  if (mode === "w" && (!WRITE_STYLES[p.style] || WRITE_STYLES[p.style].hidden)) p.style = "type";
   if (mode === "a" && !ASSEMBLE_STYLES[p.style]) p.style = "tap";
   if (mode !== "w" && mode !== "a") p.style = null;
   p.tiles = mode === "a" ? Math.max(SPRINT_TILES[0], Math.min(SPRINT_TILES[SPRINT_TILES.length - 1], p.tiles)) : null;
@@ -918,7 +927,7 @@ function sprintPanelHtml(mode, short) {
       ${silent ? `<p class="note sp-warn">Sound is off — turn it back on in Settings, or this mode has nothing to play.</p>` : ""}
       ${mode === "w" ? `<div class="sp-row sp-row-wide">
         <span class="sp-row-lbl">How</span>
-        <div class="sp-chips">${Object.values(WRITE_STYLES).map(s => `<button class="sp-chip wide ${p.style === s.key ? "on" : ""}" data-sp-set="w:style:${s.key}">
+        <div class="sp-chips">${Object.values(WRITE_STYLES).filter(s => !s.hidden).map(s => `<button class="sp-chip wide ${p.style === s.key ? "on" : ""}" data-sp-set="w:style:${s.key}">
           <span class="han">${esc(s.zh)}</span> ${esc(s.name)}</button>`).join("")}</div>
         <span class="sp-row-tip">${esc(WRITE_STYLES[p.style].tip)}</span>
       </div>` : ""}
