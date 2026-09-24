@@ -1612,8 +1612,13 @@ function renderDrill(item, ch, body, foot) {
           }
           idx++;
           peeked = false;
-          writer = makeWriter($("#" + wid, body), chars[idx], { showCharacter: false, showOutline: false });
-          if (writer) arm(); else settle(item, ch, false, foot, null, -1);
+          /* setCharacter, not a second makeWriter on the same mount — the
+             mount already has the first character's writer/SVG in it, and
+             HanziWriter.create() on a non-empty element is what left the
+             box showing only the first character with nothing happening
+             after it completed. setCharacter swaps the character in the
+             existing instance instead. */
+          writer.setCharacter(chars[idx]).then(arm);
         }
       });
     };
@@ -6894,7 +6899,13 @@ function go(v) {
    because it depends on two things — the setting and the width — and CSS can
    only ask about one of them at a time. The stylesheet reads the result off
    data-opt-cols and never has to know how it was arrived at. */
-const OPT_ROW_MIN = 820;        /* the width four options need to stay legible */
+/* The same 860px line every other mobile/desktop split in this app uses
+   (see the @media (min-width: 860px) blocks in css/app.css) — this used to
+   be its own number, 820, which meant a window between 820 and 860 got a
+   four-across row from here while the stylesheet's own mobile layer, still
+   active up to 859.98px, was laying out everything else as if it were a
+   phone. */
+const OPT_ROW_MIN = 860;
 const optColsMQ = matchMedia(`(min-width: ${OPT_ROW_MIN}px)`);
 
 function optColsEffective() {
@@ -6958,7 +6969,10 @@ function renderStreakChip() {
     chip.innerHTML = `🔥 ${s}`;
     chip.title = s ? `${s} day streak · best ${state.streak.best}` : "No streak yet — study today to start one";
   });
-  const stale = backupStale();
+  /* Signed in to sync, the record is already leaving this device on its own
+     — nagging for a manual file backup on top of that is the wrong kind of
+     careful. The dot is for the person with no other copy anywhere. */
+  const stale = sync.status !== "in" && backupStale();
   $$(".save-btn").forEach(b => {
     b.classList.toggle("nudge", stale);
     b.title = state.lastBackup
@@ -7145,7 +7159,7 @@ function boot() {
      something in; sync.js calls onSyncChange when the signed-in state moves,
      which only Settings is showing. */
   onRemoteChange = renderAll;
-  onSyncChange = () => { if ($("#syncRow")) openSettings(); };
+  onSyncChange = () => { renderStreakChip(); if ($("#syncRow")) openSettings(); };
   connectRemote().then(changed => { if (changed) renderAll(); });
   syncInit();
 }

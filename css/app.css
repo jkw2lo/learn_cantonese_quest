@@ -1697,11 +1697,21 @@ input[type="file"].search { padding: .5rem; font-size: .8rem; }
    setting against the window and writes the answer here, and the base rule
    above holds two-up until it has. See optColsEffective.
 
+   Covers plain .opts (meaning/English options — kinds r and d) as well as
+   .opts.grid2 (glyph options) — it used to be grid2-only, which is why a
+   meaning question stayed a single stacked column no matter what the
+   setting said: nothing here was ever listening for it.
+
    minmax(0,…) so a column may shrink below its content rather than pushing
    the row wider than the prompt card above it. */
+:root[data-opt-cols="row"] .opts,
 :root[data-opt-cols="row"] .opts.grid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 :root[data-opt-cols="row"] .opts.grid2 .opt { padding-left: 1.4rem; padding-right: 1.4rem; min-height: 5.2rem; }
 :root[data-opt-cols="row"] .opts.grid2 .opt .big { font-size: 2.8rem; }
+/* the .grid2 default below already gives glyph options two-up; a meaning
+   question has no such default (display:grid with no columns is one column,
+   see .opts above) and needs it stated the same way here */
+:root[data-opt-cols="grid"] .opts { grid-template-columns: 1fr 1fr; }
 
 /* ---------- question timer ---------- */
 
@@ -2305,6 +2315,7 @@ button.tier-head:hover { border-color: var(--ink-3); }
 .sp-board.best .sp-board-k, .sp-board-row.best .sp-board-k { color: var(--seal); }
 .sp-board-body { display: flex; flex-direction: column; gap: .05rem; flex: 1; min-width: 0; }
 .sp-board-body b { font-size: .88rem; font-variant-numeric: tabular-nums; }
+.sp-board-status { font-size: .7rem; font-weight: 400; color: var(--ink-3); margin-left: .35rem; }
 .sp-board-body small { font-size: .7rem; color: var(--ink-3); }
 .sp-board-star { color: var(--gold); font-size: .85rem; flex: none; }
 
@@ -3046,6 +3057,10 @@ button.tier-head:hover { border-color: var(--ink-3); }
 /* the same choice as the study drills, read off the same attribute */
 :root[data-opt-cols="row"] .sp-opts,
 :root[data-opt-cols="row"] .sp-opts.grid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* .sp-opts.grid2 already defaults two-up (below); a meaning question (plain
+   .sp-opts, mode r) has no default at all — display:grid with no columns is
+   one column — and needs it stated the same way as the drill side does */
+:root[data-opt-cols="grid"] .sp-opts { grid-template-columns: 1fr 1fr; }
 :root[data-opt-cols="row"] .sp-opts .sp-opt {
   flex-direction: column; justify-content: center; align-items: center;
   text-align: center; gap: .3rem; padding: .85rem .5rem .7rem;
@@ -3648,12 +3663,12 @@ button.tier-head:hover { border-color: var(--ink-3); }
   /* One shape for the whole session.
 
      .grid2 is set by the drill kind — character options get it, meaning and
-     reading options do not — so a single sitting gave you Recognise as a list,
-     Read in context as a list and Hear as a 2 x 2. Three tasks, three shapes,
-     none of them chosen. On a phone the answer layout is a setting, so it
-     governs all four kinds and a meaning simply wraps inside its box. */
-  :root[data-opt-cols="grid"] .opts { grid-template-columns: 1fr 1fr; }
-  :root[data-opt-cols="row"] .opts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+     reading options do not — so a single sitting used to give you Recognise
+     as a list, Read in context as a list and Hear as a 2 x 2: three tasks,
+     three shapes, none of them chosen. The answer layout is a setting now,
+     governing all four kinds everywhere (the column-count rules themselves
+     moved up to the base stylesheet, next to .opts.grid2's own), and a
+     meaning simply wraps inside its box here. */
   .opts .opt { position: relative; justify-content: center; text-align: center; }
   .opts:not(.grid2) .opt { font-size: .95rem; line-height: 1.32; padding: .8rem .6rem; }
   .opts .opt-n { position: absolute; top: .4rem; left: .4rem; }

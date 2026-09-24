@@ -43,8 +43,13 @@ const SPRINT = {
        par: 5.4 }
 };
 
-/* Both are production — you are handed a meaning and have to come back with
-   a character — and neither asks you to draw a stroke.
+/* Type and Spot are both production without a stroke — you're handed a
+   meaning and have to come back with a character, but never draw one. Write
+   is the exception: the same trackpad-or-finger writer box the daily drill
+   uses, for whoever wants a writing sprint that's actually about writing.
+   It was left out on the first pass because handwriting is slow and a
+   sprint is supposed to be fast — true, but that's a reason to let someone
+   choose it, at their own pace, not a reason to make the choice for them.
    `blurb` is the sentence, `tip` is the same thing at the width of a line
    that has two buttons in front of it — the row reads left to right (what
    the choice is, the choice, what you just chose), so the tip has to finish
@@ -56,7 +61,10 @@ const WRITE_STYLES = {
           tip: "Type it, then pick it", par: 4.6 },
   spot: { zh: "辨形", name: "Spot it", key: "spot",
           blurb: "Pick it out of six look-alikes that share its parts.",
-          tip: "One of six look-alikes", par: 3.0 }
+          tip: "One of six look-alikes", par: 3.0 },
+  write: { zh: "手寫", name: "Write it", key: "write",
+           blurb: "Draw it from memory in the box, trackpad or finger — slower, but it's the real thing.",
+           tip: "By hand, at your pace", par: 9.5 }
 };
 
 const SPRINT_MINUTES = [1, 2, 3, 5];
@@ -184,7 +192,7 @@ function sprintQuestion(c, mode, style, known) {
   return q;
 }
 
-function sprintPool(mode) {
+function sprintPool(mode, style) {
   const known = knownChars();
   /* Listening can only ask about what can actually be said. With the bundle
      loaded that is nearly everything; without it the system voice handles
@@ -197,6 +205,10 @@ function sprintPool(mode) {
   /* Only characters with an assemblable word — same filter buildWords uses
      for the daily drill's own Build the word kind. */
   if (mode === "a") return known.filter(c => buildWords(CHAR_INDEX[c]).length);
+  /* Only characters with stroke data to actually quiz — type and spot never
+     draw a stroke, so they don't need this, but a character can be known
+     for reading purposes with no writing quiz ever composed for it. */
+  if (mode === "w" && style === "write") return known.filter(c => window.STROKE_DATA[c]);
   return known;
 }
 
@@ -208,7 +220,7 @@ const sp = { mode: "r", style: "type", n: 40, secs: 120,
              typed: "", cands: [], known: [] };
 
 function sprintOpen(mode, n, secs, style) {
-  const pool = sprintPool(mode);
+  const pool = sprintPool(mode, style);
   if (pool.length < SPRINT_MIN_POOL) return;
   sprintStop();                       /* "another sheet" from a marked one */
   Object.assign(sp, {
@@ -335,8 +347,13 @@ function sprintRenderQ() {
   } else if (sp.mode === "a") {
     const target = [...q.word[0]];
     sp.filled = [];
+    /* The word's own meaning and reading, not the headword character's —
+       q.word[2]/[1], not ch.m/ch.p. Showing the single character's meaning
+       here asked for a two-character word using a clue that only ever
+       named one of its two characters, which is a different, easier
+       question than the tiles were actually posing. */
     body.innerHTML = `<div class="sp-q">
-      <div class="sp-prompt"><em class="lead">${esc(ch.m)}</em></div>
+      <div class="sp-prompt"><span class="pin">${esc(q.word[1])}</span><em class="lead">${esc(q.word[2])}</em></div>
       <div class="assemble">
         <div class="slots">${target.map((_, i) => `<div class="slot" data-s="${i}"></div>`).join("")}</div>
         <div class="tiles">${q.tiles.map((c2, i) => `<button class="tile" data-c="${esc(c2)}" data-i="${i}">${esc(c2)}</button>`).join("")}</div>
@@ -355,6 +372,64 @@ function sprintRenderQ() {
       sp.filled.push(t.dataset.c);
       if (sp.filled.length === target.length) sprintAnswer(sp.filled.join(""));
     });
+  } else if (sp.mode === "w" && sp.style === "write") {
+    /* The same writer box and trackpad the daily drill's own "w" kind uses
+       (writerBox/makeWriter/padStart/padHandoff, all in js/app.js) — a
+       sprint answers through sprintAnswer(value), so completing the quiz
+       stands in the character on success and null (never equal to
+       q.correct) on a miss or a peek, rather than grading in place the way
+       the drill does. */
+    const wid = "spq" + Math.random().toString(36).slice(2, 8);
+    body.innerHTML = `<div class="sp-q">
+      <div class="sp-prompt"><em class="lead">${esc(ch.m)}</em></div>
+      ${writerBox(ch.c, wid)}
+    </div>`;
+    $(".writer-box", body).style.margin = "0 auto";
+    $(".writer-box", body).insertAdjacentHTML("afterend", `<div class="write-tools"></div>`);
+    const tools = $(".write-tools", body);
+    const nStrokes = (window.STROKE_DATA[ch.c]?.strokes || []).length || 1;
+    const allowed = Math.max(1, Math.ceil(nStrokes / 3));
+    let missed = 0, peeked = false;
+    const writer = makeWriter($("#" + wid, body), ch.c, { showCharacter: false, showOutline: false });
+
+    const bindPad = () => $("#spPadW")?.addEventListener("click", () => {
+      const btn = $("#spPadW");
+      btn.disabled = true;
+      if (!padStart($(".tian", body), $("#" + wid, body), () => { btn.disabled = false; })) btn.disabled = false;
+    });
+    const autoPad = () => padHandoff($(".tian", body), $("#" + wid, body), () => {
+      const btn = $("#spPadW"); if (btn) btn.disabled = false;
+    });
+    const showStrokes = () => {
+      padStop();
+      peeked = true;
+      writer.cancelQuiz();
+      writer.showCharacter();
+      writer.animateCharacter();
+      tools.innerHTML = `<button class="btn btn-sm" id="spTryW">Now you try</button>`;
+      $("#spTryW").onclick = arm;
+    };
+    const arm = () => {
+      missed = 0;
+      writer.cancelQuiz();
+      writer.hideCharacter();
+      tools.innerHTML = `
+        ${padSupported() ? `<button class="btn btn-ghost btn-sm" id="spPadW"><span class="han">觸控</span> Trackpad</button>` : ""}
+        <button class="btn btn-ghost btn-sm" id="spSkipW">${peeked ? "Show me again" : "Show me the strokes"}</button>`;
+      bindPad();
+      $("#spSkipW").onclick = showStrokes;
+      autoPad();
+      writer.quiz({
+        showHintAfterMisses: 2,
+        leniency: state.writeLeniency,
+        onMistake: () => missed++,
+        onComplete: () => {
+          padStop();
+          sprintAnswer(!peeked && missed <= allowed ? ch.c : null);
+        }
+      });
+    };
+    if (writer) arm(); else sprintAnswer(null);
   } else if (sp.style === "spot") {
     body.innerHTML = `<div class="sp-q">
       <div class="sp-prompt"><span class="pin">${esc(ch.p)}</span> ${toneMark(ch.p)}<em>${esc(ch.m)}</em></div>
@@ -638,7 +713,7 @@ function sprintPanelHtml(mode, short) {
   const top = bests.slice().sort((a, b) => (b.right / b.n) - (a.right / a.n) || (a.secs / a.n) - (b.secs / b.n))[0];
   const g = sprintGrade(mode, p.n, p.secs, p.style);
   const silent = mode === "l" && !state.audio;
-  const maxN = Math.max(...SPRINT_COUNTS.filter(n => n <= Math.max(20, sprintPool(mode).length * SPRINT_MAX_LOOPS)));
+  const maxN = Math.max(...SPRINT_COUNTS.filter(n => n <= Math.max(20, sprintPool(mode, p.style).length * SPRINT_MAX_LOOPS)));
 
   return `<div class="sheet sp-panel ${open ? "open" : ""} sp-${mode}">
     <button class="sp-panel-head" data-sp-open="${mode}" aria-expanded="${open}">
@@ -784,10 +859,17 @@ function sprintRowHtml(r, showAccuracy) {
   const b = sprintState().best[sheetKey(r)];
   const isBest = !!b && b.at === r.at;
   const pct = r.n ? Math.round((r.right / r.n) * 100) : 0;
+  /* A perfect score already says "finished" — every question was both
+     answered and right, which "blank" can't be hiding behind. Anywhere
+     short of perfect, right/n alone doesn't say whether the rest were
+     wrong or never reached, so the status still earns its place. */
+  const status = r.right === r.n ? "" : r.done ? "finished" : `${r.n - r.answered} blank`;
   return `<div class="sp-board-row ${isBest ? "best" : ""}">
     <span class="sp-board-k han">${esc(cfg.zh)}</span>
-    <span class="sp-board-body"><b>${r.right} / ${r.n}</b>
-      <small>${showAccuracy ? `${pct}% · ` : ""}${fmtClock(r.secs * 1000)} sheet · ${esc(r.on)}${r.done ? " · finished" : ` · ${r.n - r.answered} blank`}</small></span>
+    <span class="sp-board-body">
+      <span><b>${r.right} / ${r.n}</b>${status ? `<span class="sp-board-status">${esc(status)}</span>` : ""}</span>
+      <small>${showAccuracy ? `${pct}% · ` : ""}${fmtClock(r.secs * 1000)} sheet · ${esc(r.on)}</small>
+    </span>
     ${isBest ? `<span class="sp-board-star" title="Your best on this sheet">★</span>` : ""}
   </div>`;
 }
