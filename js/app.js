@@ -2879,10 +2879,21 @@ const wp = { built: false, rows: 6, guide: null, pen: 6, cell: 84, strokes: [], 
    scales the chosen nib size rather than replacing it, so "broad" and
    "fine" both still mean something whichever style is picked. cap "square"
    on the marker is what actually reads as a flat chisel tip; every other
-   style keeps the round cap ink already draws with. */
+   style keeps the round cap ink already draws with.
+
+   A tapered stroke is drawn as many short overlapping segments, each its own
+   stroke() call so its width can change along the way (see wpWidth/wpDraw) —
+   at any alpha below 1, the round cap at the end of one segment and the
+   start of the next both paint the same sliver of canvas, and that doubled,
+   translucent overlap shows up as a visible ring of little circles beaded
+   along the stroke. Full opacity is what makes that seam invisible (opaque
+   ink painted twice is the same as painted once), so brush stays at 1 like
+   pen — pencil and marker keep their translucency because nobody has asked
+   for a chisel or a sketchy stroke to look fully solid, and the same seam is
+   much fainter at their thinner, less speed-varying widths. */
 const PEN_STYLES = {
   pen:    { zh: "鋼筆",  name: "Pen",    alpha: 1,   widthMul: 1,    cap: "round" },
-  brush:  { zh: "毛筆",  name: "Brush",  alpha: .92, widthMul: 1.7,  cap: "round" },
+  brush:  { zh: "毛筆",  name: "Brush",  alpha: 1,   widthMul: 1.7,  cap: "round" },
   pencil: { zh: "鉛筆",  name: "Pencil", alpha: .62, widthMul: .65,  cap: "round" },
   marker: { zh: "馬克筆", name: "Marker", alpha: .4,  widthMul: 2.4,  cap: "square" }
 };
@@ -7106,6 +7117,7 @@ function boot() {
   /* Abandoning a sheet halfway is a decision, not a slip of the finger — but
      once it is marked there is nothing left to lose by closing it. */
   $("#spClose").onclick = async () => {
+    const wasPaused = sp.paused;
     sprintPause();
     if (sp.active && sp.idx > 0 && !await askConfirm({
           k: "作廢",
@@ -7113,9 +7125,14 @@ function boot() {
           body: `${sp.idx} of ${sp.n} answered. Those answers are already counted, but the sheet won't be `
               + "scored and won't reach the board.",
           yes: "Give up", no: "Keep going"
-        })) return sprintResume();
+        })) return wasPaused ? undefined : sprintResume();
     sprintClose();
   };
+  $("#spPause").onclick = () => sprintTogglePause();
+  $("#spResume").onclick = () => sprintTogglePause();
+  /* tapping the veil itself resumes too — nothing on it is destructive, so
+     there's no reason to make the button the only way back in */
+  $("#spPauseVeil").addEventListener("pointerdown", e => { if (e.target.closest("#spResume")) return; sprintTogglePause(); });
   $("#muted").onclick = () => {
     /* this tap is the gesture the engine was waiting for */
     state.audio = true; speechBlocked = false; speechPrimed = false; audioUnlocked = false;

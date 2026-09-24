@@ -907,6 +907,46 @@ input[type="range"]::-moz-range-thumb {
 .tile:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--ink-3); }
 .tile.used { opacity: .25; pointer-events: none; }
 
+/* Sprint's radial input style for Build the word: options ringed around a
+   centre hub, picked by dragging outward toward the one you want rather
+   than tapping it directly. --r (the placement radius) is read back out of
+   this element's computed style by sprintBindRadial, so it is the one
+   number that has to change to resize the whole wheel. */
+.radial-wheel { position: relative; width: 15.5rem; height: 15.5rem; margin: .2rem auto; --r: 5.5rem; }
+.radial-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed var(--rule-2); }
+.radial-hub {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 3.2rem; height: 3.2rem; border-radius: 50%;
+  border: 2px solid var(--seal); background: var(--sheet); touch-action: none;
+}
+.radial-hub:active:not(:disabled) { background: var(--seal-wash); }
+.radial-hub:disabled { opacity: .4; }
+/* A bar from the hub's centre, grown along the +x axis and rotated/scaled by
+   JS to point and reach toward the drag — scaleX(0) at rest keeps it out of
+   the way without a display toggle that would fight the opacity fade. */
+.radial-needle {
+  position: absolute; left: 50%; top: calc(50% - 1.5px); width: var(--r); height: 3px;
+  background: var(--seal); border-radius: 2px; transform-origin: 0 50%;
+  transform: rotate(0deg) scaleX(0); opacity: 0;
+  pointer-events: none; transition: opacity .12s ease;
+}
+/* Placed with the same rotate/translate/counter-rotate used for a clock
+   face's numerals — it walks each option out along its own spoke and then
+   un-rotates it, so the glyph inside sits upright instead of tilted toward
+   the rim. */
+.radial-opt {
+  position: absolute; left: 50%; top: 50%; width: 2.9rem; height: 2.9rem; border-radius: 50%;
+  border: 1px solid var(--rule); background: var(--sheet);
+  font-family: var(--f-han); font-size: 1.3rem; line-height: 1; color: var(--ink);
+  transform: translate(-50%, -50%) rotate(var(--ang)) translate(var(--r)) rotate(calc(-1 * var(--ang)));
+  transition: transform .12s ease, opacity .2s, background .12s, border-color .12s, color .12s;
+}
+.radial-opt.armed {
+  background: var(--jade-wash); border-color: var(--jade); color: var(--jade);
+  transform: translate(-50%, -50%) rotate(var(--ang)) translate(calc(var(--r) + .4rem)) rotate(calc(-1 * var(--ang))) scale(1.14);
+}
+.radial-opt.used { opacity: .25; pointer-events: none; }
+
 /* listening drill */
 .ear {
   width: 5.5rem; height: 5.5rem; border-radius: 50%; border: 0;
@@ -2066,6 +2106,27 @@ button.tier-head:hover { border-color: var(--ink-3); }
 
 .sp-inner { padding-bottom: 3rem; }
 
+/* The pause button sits at the quiet end of the bar, past the clock rather
+   than beside the ✕ it could otherwise be mistaken for — muted until
+   hovered so it doesn't compete with the clock for a glance mid-question. */
+.sp-pause-btn { color: var(--ink-3); }
+.sp-pause-btn:hover { color: var(--ink); background: var(--sunken); }
+
+/* A veil, not just a stopped clock — #sprintRun.paused (see
+   sprintTogglePause in js/sprint.js) shows this over the whole sheet, so
+   nothing under it can be tapped or typed into while the clock is held. */
+.sp-pause-veil {
+  display: none; position: absolute; inset: 0; z-index: 5;
+  align-items: center; justify-content: center; text-align: center;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(3px);
+}
+#sprintRun.paused .sp-pause-veil { display: flex; }
+.sp-pause-card { display: flex; flex-direction: column; align-items: center; gap: .5rem; max-width: 19rem; padding: 1.5rem; }
+.sp-pause-k { font-family: var(--f-han-ui); font-size: 2.6rem; color: var(--seal); line-height: 1; }
+.sp-pause-card b { font-size: 1.15rem; }
+.sp-pause-card .note { margin: 0 0 .3rem; }
+
 /* 预备 */
 .sp-ready { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 3rem 0 1rem; text-align: center; }
 .sp-ready-k { font-family: var(--f-han); font-size: 2.2rem; color: var(--seal); letter-spacing: .1em; }
@@ -2084,9 +2145,13 @@ button.tier-head:hover { border-color: var(--ink-3); }
   display: flex; flex-direction: column; align-items: center; gap: .2rem;
   padding: 1rem 0 .2rem; text-align: center;
 }
-.sp-prompt .pin { font-family: var(--f-pin); font-size: 1.5rem; font-weight: 500; }
+/* Pronunciation and meaning read as two different kinds of text, not just
+   two different sizes of the same one — the jyutping is a muted, spaced-out
+   label in the sans the rest of the app already uses for it, sitting above
+   a meaning set in the serif display face at full ink. */
+.sp-prompt .pin { font-family: var(--f-pin); font-size: 1.3rem; font-weight: 500; color: var(--ink-3); letter-spacing: .04em; }
 .sp-prompt em { font-style: normal; font-size: .95rem; color: var(--ink-2); }
-.sp-prompt em.lead { font-family: var(--f-display); font-size: 1.7rem; color: var(--ink); line-height: 1.25; }
+.sp-prompt em.lead { font-family: var(--f-display); font-size: 1.7rem; font-style: italic; color: var(--ink); line-height: 1.25; }
 .sp-ear {
   align-self: center; width: 5.5rem; height: 5.5rem; border-radius: 50%;
   border: 1px solid var(--rule); background: var(--sheet); font-size: 2rem;
@@ -3532,16 +3597,15 @@ button.tier-head:hover { border-color: var(--ink-3); }
 
   /* ---------- the sections sheet ---------- */
 
-  /* Fixed to the bottom-left rather than sitting inline in the top bar: a
-     phone held in the left hand rests its thumb at that corner already, so
-     the button that opens seven destinations is worth a thumb's reach rather
-     than a stretch to the top of the screen. z-index 45 sits above the top
-     bar (40) but below every full-screen overlay (60+), so a session, the
-     drawer itself, or a sprint run all cover it without any extra code to
-     hide it. */
+  /* Fixed to the bottom-right rather than sitting inline in the top bar: most
+     hands are right hands, and the button that opens seven destinations is
+     worth a thumb's reach rather than a stretch to the top of the screen.
+     z-index 45 sits above the top bar (40) but below every full-screen
+     overlay (60+), so a session, the drawer itself, or a sprint run all
+     cover it without any extra code to hide it. */
   .icon-btn.burger {
     display: grid; position: fixed; z-index: 45;
-    left: calc(1rem + env(safe-area-inset-left));
+    right: calc(1rem + env(safe-area-inset-right));
     bottom: calc(1rem + env(safe-area-inset-bottom));
     width: 46px; height: 46px; border-radius: 50%;
     background: var(--paper); border-color: var(--rule-2);
@@ -3553,7 +3617,7 @@ button.tier-head:hover { border-color: var(--ink-3); }
   .drawer { position: fixed; inset: 0; z-index: 80; display: none; }
   .drawer.on { display: block; }
   .drawer-veil { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); animation: cheerFade .18s ease both; }
-  /* A capsule on the same bottom row as the burger, its left edge picking up
+  /* A capsule on the same bottom row as the burger, its right edge picking up
      right where the button leaves off — the same thumb that just tapped the
      corner lands on the row without moving. Fully rounded, not a sheet with
      square corners, so it reads as a wheel to spin rather than a panel that
@@ -3561,12 +3625,12 @@ button.tier-head:hover { border-color: var(--ink-3); }
      edge sells the same idea in motion. */
   .drawer-sheet {
     position: absolute;
-    left: calc(1rem + env(safe-area-inset-left) + 46px + .55rem);
-    right: calc(1rem + env(safe-area-inset-right));
+    right: calc(1rem + env(safe-area-inset-right) + 46px + .55rem);
+    left: calc(1rem + env(safe-area-inset-left));
     bottom: calc(1rem + env(safe-area-inset-bottom));
     background: var(--paper); border: 1px solid var(--rule-2); border-radius: 999px;
     box-shadow: 0 6px 24px rgba(0, 0, 0, .22);
-    padding: .5rem .3rem;
+    padding: .6rem .35rem;
     animation: drawer-up .22s cubic-bezier(.22, .9, .3, 1) both;
   }
   @keyframes drawer-up { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -3579,21 +3643,21 @@ button.tier-head:hover { border-color: var(--ink-3); }
      horizontal line becomes a vertical one here, which if anything reads more
      naturally beside things arranged left to right. */
   .drawer-nav {
-    display: flex; align-items: stretch; gap: .2rem;
+    display: flex; align-items: stretch; gap: .3rem;
     overflow-x: auto; scroll-snap-type: x mandatory;
     padding: 0 .2rem; -webkit-overflow-scrolling: touch;
   }
   .drawer-nav::-webkit-scrollbar { display: none; }
   .drawer-nav button {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem;
     flex: none; scroll-snap-align: center;
     /* wide enough for two rows of a label that may run to "Radicals" without
        wrapping, narrow enough that the next chip's edge still shows */
-    width: 4.4rem; min-height: 3.6rem; padding: .4rem .3rem; border: 0; border-radius: 999px;
-    background: none; color: var(--ink-2); font-size: .66rem; text-align: center; line-height: 1.2;
+    width: 5.4rem; min-height: 4.4rem; padding: .5rem .3rem; border: 0; border-radius: 999px;
+    background: none; color: var(--ink-2); font-size: .82rem; text-align: center; line-height: 1.2;
     transition: transform .1s ease, opacity .1s ease;
   }
-  .drawer-nav button .nz { font-family: var(--f-han-ui); font-size: 1.05rem; color: var(--ink-3); }
+  .drawer-nav button .nz { font-family: var(--f-han-ui); font-size: 1.3rem; color: var(--ink-3); }
   .drawer-nav button.on { background: var(--sunken); color: var(--ink); font-weight: 500; }
   .drawer-nav button.on .nz { color: var(--seal); }
   .drawer-rule { display: block; flex: none; width: 1px; margin: .3rem .1rem; background: var(--rule-2); }
@@ -3768,6 +3832,11 @@ button.tier-head:hover { border-color: var(--ink-3); }
   #sprintRun .slot { width: 4.2rem; height: 4.2rem; font-size: 2.4rem; border-radius: 10px; }
   #sprintRun .tiles { gap: .55rem; }
   #sprintRun .tile { width: 4.2rem; height: 4.2rem; font-size: 2.4rem; border-radius: 10px; }
+  /* the radial style scales the same way — a bigger wheel, a bigger hub, and
+     options sized to match the grid's own bigger tiles above */
+  #sprintRun .radial-wheel { width: 17.5rem; height: 17.5rem; --r: 6.2rem; }
+  #sprintRun .radial-hub { width: 3.8rem; height: 3.8rem; }
+  #sprintRun .radial-opt { width: 3.4rem; height: 3.4rem; font-size: 1.6rem; }
 
   /* ---------- the categories, flat ----------
 
