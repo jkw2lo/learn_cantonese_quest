@@ -67,6 +67,25 @@ const WRITE_STYLES = {
            tip: "By hand, at your pace", par: 9.5 }
 };
 
+/* Two ways to hand in a tile: the row, or the wheel. The wheel is the
+   ergonomic pitch — a thumb resting near the middle of the screen doesn't
+   have to travel out to whichever corner a tile landed in, it just leans
+   the direction of the one it wants — so it earns a slightly longer par
+   than the row it's standing in for. */
+const ASSEMBLE_STYLES = {
+  tap:    { zh: "格仔", name: "Grid", key: "tap",
+            blurb: "Tap the tiles in a row, in order.",
+            tip: "Tap in a row", par: 5.4 },
+  radial: { zh: "轉揀", name: "Radial", key: "radial",
+            blurb: "Swipe out from the centre toward the character you want — pulling back to the middle before letting go cancels the pick.",
+            tip: "Swipe out to pick", par: 6.2 }
+};
+
+/* Which style table a mode's `style` field is drawn from — the two lookups
+   below (par, and the picker's "by <style>" labels) both used to assume
+   WRITE_STYLES because Build the word had no styles of its own yet. */
+const STYLE_OF = { w: WRITE_STYLES, a: ASSEMBLE_STYLES };
+
 const SPRINT_MINUTES = [1, 2, 3, 5];
 const SPRINT_COUNTS = [20, 30, 40, 50, 60, 80, 100];
 /* How many tiles Build the word deals per question — the target characters
@@ -110,7 +129,11 @@ const SPRINT_GRADES = [
   { at: 0,    zh: "狂", name: "Furious" }
 ];
 
-const sprintPar = (mode, style) => mode === "w" ? WRITE_STYLES[style || "type"].par : SPRINT[mode].par;
+const sprintPar = (mode, style) => {
+  if (mode === "w") return WRITE_STYLES[style || "type"].par;
+  if (mode === "a") return ASSEMBLE_STYLES[style || "tap"].par;
+  return SPRINT[mode].par;
+};
 const sprintPace = (n, secs) => secs / n;
 function sprintGrade(mode, n, secs, style) {
   const ratio = sprintPace(n, secs) / sprintPar(mode, style);
@@ -222,7 +245,7 @@ function sprintPool(mode, style) {
 /* ---------- the run ---------- */
 
 const sp = { mode: "r", style: "type", n: 40, secs: 120,
-             queue: [], idx: 0, active: false, marked: false,
+             queue: [], idx: 0, active: false, marked: false, paused: false,
              startedAt: 0, endsAt: 0, tick: null, qStart: 0,
              typed: "", cands: [], known: [] };
 
@@ -231,15 +254,16 @@ function sprintOpen(mode, n, secs, style, tiles) {
   if (pool.length < SPRINT_MIN_POOL) return;
   sprintStop();                       /* "another sheet" from a marked one */
   Object.assign(sp, {
-    mode, style: mode === "w" ? style : null, n, secs,
+    mode, style: (mode === "w" || mode === "a") ? style : null, n, secs,
     tiles: mode === "a" ? (tiles || 5) : null,
-    known: knownChars(), idx: 0, active: true, marked: false,
+    known: knownChars(), idx: 0, active: true, marked: false, paused: false,
     typed: "", cands: [], qStart: 0,
     /* cleared explicitly: a run that never got past the countdown would
        otherwise hand the next sheet the last one's clock */
     startedAt: 0, endsAt: 0, readyAt: 0
   });
   sp.queue = sprintDeal(pool, n).map(c => sprintQuestion(c, mode, sp.style, sp.known, sp.tiles));
+  $("#sprintRun").classList.remove("paused");
   $("#sprintRun").classList.add("on");
   document.body.style.overflow = "hidden";
   $("#spDrain").firstElementChild.style.width = "100%";
@@ -293,7 +317,7 @@ function sprintClock() {
    "no" that costs. So the confirm holds the clock, and the time left when it
    opened is the time left when it closes. */
 function sprintPause() {
-  if (!sp.active || !sp.startedAt) return 0;
+  if (!sp.active || !sp.startedAt || !sp.tick) return sp.left || 0;
   sp.left = Math.max(0, sp.endsAt - Date.now());
   clearInterval(sp.tick);
   sp.tick = null;
@@ -301,11 +325,33 @@ function sprintPause() {
 }
 
 function sprintResume() {
-  if (!sp.active || !sp.startedAt || sp.tick) return;
+  if (!sp.active || !sp.startedAt || sp.tick || sp.paused) return;
   sp.endsAt = Date.now() + (sp.left || 0);
   sp.qStart = Date.now();            /* nor is the current question charged */
   sp.tick = setInterval(sprintClock, 100);
   $("#spInput")?.focus();
+}
+
+/* The pause button, sitting quietly in the sheet's own bar rather than
+   fighting the close button for attention — the ✕'s "give up on this
+   sheet?" confirm already calls sprintPause/sprintResume around itself
+   (see its handler), and both guard against running twice, so the two
+   never fight over the clock even if a sheet is closed while paused. */
+function sprintTogglePause() {
+  /* sp.tick is also the 預備 countdown's own timer before sp.startedAt is
+     set — nothing to hold the clock at yet, so the button is a no-op during
+     those three seconds rather than a pause that silently doesn't take. */
+  if (!sp.active || !sp.startedAt) return;
+  if (sp.paused) {
+    sp.paused = false;
+    $("#sprintRun").classList.remove("paused");
+    sprintResume();
+  } else {
+    sprintPause();
+    sp.paused = true;
+    $("#sprintRun").classList.add("paused");
+    document.activeElement?.blur();
+  }
 }
 
 function sprintStop() {
@@ -318,7 +364,8 @@ function sprintClose() {
   sprintStop();
   stopPhrase();
   sp.active = false;
-  $("#sprintRun").classList.remove("on");
+  sp.paused = false;
+  $("#sprintRun").classList.remove("on", "paused");
   document.body.style.overflow = "";
   renderAll();
 }
@@ -355,6 +402,7 @@ function sprintRenderQ() {
   } else if (sp.mode === "a") {
     const target = [...q.word[0]];
     sp.filled = [];
+    const radial = sp.style === "radial";
     /* The word's own meaning and reading, not the headword character's —
        q.word[2]/[1], not ch.m/ch.p. Showing the single character's meaning
        here asked for a two-character word using a clue that only ever
@@ -362,31 +410,40 @@ function sprintRenderQ() {
        question than the tiles were actually posing. */
     body.innerHTML = `<div class="sp-q">
       <div class="sp-prompt"><span class="pin">${esc(q.word[1])}</span><em class="lead">${esc(q.word[2])}</em></div>
-      <div class="assemble">
+      <div class="assemble ${radial ? "assemble-radial" : ""}">
         <div class="slots">${target.map((_, i) => `<div class="slot" data-s="${i}"></div>`).join("")}</div>
-        <div class="tiles">${q.tiles.map((c2, i) => `<button class="tile" data-c="${esc(c2)}" data-i="${i}">${esc(c2)}</button>`).join("")}</div>
+        ${radial ? sprintRadialHtml(q.tiles)
+                 : `<div class="tiles">${q.tiles.map((c2, i) => `<button class="tile" data-c="${esc(c2)}" data-i="${i}">${esc(c2)}</button>`).join("")}</div>`}
       </div>
     </div>`;
-    /* Tapped in order, not matched against the slot they land in — this is a
-       race, not the daily drill's retry-until-right version of the same
-       tiles, so a wrong tap still spends a slot and can still cost the
-       question. */
-    $$(".tile", body).forEach(t => t.onclick = () => {
-      if (t.disabled || sp.filled.length >= target.length) return;
+    /* Shared by both input styles — picked in order, not matched against the
+       slot it lands in, so a wrong pick still spends a slot and can still
+       cost the question, the same as the daily drill's tiles never work.
+       Every option goes dead the instant the word is complete, not just the
+       ones already used — the slot-fill pause that follows (see
+       sprintAnswer) leaves this render on screen for a moment, and an option
+       still live during it would push a phantom entry past the last slot. */
+    const commit = c => {
+      if (sp.filled.length >= target.length) return;
       const i = sp.filled.length;
       const slot = $(`.slot[data-s="${i}"]`, body);
-      slot.textContent = t.dataset.c; slot.classList.add("filled");
-      t.disabled = true; t.classList.add("used");
-      sp.filled.push(t.dataset.c);
-      /* Every tile goes dead the instant the word is complete, not just the
-         ones already tapped — the slot-fill pause that follows (see
-         sprintAnswer) leaves this render on screen for a moment, and a tile
-         still armed during it would push a phantom entry past the last slot. */
+      slot.textContent = c; slot.classList.add("filled");
+      sp.filled.push(c);
       if (sp.filled.length === target.length) {
-        $$(".tile", body).forEach(x => x.disabled = true);
+        $$(radial ? ".radial-opt" : ".tile", body).forEach(x => x.disabled = true);
+        if (radial) { const hub = $(".radial-hub", body); if (hub) hub.disabled = true; }
         sprintAnswer(sp.filled.join(""));
       }
-    });
+    };
+    if (radial) {
+      sprintBindRadial(body, commit);
+    } else {
+      $$(".tile", body).forEach(t => t.onclick = () => {
+        if (t.disabled) return;
+        t.disabled = true; t.classList.add("used");
+        commit(t.dataset.c);
+      });
+    }
   } else if (sp.mode === "w" && sp.style === "write") {
     /* The same writer box and trackpad the daily drill's own "w" kind uses
        (writerBox/makeWriter/padStart/padHandoff, all in js/app.js) — a
@@ -506,6 +563,103 @@ function sprintCandidates() {
     ? top.map((c, i) => `<button class="sp-cand" data-v="${esc(c)}"><kbd class="opt-n">${i + 1}</kbd><span class="han">${esc(c)}</span></button>`).join("")
     : `<span class="sp-cands-hint">Nothing you know sounds like that.</span>`;
   $$(".sp-cand", el).forEach(b => b.onclick = () => sprintAnswer(b.dataset.v));
+}
+
+/* ---------- the radial input style ----------
+
+   A pie/marking-menu gesture: press the hub, drag outward, and the
+   direction — not any particular thing under the finger — decides which
+   option fires. Letting the drag settle back inside the dead zone before
+   release cancels it, so aiming can be corrected without spending a tile
+   the way a mis-tap on the grid always does. */
+
+function sprintRadialHtml(tiles) {
+  const n = tiles.length;
+  return `<div class="radial-wheel">
+    <div class="radial-ring" aria-hidden="true"></div>
+    <div class="radial-needle" aria-hidden="true"></div>
+    <button class="radial-hub" aria-label="Press and drag outward toward the character you want"></button>
+    ${tiles.map((c, i) => {
+      const ang = Math.round((360 / n) * i - 90);
+      return `<button class="radial-opt" data-c="${esc(c)}" data-i="${i}" data-ang="${ang}" style="--ang:${ang}deg">${esc(c)}</button>`;
+    }).join("")}
+  </div>`;
+}
+
+/* How far out, as a fraction of the wheel's own radius, a drag has to reach
+   before a direction counts as aimed rather than still hovering near the
+   hub it started from. */
+const RADIAL_DEAD_ZONE = 0.4;
+
+function sprintBindRadial(body, onPick) {
+  const wheel = $(".radial-wheel", body);
+  const hub = $(".radial-hub", body);
+  const needle = $(".radial-needle", body);
+  const firstOpt = $(".radial-opt", wheel);
+  if (!wheel || !hub || !firstOpt) return;
+  /* --r is set in rem, and getComputedStyle never resolves a custom
+     property's unit the way it resolves an ordinary one — reading it back
+     as a number silently drops the "rem" and undersizes everything that
+     follows by ~16x. Measuring the real gap between the hub and a rendered
+     option is unit-agnostic and stays correct if the CSS radius ever
+     changes (see the #sprintRun override for the phone-sized wheel). */
+  const hr0 = hub.getBoundingClientRect(), or0 = firstOpt.getBoundingClientRect();
+  const r = Math.hypot((or0.left + or0.width / 2) - (hr0.left + hr0.width / 2),
+                        (or0.top + or0.height / 2) - (hr0.top + hr0.height / 2)) || 90;
+  const selectAt = r * RADIAL_DEAD_ZONE;
+  let armed = null, pid = null;
+
+  const live = () => $$(".radial-opt", wheel).filter(b => !b.disabled);
+  const setArmed = b => {
+    if (armed === b) return;
+    if (armed) armed.classList.remove("armed");
+    armed = b;
+    if (armed) armed.classList.add("armed");
+  };
+  /* Shortest signed distance around the circle between two angles, so an
+     option at -170° still reads as close to a drag at 175°. */
+  const nearest = angleDeg => {
+    let best = null, bestDiff = Infinity;
+    live().forEach(b => {
+      const diff = Math.abs(((angleDeg - (+b.dataset.ang) + 540) % 360) - 180);
+      if (diff < bestDiff) { bestDiff = diff; best = b; }
+    });
+    return best;
+  };
+  const relativeTo = e => {
+    const hr = hub.getBoundingClientRect();
+    return { dx: e.clientX - (hr.left + hr.width / 2), dy: e.clientY - (hr.top + hr.height / 2) };
+  };
+
+  hub.addEventListener("pointerdown", e => {
+    if (hub.disabled) return;
+    pid = e.pointerId;
+    hub.setPointerCapture(pid);
+    needle.style.opacity = "1";
+    e.preventDefault();
+  });
+  hub.addEventListener("pointermove", e => {
+    if (pid === null || e.pointerId !== pid) return;
+    const { dx, dy } = relativeTo(e);
+    const mag = Math.hypot(dx, dy);
+    const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    needle.style.transform = `rotate(${ang}deg) scaleX(${Math.min(mag, r) / r})`;
+    setArmed(mag > selectAt ? nearest(ang) : null);
+  });
+  const release = e => {
+    if (pid === null || (e && e.pointerId !== pid)) return;
+    pid = null;
+    needle.style.opacity = "0";
+    needle.style.transform = "scaleX(0)";
+    if (armed) {
+      const b = armed;
+      setArmed(null);
+      b.disabled = true; b.classList.add("used");
+      onPick(b.dataset.c);
+    }
+  };
+  hub.addEventListener("pointerup", release);
+  hub.addEventListener("pointercancel", release);
 }
 
 function sprintTypeKey(e) {
@@ -730,9 +884,10 @@ function renderSprint() {
    and is where the arithmetic version starts children too. */
 function sprintPick(mode) {
   const held = sprintState().pick[mode];
-  const p = { n: 40, secs: 120, style: mode === "w" ? "type" : null, tiles: 5, ...(held || {}) };
+  const p = { n: 40, secs: 120, style: mode === "w" ? "type" : mode === "a" ? "tap" : null, tiles: 5, ...(held || {}) };
   if (mode === "w" && !WRITE_STYLES[p.style]) p.style = "type";
-  if (mode !== "w") p.style = null;
+  if (mode === "a" && !ASSEMBLE_STYLES[p.style]) p.style = "tap";
+  if (mode !== "w" && mode !== "a") p.style = null;
   p.tiles = mode === "a" ? Math.max(SPRINT_TILES[0], Math.min(SPRINT_TILES[SPRINT_TILES.length - 1], p.tiles)) : null;
   return p;
 }
@@ -766,6 +921,12 @@ function sprintPanelHtml(mode, short) {
         <div class="sp-chips">${Object.values(WRITE_STYLES).map(s => `<button class="sp-chip wide ${p.style === s.key ? "on" : ""}" data-sp-set="w:style:${s.key}">
           <span class="han">${esc(s.zh)}</span> ${esc(s.name)}</button>`).join("")}</div>
         <span class="sp-row-tip">${esc(WRITE_STYLES[p.style].tip)}</span>
+      </div>` : ""}
+      ${mode === "a" ? `<div class="sp-row sp-row-wide">
+        <span class="sp-row-lbl">How</span>
+        <div class="sp-chips">${Object.values(ASSEMBLE_STYLES).map(s => `<button class="sp-chip wide ${p.style === s.key ? "on" : ""}" data-sp-set="a:style:${s.key}">
+          <span class="han">${esc(s.zh)}</span> ${esc(s.name)}</button>`).join("")}</div>
+        <span class="sp-row-tip">${esc(ASSEMBLE_STYLES[p.style].tip)}</span>
       </div>` : ""}
       ${mode === "a" ? `<div class="sp-row">
         <span class="sp-row-lbl">Tiles</span>
@@ -804,13 +965,13 @@ function sprintPanelHtml(mode, short) {
       <div class="sp-verdict">
         <span class="sp-verdict-k han">${esc(g.zh)}</span>
         <span class="sp-verdict-body"><b>${esc(g.name)}</b>
-          <small>${sprintPace(p.n, p.secs).toFixed(1)} seconds a question · par for ${esc(cfg.name.toLowerCase())}${p.style ? ` by ${esc(WRITE_STYLES[p.style].name.toLowerCase())}` : ""} is ${sprintPar(mode, p.style).toFixed(1)}</small></span>
+          <small>${sprintPace(p.n, p.secs).toFixed(1)} seconds a question · par for ${esc(cfg.name.toLowerCase())}${p.style ? ` by ${esc(STYLE_OF[mode][p.style].name.toLowerCase())}` : ""} is ${sprintPar(mode, p.style).toFixed(1)}</small></span>
       </div>
       <button class="btn btn-block" data-sp-go="${mode}" ${short ? "disabled" : ""}>Start the sheet</button>
       ${bests.length ? `<div class="sp-mini">
         <span class="eyebrow">Your sheets ${hanLabel("試卷")}</span>
         ${bests.map(b => `<div class="sp-mini-row">
-          <span>${b.n} in ${fmtClock(b.secs * 1000)}${b.style ? ` · ${esc(WRITE_STYLES[b.style].zh)}` : ""}</span>
+          <span>${b.n} in ${fmtClock(b.secs * 1000)}${b.style ? ` · ${esc(STYLE_OF[mode][b.style].zh)}` : ""}</span>
           <span class="sp-mini-n"><b>${b.right}</b>/${b.n}${b.done ? ` <span class="han sp-fin">完</span>` : ""}</span>
         </div>`).join("")}
       </div>` : ""}
