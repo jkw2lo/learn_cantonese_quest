@@ -3018,6 +3018,12 @@ function buildWritePage() {
                 <option value="13">very broad</option>
               </select>
             </label>
+            <label class="wp-field wp-brush">
+              <select id="wpmNib">
+                <option value="brush" ${wp.brush ? "selected" : ""}>Tapered</option>
+                <option value="pen" ${wp.brush ? "" : "selected"}>Even</option>
+              </select>
+            </label>
             <label class="wp-field">Pen
               <select id="wpmStyle">
                 ${Object.entries(PEN_STYLES).map(([id, s]) => `<option value="${id}" ${id === wp.penStyle ? "selected" : ""}>${esc(s.zh)} ${esc(s.name)}</option>`).join("")}
@@ -3066,6 +3072,7 @@ function buildWritePage() {
   $("#wpPad")?.addEventListener("click", () => wpPad());
   $("#wpMore").onclick  = () => { wp.rows += 4; wpSizePage(); };
   $("#wpmPen").onchange = e => { wp.pen = +e.target.value; applyPenSettings(); };
+  $("#wpmNib").onchange = e => { wp.brush = e.target.value === "brush"; wpSetPen(); };
   $("#wpmStyle").onchange = e => { wp.penStyle = e.target.value; applyPenSettings(); };
   $("#wpmAdd").onclick  = () => wpmAdd();
   $("#wpmClear").onclick = () => wpmClear();
@@ -3505,19 +3512,36 @@ function wpmSetPen() {
   applyPenTo(c.getContext("2d"));
 }
 
+/* Mirrors wpDraw exactly, including reusing its wp.n/wp.w brush-momentum
+   state — the two canvases are never drawn on at once (the phone layer shows
+   one or the other), so sharing that state is safe, and it's what makes the
+   mobile box taper the same way the desktop page does instead of drawing a
+   single flat-width path the way this used to. */
 function wpmDraw(type, x, y) {
   const c = $("#wpmInk");
   if (!c) return;
   const ctx = c.getContext("2d");
   if (type === "mousedown") {
     ctx.beginPath(); ctx.moveTo(x, y);
-    wpm.cur = [[Math.round(x), Math.round(y)]];
+    wp.n = 0;
+    const w = wpWidth(0, true);
+    wpm.cur = [[Math.round(x), Math.round(y), +w.toFixed(2)]];
     wpm.strokes.push(wpm.cur);
   } else if (type === "mousemove" && wpm.cur) {
-    ctx.lineTo(x, y); ctx.stroke();
-    wpm.cur.push([Math.round(x), Math.round(y)]);
+    const prev = wpm.cur[wpm.cur.length - 1];
+    const w = wpWidth(Math.hypot(x - prev[0], y - prev[1]), false);
+    wp.n++;
+    /* one path per segment, so the width can change along the stroke */
+    ctx.beginPath();
+    ctx.lineWidth = w;
+    ctx.moveTo(prev[0], prev[1]);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    wpm.cur.push([Math.round(x), Math.round(y), +w.toFixed(2)]);
   } else if (type === "mouseup") {
     wpm.cur = null;
+    wp.n = 0;
+    ctx.lineWidth = wp.pen * (PEN_STYLES[wp.penStyle] || PEN_STYLES.pen).widthMul;
   }
 }
 
@@ -3574,8 +3598,12 @@ async function wpmAdd() {
   const idx = page.count || 0;
   const col = idx % cols, row = Math.floor(idx / cols);
   const scale = wp.cell / boxPx;
-  const placed = wpm.strokes.map(pts => pts.map(([x, y]) => [
-    Math.round(col * wp.cell + x * scale), Math.round(row * wp.cell + y * scale)
+  /* The width recorded at each point (see wpmDraw) scales with the same
+     factor as its position — dropping it here is what used to flatten a
+     tapered stroke back to a uniform line the moment it landed on the page. */
+  const placed = wpm.strokes.map(pts => pts.map(([x, y, w]) => [
+    Math.round(col * wp.cell + x * scale), Math.round(row * wp.cell + y * scale),
+    ...(w === undefined ? [] : [+(w * scale).toFixed(2)])
   ]));
   page.strokes = [...(page.strokes || []), ...placed];
   page.count = idx + 1;
@@ -6928,6 +6956,8 @@ function openDrawer() {
   d.classList.add("on");
   document.body.style.overflow = "hidden";
   $("#burgerBtn").setAttribute("aria-expanded", "true");
+  centerDrawerNav();
+  drawerNavTick();
 }
 function closeDrawer() {
   const d = $("#drawer");
@@ -6936,6 +6966,68 @@ function closeDrawer() {
   d.hidden = true;
   document.body.style.overflow = "";
   $("#burgerBtn").setAttribute("aria-expanded", "false");
+}
+
+/* ---------- the rolodex loop ----------
+
+   Three copies of the same sections, back to back. Scroll off the end of the
+   middle one and a silent, unanimated jump by exactly one copy's width lands
+   on the pixel-identical seam of the next — so scrolling in either direction
+   never actually runs out, the way a real rolodex wheel never does. The jump
+   only ever fires once scrolling has settled (see the debounce below):
+   moving scrollLeft out from under an active touch drag is what makes an
+   infinite scroller visibly stutter, so it waits to be asked.
+
+   Cloned before boot()'s own `$$("[data-nav]").forEach(b => b.onclick = ...)`
+   runs, so the clones pick up their click handler the same way the originals
+   do — this only has to build the DOM, not wire it a second time. */
+function initDrawerLoop() {
+  const nav = $(".drawer-nav");
+  if (!nav || nav.dataset.looped) return;
+  nav.dataset.looped = "1";
+  const original = [...nav.children];
+  for (let i = 0; i < 2; i++) original.forEach(el => nav.appendChild(el.cloneNode(true)));
+  nav._loopOriginal = original;
+  nav._loopLen = original.length;
+
+  const reposition = () => {
+    const w = nav.scrollWidth / 3;
+    if (!w) return;
+    if (nav.scrollLeft < w * 0.5) nav.scrollLeft += w;
+    else if (nav.scrollLeft > w * 1.5) nav.scrollLeft -= w;
+  };
+  let settleT = null, tickQ = false;
+  nav.addEventListener("scroll", () => {
+    clearTimeout(settleT);
+    settleT = setTimeout(reposition, 120);
+    if (!tickQ) { tickQ = true; requestAnimationFrame(() => { drawerNavTick(); tickQ = false; }); }
+  });
+}
+
+/* Scrolls to the middle copy of whichever section is current, so opening the
+   drawer always starts on where you are — and lands with a full copy's width
+   of room to scroll either way before the loop above has anything to do. */
+function centerDrawerNav() {
+  const nav = $(".drawer-nav");
+  if (!nav || !nav._loopOriginal) return;
+  const idx = nav._loopOriginal.findIndex(el => el.dataset && el.dataset.nav === view);
+  if (idx < 0) return;
+  const mid = nav.children[nav._loopLen + idx];
+  nav.scrollLeft = Math.max(0, mid.offsetLeft - (nav.clientWidth - mid.clientWidth) / 2);
+}
+
+/* The wheel look: a chip scales and fades as it moves away from centre, the
+   way the numbers on either side of a real dial thumbwheel taper off. */
+function drawerNavTick() {
+  const nav = $(".drawer-nav");
+  if (!nav) return;
+  const mid = nav.getBoundingClientRect().left + nav.clientWidth / 2;
+  nav.querySelectorAll("[data-nav]").forEach(b => {
+    const r = b.getBoundingClientRect();
+    const d = Math.min(1, Math.abs((r.left + r.width / 2) - mid) / (nav.clientWidth / 2 || 1));
+    b.style.transform = `scale(${(1 - d * 0.22).toFixed(3)})`;
+    b.style.opacity = (1 - d * 0.55).toFixed(3);
+  });
 }
 
 function renderAll() {
@@ -6997,6 +7089,7 @@ function initTheme() {
 function boot() {
   load();
   initTheme();
+  initDrawerLoop();
   $$("[data-nav]").forEach(b => b.onclick = () => go(b.dataset.nav));
   $("#sesClose").onclick = async () => {
     if (session.idx > 0 && session.idx < session.queue.length

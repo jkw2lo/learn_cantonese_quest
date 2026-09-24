@@ -3532,41 +3532,71 @@ button.tier-head:hover { border-color: var(--ink-3); }
 
   /* ---------- the sections sheet ---------- */
 
-  .icon-btn.burger { display: grid; }
+  /* Fixed to the bottom-left rather than sitting inline in the top bar: a
+     phone held in the left hand rests its thumb at that corner already, so
+     the button that opens seven destinations is worth a thumb's reach rather
+     than a stretch to the top of the screen. z-index 45 sits above the top
+     bar (40) but below every full-screen overlay (60+), so a session, the
+     drawer itself, or a sprint run all cover it without any extra code to
+     hide it. */
+  .icon-btn.burger {
+    display: grid; position: fixed; z-index: 45;
+    left: calc(1rem + env(safe-area-inset-left));
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--paper); border-color: var(--rule-2);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .16);
+  }
   .burger-bars { display: grid; gap: 3px; width: 15px; }
   .burger-bars i { display: block; height: 1.5px; background: currentColor; border-radius: 1px; }
 
   .drawer { position: fixed; inset: 0; z-index: 80; display: none; }
   .drawer.on { display: block; }
   .drawer-veil { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); animation: cheerFade .18s ease both; }
-  /* Anchored to the bottom, not dropped from the button. A phone is held from
-     the bottom and the list is the part you aim at — the button is one tap and
-     the list is nine. */
+  /* A capsule on the same bottom row as the burger, its left edge picking up
+     right where the button leaves off — the same thumb that just tapped the
+     corner lands on the row without moving. Fully rounded, not a sheet with
+     square corners, so it reads as a wheel to spin rather than a panel that
+     happens to be short; drawerNavTick's scale/fade as each chip nears the
+     edge sells the same idea in motion. */
   .drawer-sheet {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    max-height: 84dvh; overflow-y: auto;
-    background: var(--paper); border-top: 1px solid var(--rule-2);
-    border-radius: 16px 16px 0 0;
-    padding: .5rem .7rem calc(.8rem + env(safe-area-inset-bottom));
+    position: absolute;
+    left: calc(1rem + env(safe-area-inset-left) + 46px + .55rem);
+    right: calc(1rem + env(safe-area-inset-right));
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    background: var(--paper); border: 1px solid var(--rule-2); border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .22);
+    padding: .5rem .3rem;
     animation: drawer-up .22s cubic-bezier(.22, .9, .3, 1) both;
   }
   @keyframes drawer-up { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
-  .drawer-grip {
-    display: block; width: 34px; height: 4px; border-radius: 2px;
-    background: var(--rule); margin: .15rem auto .5rem;
+  /* No grip tab here — a bottom-anchored full sheet needed one to say "drag me
+     away"; a capsule that only ever scrolls sideways doesn't. */
+  .drawer-grip { display: none; }
+  /* The rolodex: one row, scrolled rather than stacked, each button snapping
+     to the centre the way a wheel picker settles on a value. Four groups
+     still read as four — the rule that used to sit between them as a
+     horizontal line becomes a vertical one here, which if anything reads more
+     naturally beside things arranged left to right. */
+  .drawer-nav {
+    display: flex; align-items: stretch; gap: .2rem;
+    overflow-x: auto; scroll-snap-type: x mandatory;
+    padding: 0 .2rem; -webkit-overflow-scrolling: touch;
   }
-  .drawer-nav { display: flex; flex-direction: column; }
+  .drawer-nav::-webkit-scrollbar { display: none; }
   .drawer-nav button {
-    display: flex; align-items: baseline; gap: .7rem; text-align: left;
-    /* 3rem of row: a tab is the one control on this page you reach for without
-       looking, so it gets a target you cannot miss */
-    min-height: 3rem; padding: .6rem .7rem; border: 0; border-radius: 9px;
-    background: none; color: var(--ink-2); font-size: 1rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem;
+    flex: none; scroll-snap-align: center;
+    /* wide enough for two rows of a label that may run to "Radicals" without
+       wrapping, narrow enough that the next chip's edge still shows */
+    width: 4.4rem; min-height: 3.6rem; padding: .4rem .3rem; border: 0; border-radius: 999px;
+    background: none; color: var(--ink-2); font-size: .66rem; text-align: center; line-height: 1.2;
+    transition: transform .1s ease, opacity .1s ease;
   }
-  .drawer-nav button .nz { font-family: var(--f-han-ui); font-size: 1.1rem; color: var(--ink-3); flex: none; }
+  .drawer-nav button .nz { font-family: var(--f-han-ui); font-size: 1.05rem; color: var(--ink-3); }
   .drawer-nav button.on { background: var(--sunken); color: var(--ink); font-weight: 500; }
   .drawer-nav button.on .nz { color: var(--seal); }
-  .drawer-rule { display: block; height: 1px; background: var(--rule-2); margin: .3rem .7rem; }
+  .drawer-rule { display: block; flex: none; width: 1px; margin: .3rem .1rem; background: var(--rule-2); }
 
   /* The bottom bar used to hold 5.5rem of the page open under everything. It
      is gone, and so is the gap it was keeping clear. */
@@ -3725,6 +3755,19 @@ button.tier-head:hover { border-color: var(--ink-3); }
   .sp-row .sp-step { display: flex; }
   /* spot-the-character deals six, in 2 x 3 — shorter boxes, same reach */
   .sp-opts.grid3 .sp-opt { min-height: 4.6rem; }
+
+  /* Sprint's Build the word, on a phone: tiles this small under a thumb at
+     speed is how a correct tap becomes a mistap. Scoped to #sprintRun, not
+     .assemble/.slot/.tile generally — the daily drill's own Practice-mode
+     tiles (renderDrill's kind "a") sit in a slower, un-timed screen with more
+     room and aren't the thing that was reported as hard to hit. */
+  #sprintRun .sp-prompt .pin { font-size: 1.9rem; }
+  #sprintRun .sp-prompt em.lead { font-size: 2.1rem; }
+  #sprintRun .assemble { gap: 1.1rem; }
+  #sprintRun .slots { gap: .5rem; }
+  #sprintRun .slot { width: 4.2rem; height: 4.2rem; font-size: 2.4rem; border-radius: 10px; }
+  #sprintRun .tiles { gap: .55rem; }
+  #sprintRun .tile { width: 4.2rem; height: 4.2rem; font-size: 2.4rem; border-radius: 10px; }
 
   /* ---------- the categories, flat ----------
 

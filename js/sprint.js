@@ -69,6 +69,11 @@ const WRITE_STYLES = {
 
 const SPRINT_MINUTES = [1, 2, 3, 5];
 const SPRINT_COUNTS = [20, 30, 40, 50, 60, 80, 100];
+/* How many tiles Build the word deals per question — the target characters
+   plus enough distractors to fill the rest. 5 was the fixed total before this
+   was a setting (2 target + 3 distractors, the common case); 10 is where a
+   phone-width row of 3.4rem tiles stops fitting without wrapping badly. */
+const SPRINT_TILES = [5, 6, 7, 8, 9, 10];
 /* How far a tap moves the number on a phone, where the chip rows stand down.
    The chips stay the desktop control and keep their own values; a stepper
    walks the whole range in even steps instead, so 70 questions and 4 minutes
@@ -92,6 +97,7 @@ function stepper(mode, key, now, step, lo, hi, mult) {
 const SPRINT_MIN_POOL = 8;        /* characters you need before a sheet means anything */
 const SPRINT_MAX_LOOPS = 6;       /* how many times one sheet may reuse a character */
 const SPRINT_READY = 3;           /* the 預備 countdown, in seconds */
+const SPRINT_ASSEMBLE_PAUSE = 750; /* ms Build the word holds the finished tiles on screen */
 
 /* Difficulty is relative to the mode, not absolute. Two seconds a question is
    brisk reading and impossible typing, and a single table of seconds would
@@ -161,7 +167,7 @@ function sprintDistractors(ch, known, n, kind) {
   return out;
 }
 
-function sprintQuestion(c, mode, style, known) {
+function sprintQuestion(c, mode, style, known, tiles) {
   const ch = CHAR_INDEX[c];
   const q = { c, ch };
   if (mode === "r") {
@@ -185,7 +191,8 @@ function sprintQuestion(c, mode, style, known) {
     q.word = w;
     q.correct = w[0];
     const target = [...w[0]];
-    q.tiles = shuffle([...target, ...pick(known.filter(x => !target.includes(x)), 3)]);
+    const fill = Math.max(0, (tiles || 5) - target.length);
+    q.tiles = shuffle([...target, ...pick(known.filter(x => !target.includes(x)), fill)]);
   } else {
     q.correct = c;                     /* typed: the candidates are live */
   }
@@ -219,19 +226,20 @@ const sp = { mode: "r", style: "type", n: 40, secs: 120,
              startedAt: 0, endsAt: 0, tick: null, qStart: 0,
              typed: "", cands: [], known: [] };
 
-function sprintOpen(mode, n, secs, style) {
+function sprintOpen(mode, n, secs, style, tiles) {
   const pool = sprintPool(mode, style);
   if (pool.length < SPRINT_MIN_POOL) return;
   sprintStop();                       /* "another sheet" from a marked one */
   Object.assign(sp, {
     mode, style: mode === "w" ? style : null, n, secs,
+    tiles: mode === "a" ? (tiles || 5) : null,
     known: knownChars(), idx: 0, active: true, marked: false,
     typed: "", cands: [], qStart: 0,
     /* cleared explicitly: a run that never got past the countdown would
        otherwise hand the next sheet the last one's clock */
     startedAt: 0, endsAt: 0, readyAt: 0
   });
-  sp.queue = sprintDeal(pool, n).map(c => sprintQuestion(c, mode, sp.style, sp.known));
+  sp.queue = sprintDeal(pool, n).map(c => sprintQuestion(c, mode, sp.style, sp.known, sp.tiles));
   $("#sprintRun").classList.add("on");
   document.body.style.overflow = "hidden";
   $("#spDrain").firstElementChild.style.width = "100%";
@@ -364,13 +372,20 @@ function sprintRenderQ() {
        tiles, so a wrong tap still spends a slot and can still cost the
        question. */
     $$(".tile", body).forEach(t => t.onclick = () => {
-      if (t.disabled) return;
+      if (t.disabled || sp.filled.length >= target.length) return;
       const i = sp.filled.length;
       const slot = $(`.slot[data-s="${i}"]`, body);
       slot.textContent = t.dataset.c; slot.classList.add("filled");
       t.disabled = true; t.classList.add("used");
       sp.filled.push(t.dataset.c);
-      if (sp.filled.length === target.length) sprintAnswer(sp.filled.join(""));
+      /* Every tile goes dead the instant the word is complete, not just the
+         ones already tapped — the slot-fill pause that follows (see
+         sprintAnswer) leaves this render on screen for a moment, and a tile
+         still armed during it would push a phantom entry past the last slot. */
+      if (sp.filled.length === target.length) {
+        $$(".tile", body).forEach(x => x.disabled = true);
+        sprintAnswer(sp.filled.join(""));
+      }
     });
   } else if (sp.mode === "w" && sp.style === "write") {
     /* The same writer box and trackpad the daily drill's own "w" kind uses
@@ -526,9 +541,25 @@ function sprintAnswer(value) {
      you're already looking, and costs nothing: it doesn't pause the sheet,
      doesn't move anything, and on a laptop it doesn't happen. */
   if (sprintTells()) flashVerdict(q.ok);
-  sp.idx++;
-  if (sp.idx >= sp.queue.length) return sprintFinish(true);
-  sprintRenderQ();
+  const advance = () => {
+    sp.idx++;
+    if (sp.idx >= sp.queue.length) return sprintFinish(true);
+    sprintRenderQ();
+  };
+  /* Build the word fills its slots by hand, tile by tile — the last tap
+     lands the final slot, and the whole word is worth a moment on screen
+     before the sheet moves on, rather than racing straight to the next
+     prompt the instant the tap registers. Every other mode is graded blind
+     (multiple choice, typed, drawn) and keeps moving on the way it always
+     has. The clock keeps running through the pause, same as it does through
+     any other question — this isn't free time, just a beat to read the
+     answer in. */
+  if (sp.mode === "a") {
+    $$(".slot", $("#spInner")).forEach(s => s.classList.toggle("bad", !q.ok));
+    setTimeout(() => { if (sp.active) advance(); }, SPRINT_ASSEMBLE_PAUSE);
+  } else {
+    advance();
+  }
 }
 
 function sprintFinish(completed) {
@@ -682,7 +713,7 @@ function renderSprint() {
   });
   $$("#viewSprint [data-sp-go]").forEach(b => b.onclick = () => {
     const m = b.dataset.spGo, p = sprintPick(m);
-    sprintOpen(m, p.n, p.secs, p.style);
+    sprintOpen(m, p.n, p.secs, p.style, p.tiles);
   });
   $$("#viewSprint .leech-open").forEach(b => b.onclick = () => openChar(b.dataset.c));
   $$("#viewSprint [data-sp-forget]").forEach(b => b.onclick = e => {
@@ -699,9 +730,10 @@ function renderSprint() {
    and is where the arithmetic version starts children too. */
 function sprintPick(mode) {
   const held = sprintState().pick[mode];
-  const p = { n: 40, secs: 120, style: mode === "w" ? "type" : null, ...(held || {}) };
+  const p = { n: 40, secs: 120, style: mode === "w" ? "type" : null, tiles: 5, ...(held || {}) };
   if (mode === "w" && !WRITE_STYLES[p.style]) p.style = "type";
   if (mode !== "w") p.style = null;
+  p.tiles = mode === "a" ? Math.max(SPRINT_TILES[0], Math.min(SPRINT_TILES[SPRINT_TILES.length - 1], p.tiles)) : null;
   return p;
 }
 
@@ -734,6 +766,12 @@ function sprintPanelHtml(mode, short) {
         <div class="sp-chips">${Object.values(WRITE_STYLES).map(s => `<button class="sp-chip wide ${p.style === s.key ? "on" : ""}" data-sp-set="w:style:${s.key}">
           <span class="han">${esc(s.zh)}</span> ${esc(s.name)}</button>`).join("")}</div>
         <span class="sp-row-tip">${esc(WRITE_STYLES[p.style].tip)}</span>
+      </div>` : ""}
+      ${mode === "a" ? `<div class="sp-row">
+        <span class="sp-row-lbl">Tiles</span>
+        <div class="sp-chips">${SPRINT_TILES.map(t => `<button class="sp-chip ${p.tiles === t ? "on" : ""}"
+          data-sp-set="a:tiles:${t}">${t}</button>`).join("")}</div>
+        ${stepper(mode, "tiles", p.tiles, 1, SPRINT_TILES[0], SPRINT_TILES[SPRINT_TILES.length - 1], 1)}
       </div>` : ""}
       <div class="sp-row">
         <span class="sp-row-lbl">Questions</span>
