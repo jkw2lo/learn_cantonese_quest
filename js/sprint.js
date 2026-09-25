@@ -444,7 +444,14 @@ function sprintRenderQ() {
       }
     };
     if (radial) {
-      sprintBindRadial(body, commit);
+      /* Undoes commit()'s own bookkeeping when a drag ends before the word
+         is whole — every slot it had filled in goes back to empty, and
+         sprintBindRadial has already re-armed the dots that filled them. */
+      const resetSlots = () => {
+        sp.filled = [];
+        $$(".slot", body).forEach(s => { s.textContent = ""; s.classList.remove("filled"); });
+      };
+      sprintBindRadial(body, target.length, commit, resetSlots);
     } else {
       $$(".tile", body).forEach(t => t.onclick = () => {
         if (t.disabled) return;
@@ -577,11 +584,12 @@ function sprintCandidates() {
 
    Connect the dots: press whichever character you think comes first, then
    — the same unbroken gesture, finger never lifting — drag through the
-   rest in the order they belong. Touching a dot is the pick, the same
-   instant a tap would be on the grid: there is no separate confirm step
-   and no way to back out of one once the finger has crossed it, matching
-   how a wrong tap on the grid already spends a slot rather than being
-   forgiving about it. */
+   rest in the order they belong. Touching a dot picks it immediately, the
+   same instant a tap would on the grid, and a wrong pick still spends its
+   slot — but only once the word is whole. Letting go early (a change of
+   mind, or a finger that slipped onto the wrong dot) undoes the entire
+   attempt rather than stranding a half-built word with no way back in, so
+   there's no cost to starting over, only to finishing wrong. */
 
 function sprintRadialHtml(tiles) {
   const n = tiles.length;
@@ -594,7 +602,7 @@ function sprintRadialHtml(tiles) {
   </div>`;
 }
 
-function sprintBindRadial(body, onPick) {
+function sprintBindRadial(body, n, onPick, onReset) {
   const wheel = $(".radial-wheel", body);
   if (!wheel) return;
   const live = () => $$(".radial-opt", wheel).filter(b => !b.disabled);
@@ -631,14 +639,28 @@ function sprintBindRadial(body, onPick) {
     return el;
   };
 
-  let pid = null, from = null, liveLine = null;
+  let pid = null, from = null, liveLine = null, picked = [], lines = [];
 
   const pick = b => {
     const pt = centre(b);
-    if (from) segment(from, pt);
+    if (from) lines.push(segment(from, pt));
     b.disabled = true; b.classList.add("used");
+    picked.push(b);
     from = pt;
     onPick(b.dataset.c);
+  };
+
+  /* A complete word never reaches this — the n-th pick above already
+     handed off to sprintAnswer synchronously, before release can fire, and
+     disabled every dot on its way there (see commit() in sprintRenderQ),
+     so picked.length can only still be short of n here if the gesture
+     ended early. Every dot it touched goes live again, its line vanishes,
+     and the caller clears whatever it had filled in to match. */
+  const reset = () => {
+    picked.forEach(b => { b.disabled = false; b.classList.remove("used"); });
+    lines.forEach(el => el.remove());
+    picked = []; lines = []; from = null;
+    onReset();
   };
 
   wheel.addEventListener("pointerdown", e => {
@@ -662,6 +684,7 @@ function sprintBindRadial(body, onPick) {
     if (pid === null || (e && e.pointerId !== pid)) return;
     pid = null;
     if (liveLine) { liveLine.remove(); liveLine = null; }
+    if (picked.length < n) reset();
   };
   wheel.addEventListener("pointerup", release);
   wheel.addEventListener("pointercancel", release);

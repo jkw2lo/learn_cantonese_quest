@@ -913,16 +913,18 @@ input[type="range"]::-moz-range-thumb {
    out of this element's computed style, so it is the one number that has
    to change to resize the whole wheel. touch-action: none keeps a drag
    across the ring from also trying to scroll the page underneath it. */
-.radial-wheel { position: relative; width: 15.5rem; height: 15.5rem; margin: .2rem auto; --r: 5.5rem; touch-action: none; }
+.radial-wheel { position: relative; width: 17.5rem; height: 17.5rem; margin: .2rem auto; --r: 6.4rem; touch-action: none; }
 .radial-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed var(--rule-2); }
 /* Placed with the same rotate/translate/counter-rotate used for a clock
    face's numerals — it walks each option out along its own spoke and then
    un-rotates it, so the glyph inside sits upright instead of tilted toward
-   the rim. */
+   the rim. Sized up from a first pass that was easy to overshoot on — a
+   bigger target is also a bigger gap to the next dot over, which is the
+   actual fix for a drag landing on the wrong character. */
 .radial-opt {
-  position: absolute; left: 50%; top: 50%; width: 2.9rem; height: 2.9rem; border-radius: 50%;
+  position: absolute; left: 50%; top: 50%; width: 3.5rem; height: 3.5rem; border-radius: 50%;
   border: 1px solid var(--rule); background: var(--sheet);
-  font-family: var(--f-han); font-size: 1.3rem; line-height: 1; color: var(--ink);
+  font-family: var(--f-han); font-size: 1.6rem; line-height: 1; color: var(--ink);
   transform: translate(-50%, -50%) rotate(var(--ang)) translate(var(--r)) rotate(calc(-1 * var(--ang)));
   transition: opacity .2s;
 }
@@ -3826,8 +3828,8 @@ button.tier-head:hover { border-color: var(--ink-3); }
   #sprintRun .tile { width: 4.2rem; height: 4.2rem; font-size: 2.4rem; border-radius: 10px; }
   /* the radial style scales the same way — a bigger wheel and options sized
      to match the grid's own bigger tiles above */
-  #sprintRun .radial-wheel { width: 17.5rem; height: 17.5rem; --r: 6.2rem; }
-  #sprintRun .radial-opt { width: 3.4rem; height: 3.4rem; font-size: 1.6rem; }
+  #sprintRun .radial-wheel { width: 19.5rem; height: 19.5rem; --r: 7.2rem; }
+  #sprintRun .radial-opt { width: 4rem; height: 4rem; font-size: 1.9rem; }
 
   /* ---------- the categories, flat ----------
 
