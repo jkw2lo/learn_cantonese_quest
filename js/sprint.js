@@ -57,7 +57,7 @@ const SPRINT = {
    line. */
 const WRITE_STYLES = {
   type: { zh: "打字", name: "Type it", key: "type",
-          blurb: "Type the pinyin, pick the character — how Chinese is actually written on a phone.",
+          blurb: "Type the jyutping, pick the character — tone numbers optional, the way Cantonese is typed on a phone.",
           tip: "Type it, then pick it", par: 4.6 },
   /* Disabled for now, not removed — hidden is a comment, so `hidden: true`
      is what sprintPanelHtml's "How" row filters on, and it stays a real
@@ -528,7 +528,7 @@ function sprintRenderQ() {
       <div class="sp-prompt"><em class="lead">${esc(ch.m)}</em></div>
       <div class="sp-type">
         <input class="sp-input" id="spInput" type="text" inputmode="latin" autocomplete="off"
-               autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="pinyin…" aria-label="Type the pinyin">
+               autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="jyutping…" aria-label="Type the jyutping">
         <button class="sp-skip" id="spSkip">Don't know <kbd class="opt-n">0</kbd></button>
       </div>
       <div class="sp-cands" id="spCands"></div>

@@ -98,6 +98,7 @@ radical frames had been averaged from the wrong donors.
 | **§11** | [Growing the curriculum, and milestones](#11--growing-the-curriculum-and-milestones) |
 | **§12** | [The phone, and the promise it made to the desktop](#12--the-phone-and-the-promise-it-made-to-the-desktop) — has its own §0 in it |
 | **§13** | [Signing in, so a record follows you between devices](#13--signing-in-so-a-record-follows-you-between-devices) |
+| **§14** | [Two things Hanzi Quest's Text size missed](#14--two-things-hanzi-quests-text-size-missed) — found porting it here |
 | | **Do not port these** — Cantonese-specific |
 
 ---
@@ -1994,6 +1995,40 @@ Not an account system. No server of ours, no profile, nothing to administer,
 and no second source of truth — the document Firebase holds is the same JSON the
 💾 button already writes to a file. Signing out drops the remote and leaves the
 local record exactly where it was.
+
+---
+
+## §14 · Two things Hanzi Quest's Text size missed
+
+Hanzi Quest's 1.13–1.16 work (welcome back, rest days, retention wins, the
+manual, What's new, Text size) was ported here as 0.24.0 from its `porting.md`.
+Its Text size was verified at 375px only. Measuring every tab at 1024px and at
+375px turned up two things, and both are in Hanzi Quest's source too.
+
+**The desktop top bar runs off the page.** The tab row is laid out by px
+breakpoints with barely a tab's width to spare between 860 and 1439, and every
+size in it is rem — so at 140% the row was 270px wider than a 1024px window
+and the whole page scrolled sideways. It is chrome, not reading, so it now
+holds its default size on a desktop whatever the setting, and everything below
+it grows:
+
+```css
+@media (min-width: 860px) { .topbar { zoom: calc(1 / var(--ts, 1)); } }
+```
+
+On a phone the tabs are in the drawer, which does grow, so this is desktop only.
+
+**The mobile notebook's pen row was already too wide.** At 375px and the
+default size, the three fields in `.wp-mobile-tools` came to 385px. Text size
+took it to 568. It wraps now, and each field can shrink:
+
+```css
+.wp-mobile-tools { flex-wrap: wrap; }
+.wp-mobile-tools .wp-field { flex: 1 1 6.5rem; min-width: 0; }
+```
+
+The check that finds both is one line in the console at each width and size:
+`document.documentElement.scrollWidth > innerWidth`.
 
 ---
 

@@ -1384,7 +1384,7 @@ console.log('\nsprint: the record behind the sheets');
                               'SpeechSynthesisUtterance', 'matchMedia', 'structuredClone', 'queueMicrotask']);
   /* data.js counts too: shuffle() lives there, and app.js is loaded after all
      three and shares the global scope with them. */
-  const bundle = appSrc + sprintSrc + read('js/srs.js') + read('js/data.js');
+  const bundle = appSrc + sprintSrc + read('js/srs.js') + read('js/data.js') + read('js/manual.js') + read('js/news.js');
   const isDeclared = n => new RegExp(
     `(?:const|let|var|function)\\s+${n.replace(/\$/g, '\\$')}(?![\\w$])`).test(bundle);
   const dead = [...called].filter(n => !NOT_A_CALL.has(n) && !isDeclared(n));
@@ -1800,6 +1800,102 @@ console.log('\nsigning in is optional, and off until it is configured');
   ok('signing out lets go of the remote document',
      /async function syncSignOut[\s\S]{0,320}dropRemote\(\)/.test(syn));
   ok('the security rule is written down where it is needed', /allow read, write: if request\.auth/.test(syn));
+}
+
+console.log('\nreview without the grind: rest days, welcome back, retention wins');
+{
+  const g = new Function(read('js/data.js') + '\n' + read('js/srs.js') + `
+    return { get state() { return state; }, get lastWin() { return lastWin; }, load, blank, dayKey, addDays,
+      introduce, grade, today, touchStreak, liveStreak, restCover, restDays, restsLeftThisWeek, dueList,
+      welcomeOffer, welcomeTake, welcomeUndo, welcomeDecline, mergeState, mergeDay, mergeChar,
+      REST_PER_WEEK, REST_MAX_GAP, WELCOME_KEEP, WELCOME_GAP, KEPT_GAP, LAPSE_FROM, HQ };`)();
+  globalThis.localStorage._d = {};
+  g.load();
+  const k = g.dayKey(), ago = n => g.addDays(k, -n);
+
+  g.state.streak = { cur: 5, best: 5, last: ago(2) };
+  ok('one missed day leaves a streak standing', g.liveStreak() === 5);
+  g.touchStreak();
+  ok('  and studying again carries it on, without counting the rest', g.state.streak.cur === 6
+     && Object.keys(g.state.rests).length === 1, JSON.stringify(g.state.streak));
+  g.state.rests = {};
+  g.state.streak = { cur: 5, best: 5, last: ago(g.REST_MAX_GAP + 2) };
+  ok('a gap longer than any week could cover ends it', g.liveStreak() === 0 && g.restCover(ago(g.REST_MAX_GAP + 2), k) === null);
+  g.state.streak = { cur: 0, best: 5, last: null };
+
+  const cs = g.HQ.slice(0, g.WELCOME_KEEP + 10).map(ch => ch.c);
+  cs.forEach((c, i) => { g.introduce(c); Object.assign(g.state.chars[c], { due: ago(1), lvl: i % 5, last: ago(g.WELCOME_GAP + 1) }); });
+  g.state.streak = { cur: 3, best: 5, last: ago(g.WELCOME_GAP + 1) };
+  const offer = g.welcomeOffer();
+  ok('after days away with a pile due, a welcome is offered', offer && offer.keep === g.WELCOME_KEEP && offer.later === 10,
+     JSON.stringify(offer));
+  g.welcomeTake();
+  ok('  taking it leaves only the shakiest due today', g.dueList().length === g.WELCOME_KEEP);
+  ok('  and the rest are all due within the spread, none today',
+     cs.filter(c => g.state.chars[c].due > k).every(c => g.state.chars[c].due <= g.addDays(k, g.state.welcome.days)));
+  ok('  and it is not offered twice in a day', g.welcomeOffer() === null);
+  g.welcomeUndo();
+  ok('  undo puts them all back in today', g.dueList().length === cs.length);
+
+  /* a spread moves due dates with no sighting; on the same day the later
+     reschedule has to win the merge, or sync undoes the spread */
+  const x = { seen: 1, right: 1, wrong: 0, lvl: 2, due: ago(1), last: k, rs: 1 };
+  const y = Object.assign({}, x, { due: g.addDays(k, 3), rs: 2 });
+  ok('same-day merge keeps the later reschedule', g.mergeChar(x, y).due === y.due && g.mergeChar(y, x).due === y.due);
+
+  const c1 = cs[0];
+  Object.assign(g.state.chars[c1], { last: ago(g.KEPT_GAP), due: k, lvl: 3 });
+  g.grade(c1, true, 'r');
+  ok('right after a fortnight unseen is kept', g.lastWin && g.lastWin.kept >= g.KEPT_GAP && g.today().kept[c1]);
+  const c2 = cs[1];
+  Object.assign(g.state.chars[c2], { last: k, due: k, lvl: g.LAPSE_FROM + 1 });
+  g.grade(c2, false, 'r');
+  ok('a miss once known is owed a rescue', g.state.chars[c2].lapse === g.LAPSE_FROM + 1);
+  let rescued = false;
+  for (let i = 0; i < 4 && !rescued; i++) { g.state.chars[c2].due = k; g.grade(c2, true, 'r'); rescued = !!(g.lastWin && g.lastWin.rescued); }
+  ok('  and gets it by climbing back', rescued && !g.state.chars[c2].lapse && g.today().resc[c2]);
+
+  const a = g.blank(), b = g.blank();
+  a.rests = { [ago(3)]: true }; b.rests = { [ago(10)]: true };
+  ok('rest days union across devices', Object.keys(g.mergeState(a, b).rests).length === 2);
+  const d = g.mergeDay({ new: 0, rev: 1, kept: { 我: 20 } }, { new: 0, rev: 1, resc: { 你: 1 }, kept: { 佢: 15 } });
+  ok('a day keeps both devices\' kept and rescued', d.kept.我 && d.kept.佢 && d.resc.你);
+  const fresh = g.blank(), merged = g.mergeState(g.blank(), g.blank());
+  const lists = Object.keys(fresh).filter(k => Array.isArray(fresh[k]));
+  ok('every list in the record survives a merge as a list', lists.every(k => Array.isArray(merged[k])), lists.join(' '));
+}
+
+console.log('\nwhat\'s new keeps up with the version');
+{
+  const news = new Function(read('js/news.js') + '\nreturn {RELEASES, verNewer, releasesSince};')();
+  const ver = /APP_VERSION = "(\d+)\.(\d+)\./.exec(read('index.html'));
+  ok('the newest release note is for this minor version — bump minor, write a note in js/news.js',
+     ver && news.RELEASES[0].v === `${ver[1]}.${ver[2]}`, `${news.RELEASES[0].v} vs ${ver && ver[1] + '.' + ver[2]}`);
+  ok('  and the notes run newest first, with no version twice',
+     news.RELEASES.every((r, i) => i === 0 || news.verNewer(news.RELEASES[i - 1].v, r.v)));
+  ok('  and 0.10 counts as newer than 0.9', news.verNewer('0.10', '0.9') && !news.verNewer('0.9', '0.10'));
+  ok('  and "since you last looked" lists only what came after', news.releasesSince('0.20').map(r => r.v).join() ===
+     news.RELEASES.filter(r => news.verNewer(r.v, '0.20')).map(r => r.v).join());
+}
+
+console.log('\nthe manual, and text size');
+{
+  const man = read('js/manual.js'), app = read('js/app.js'), html = read('index.html');
+  const ids = new Set([...man.matchAll(/^\s*id: "([a-z]+)"/gm)].map(m => m[1]));
+  const links = [...man.matchAll(/data-man="([a-z]+)"/g)].map(m => m[1]);
+  ok('every cross-reference in the manual has a section to open', links.every(l => ids.has(l)),
+     links.filter(l => !ids.has(l)).join(' '));
+  const outside = [...app.matchAll(/data-manual="([a-z]+)"/g)].map(m => m[1]);
+  ok('  and so does every "How this works" link elsewhere', outside.length && outside.every(l => ids.has(l)),
+     outside.filter(l => !ids.has(l)).join(' '));
+  ok('manual.js and news.js load before app.js',
+     html.indexOf('src="js/news.js') < html.indexOf('src="js/app.js') && html.indexOf('src="js/manual.js') < html.indexOf('src="js/app.js'));
+  const key = (/TEXT_SIZE_KEY = "([^"]+)"/.exec(app) || [])[1];
+  ok('the head script reads the key Settings writes', key && html.includes(`localStorage.getItem("${key}")`), key);
+  const phone = (/TEXT_SIZE_PHONE = ([\d.]+)/.exec(app) || [])[1];
+  ok('  and starts a phone at the same size textSize() does', phone && html.includes(`.matches ? ${phone} : 1`), phone);
+  ok('  at the phone breakpoint the rest of the app uses',
+     html.includes('matchMedia("(max-width: 859.98px)")') && /PHONE_MQ = matchMedia\("\(max-width: 859\.98px\)"\)/.test(app));
 }
 
 console.log(failures ? `\nFAILED — ${failures} check(s)\n` : '\nall checks passed\n');

@@ -426,6 +426,20 @@ disappears from Settings, the banner can never render, and `unlockedCeiling`
 stops consulting the flag at all — the feature is gone rather than merely off. A
 record that had it switched on is unaffected; the flag just sits there ignored.
 
+## The manual, and what's new
+
+**Settings → Help → How Cantonese Quest works** is the user-facing version of
+this README: what the app does, not why the code is shaped as it is. It lives in
+`js/manual.js`, and every number in it is read from the constant that decides
+it, so changing `INTERVALS` or `REST_PER_WEEK` changes the manual too. When you
+add a feature, add or extend a section there — the smoke test won't catch a
+missing paragraph. Other screens link into it with `data-manual="<id>"`.
+
+`js/news.js` holds one user-facing note per minor version, newest first. The
+manual opens with what's new since you last looked and ends with every release;
+Today shows a one-line strip after an update. A minor bump without a note fails
+the smoke test.
+
 ## Files
 
     index.html        page shell
@@ -436,6 +450,8 @@ record that had it switched on is unaffected; the flag just sits there ignored.
     js/srs.js         scheduling, streaks, sprint records, storage
     js/sprint.js      the 速練 tab: timed sheets, the boards, the 錯字本
     js/app.js         views, the study session, flashcards, repair rounds
+    js/manual.js      the in-app manual (Settings → Help)
+    js/news.js        release notes, one per minor version
     tools/jyut.mjs            look a character or word up while writing data.js
     tools/fetch-glosses.mjs   regenerate the reference glosses for untaught characters
     tools/check-jyutping.mjs  audit every reading against Unihan and CC-Canto
