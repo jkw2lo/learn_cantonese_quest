@@ -1041,10 +1041,16 @@ function practiceChars(mode) {
 const ROUND = 10;
 const practiceRound = mode => practicePool(PRACTICE[mode].skill, ROUND, practiceChars(mode));
 
-function startPractice(mode) {
-  cqNote("start", "practice " + mode);
+/* chars, when given, names the round instead of leaving practiceRound's
+   70/30 recency split to pick it — see openWritePicker, the one caller that
+   passes it. Still filtered against practiceChars(mode): a character picked
+   before today's stroke data loaded, or from another mode's picker by
+   mistake, shouldn't be able to hand a writing round something it can't
+   actually write. */
+function startPractice(mode, chars) {
+  cqNote("start", "practice " + mode + (chars ? " custom" : ""));
   const cfg = PRACTICE[mode];
-  const pool = practiceRound(mode);
+  const pool = chars ? shuffle(chars.filter(c => practiceChars(mode).includes(c))) : practiceRound(mode);
   if (!pool.length) return;
   session.queue = pool.map(c => ({ t: "drill", c, kind: one(cfg.kinds) }));
   session.idx = 0;
@@ -1061,6 +1067,94 @@ function startPractice(mode) {
   $("#session").classList.add("on");
   document.body.style.overflow = "hidden";
   renderStep();
+}
+
+/* ---------- choosing exactly which characters to write ----------
+
+   The auto-picked round above is a 70/30 recency split across everything
+   you can write — a good default, but it has no way to know that a
+   particular handful from a few days ago are the ones that actually feel
+   shaky right now. This names them instead of waiting for the rotation to
+   land on them. Its own small bit of state (sort, search, the selection
+   itself) is separate from the Exercise book's wp.sort/wp.find/wp.guide —
+   two pickers open at different times for different reasons, and sharing
+   state would mean one silently resets the other. */
+const wpick = { sort: "day", find: "", sel: new Set() };
+
+function writePickerGroups() {
+  let known = practiceChars("write");
+  if (wpick.find) known = known.filter(c => matches(CHAR_INDEX[c], wpick.find));
+  if (wpick.sort === "day") {
+    const by = {};
+    known.forEach(c => { const d = (rec(c) && rec(c).first) || "0000-00-00"; (by[d] = by[d] || []).push(c); });
+    return Object.keys(by).sort().reverse().map(d => ({ label: dayLabel(d), chars: by[d] }));
+  }
+  if (wpick.sort === "stage") {
+    return STAGES.map(st => ({ label: `${st.icon} ${st.name}`,
+        chars: known.filter(c => CHAR_INDEX[c].stage === st.n) })).filter(g => g.chars.length);
+  }
+  if (wpick.sort === "weak") {
+    const score = c => ((rec(c).skills.w || 0) * 10) - rec(c).wrong;
+    return [{ label: "Needs the most work", chars: [...known].sort((a, b) => score(a) - score(b)) }];
+  }
+  return [{ label: "All characters",
+            chars: [...known].sort((a, b) => CHAR_INDEX[a].p.localeCompare(CHAR_INDEX[b].p)) }];
+}
+
+function openWritePicker() {
+  wpick.sel.clear();
+  wpick.find = "";
+  wpick.sort = "day";
+  openSheet("Choose characters to write", "");
+  renderWritePicker();
+}
+
+function renderWritePicker() {
+  const groups = writePickerGroups();
+  const total = groups.reduce((a, g) => a + g.chars.length, 0);
+  const n = wpick.sel.size;
+  $("#svBody").innerHTML = `<div class="wrap"><div class="section">
+    <p class="note">Pick as many as you like, then practise just those — good for the
+      handful you keep blanking on rather than waiting for them to come back around
+      on their own.</p>
+    <div class="pick-head">
+      <span class="eyebrow">${n} selected</span>
+      ${n ? `<button class="link-btn" id="pickWClear">Clear</button>` : ""}
+    </div>
+    <input class="search pick-find" id="pickWFind" type="search" placeholder="Find a character…" value="${esc(wpick.find)}">
+    <div class="pick-sorts">
+      ${WP_SORTS.map(o => `<button class="filt ${wpick.sort === o.id ? "on" : ""}" data-wsort="${o.id}">${esc(o.label)}</button>`).join("")}
+    </div>
+    <div class="pick-scroll">
+      ${total ? groups.map(g => `<div class="pick-group">
+        <div class="pick-label">${esc(g.label)}<span>${g.chars.length}</span></div>
+        <div class="pick-grid">${g.chars.map(c => `<button class="pick ${wpick.sel.has(c) ? "on" : ""}"
+          data-wpick="${esc(c)}" title="${esc(CHAR_INDEX[c].p)} · ${esc(CHAR_INDEX[c].m)}">${esc(c)}</button>`).join("")}</div>
+      </div>`).join("")
+      : `<p class="note">${wpick.find ? "Nothing matches." : "Nothing here yet — learn a character with stroke data first."}</p>`}
+    </div>
+    <button class="btn btn-block" id="pickWGo" ${n ? "" : "disabled"}>${n ? `Practise ${n} character${n === 1 ? "" : "s"}` : "Select characters to practise"}</button>
+  </div></div>`;
+
+  $$("#svBody [data-wsort]").forEach(b => b.onclick = () => { wpick.sort = b.dataset.wsort; renderWritePicker(); });
+  $$("#svBody [data-wpick]").forEach(b => b.onclick = () => {
+    const c = b.dataset.wpick;
+    wpick.sel.has(c) ? wpick.sel.delete(c) : wpick.sel.add(c);
+    renderWritePicker();
+  });
+  $("#pickWClear")?.addEventListener("click", () => { wpick.sel.clear(); renderWritePicker(); });
+  const f = $("#pickWFind");
+  if (f) f.oninput = () => {
+    wpick.find = f.value.trim();
+    const pos = f.selectionStart;
+    renderWritePicker();
+    const nf = $("#pickWFind"); nf.focus(); nf.setSelectionRange(pos, pos);
+  };
+  $("#pickWGo")?.addEventListener("click", () => {
+    const chars = [...wpick.sel];
+    closeSheet();
+    startPractice("write", chars);
+  });
 }
 
 /* ---------- 錯字本 repair rounds ----------
@@ -4159,6 +4253,9 @@ function renderToday() {
         </button>`;
       }).join("")}
     </div>
+    ${practiceChars("write").length ? `<div class="deeper-custom">
+      <button class="link-btn" id="prWriteCustom">Choose specific characters to write</button>
+    </div>` : ""}
   </section>`;
 
   /* A dashboard rather than a scroll.
@@ -4220,6 +4317,7 @@ function renderToday() {
   });
   $$("#viewToday .lc").forEach(b => b.onclick = () => openChar(b.dataset.c));
   $$("#viewToday [data-practice]").forEach(b => b.onclick = () => startPractice(b.dataset.practice));
+  $("#prWriteCustom")?.addEventListener("click", () => openWritePicker());
   $$("#viewToday [data-todo]").forEach(b => b.onclick = () => {
     const id = b.dataset.todo;
     if (id === "learn") return startSession();

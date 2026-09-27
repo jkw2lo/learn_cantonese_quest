@@ -1524,6 +1524,7 @@ button.todo:hover:not(:disabled) { background: var(--sunken); }
 .tally-none .tally { opacity: .55; }
 
 .deeper .pr-deep { background: var(--sheet); }
+.deeper-custom { padding-top: .5rem; text-align: center; }
 .deeper-foot {
   display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; flex-wrap: wrap;
   font-size: .72rem; color: var(--ink-3); padding-top: .1rem;
@@ -3601,12 +3602,12 @@ button.tier-head:hover { border-color: var(--ink-3); }
     display: grid; position: fixed; z-index: 45;
     right: calc(1rem + env(safe-area-inset-right));
     bottom: calc(1rem + env(safe-area-inset-bottom));
-    width: 46px; height: 46px; border-radius: 50%;
+    width: 56px; height: 56px; border-radius: 50%;
     background: var(--paper); border-color: var(--rule-2);
     box-shadow: 0 2px 10px rgba(0, 0, 0, .16);
   }
-  .burger-bars { display: grid; gap: 3px; width: 15px; }
-  .burger-bars i { display: block; height: 1.5px; background: currentColor; border-radius: 1px; }
+  .burger-bars { display: grid; gap: 4px; width: 18px; }
+  .burger-bars i { display: block; height: 2px; background: currentColor; border-radius: 1px; }
 
   .drawer { position: fixed; inset: 0; z-index: 80; display: none; }
   .drawer.on { display: block; }
@@ -3619,7 +3620,7 @@ button.tier-head:hover { border-color: var(--ink-3); }
      edge sells the same idea in motion. */
   .drawer-sheet {
     position: absolute;
-    right: calc(1rem + env(safe-area-inset-right) + 46px + .55rem);
+    right: calc(1rem + env(safe-area-inset-right) + 56px + .55rem);
     left: calc(1rem + env(safe-area-inset-left));
     bottom: calc(1rem + env(safe-area-inset-bottom));
     background: var(--paper); border: 1px solid var(--rule-2); border-radius: 999px;
@@ -3635,26 +3636,29 @@ button.tier-head:hover { border-color: var(--ink-3); }
      to the centre the way a wheel picker settles on a value. Four groups
      still read as four — the rule that used to sit between them as a
      horizontal line becomes a vertical one here, which if anything reads more
-     naturally beside things arranged left to right. */
+     naturally beside things arranged left to right. scroll-snap-stop: always
+     on each button (not just the row's own mandatory type) is what makes a
+     fast flick land on the very next chip rather than sailing past several —
+     the actual difference between "scrolls" and "snaps". */
   .drawer-nav {
-    display: flex; align-items: stretch; gap: .3rem;
+    display: flex; align-items: stretch; gap: .6rem;
     overflow-x: auto; scroll-snap-type: x mandatory;
-    padding: 0 .2rem; -webkit-overflow-scrolling: touch;
+    padding: 0 .3rem; -webkit-overflow-scrolling: touch;
   }
   .drawer-nav::-webkit-scrollbar { display: none; }
   .drawer-nav button {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem;
-    flex: none; scroll-snap-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem;
+    flex: none; scroll-snap-align: center; scroll-snap-stop: always;
     /* wide enough for two rows of a label that may run to "Radicals" without
        wrapping, narrow enough that the next chip's edge still shows */
-    width: 5.4rem; min-height: 4.4rem; padding: .5rem .3rem; border: 0; border-radius: 999px;
-    background: none; color: var(--ink-2); font-size: .82rem; text-align: center; line-height: 1.2;
+    width: 6.2rem; min-height: 5.2rem; padding: .55rem .35rem; border: 0; border-radius: 999px;
+    background: none; color: var(--ink-2); font-size: 1rem; text-align: center; line-height: 1.2;
     transition: transform .1s ease, opacity .1s ease;
   }
-  .drawer-nav button .nz { font-family: var(--f-han-ui); font-size: 1.3rem; color: var(--ink-3); }
+  .drawer-nav button .nz { font-family: var(--f-han-ui); font-size: 1.6rem; color: var(--ink-3); }
   .drawer-nav button.on { background: var(--sunken); color: var(--ink); font-weight: 500; }
   .drawer-nav button.on .nz { color: var(--seal); }
-  .drawer-rule { display: block; flex: none; width: 1px; margin: .3rem .1rem; background: var(--rule-2); }
+  .drawer-rule { display: block; flex: none; width: 1px; margin: .3rem .2rem; background: var(--rule-2); }
 
   /* The bottom bar used to hold 5.5rem of the page open under everything. It
      is gone, and so is the gap it was keeping clear. */
