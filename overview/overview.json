@@ -1,0 +1,39 @@
+{
+  "version": 3,
+  "name": "Cantonese Quest",
+  "tagline": "Speak & read Cantonese",
+  "pitch": "A practice notebook for speaking and reading Cantonese, in the order that gets you through a day in Hong Kong.",
+  "accent": "#c0392b",
+  "status": "Live",
+
+  "problem": "Most Chinese lessons won't help you order a coffee in Hong Kong.",
+  "stats": [
+    { "value": "146", "label": "characters in 10 stages, hello to particles" },
+    { "value": "6", "label": "tones, drawn at their pitch instead of named" },
+    { "value": "37", "label": "characters shown with their simplified form" }
+  ],
+
+  "features": [
+    { "title": "Six tones, drawn", "text": "Each tone is a line at its pitch, so you can see why 買 and 賣 differ.",
+      "details": ["Jyutping writes the tone as a digit: maai5 to buy, maai6 to sell", "Tap any character to hear its tone", "Tone pairs that mean opposite things, taught together"],
+      "screen": { "src": "tones.png", "alt": "The Tones page: 買 maai5 to buy vs 賣 maai6 to sell, then six cards drawing each tone's pitch with an example" } },
+    { "title": "A cha chaan teng menu", "text": "A real Hong Kong diner menu, written in the shorthand it really uses.",
+      "details": ["凍 iced, 少甜 less sugar, 走 hold the", "Characters you know ink in; the rest stay grey", "Ordering phrases to say out loud, with audio"],
+      "screen": { "src": "menu.png", "alt": "A cha chaan teng menu of drinks, buns and toast, noodles and rice, dishes and soup, some characters grey" } },
+    { "title": "Taught for a day out", "text": "Ten stages in the order a day needs them: hello, eating, places, time.",
+      "details": ["Traditional characters, as written in Hong Kong", "The particles everyday Cantonese runs on: 佢, 哋, 咗, 喺"] },
+    { "title": "Built for practice", "text": "Spaced review, timed Sprints, a mistake notebook and handwriting.",
+      "details": ["Hearing, recognising, recalling and writing tracked apart", "Sync across devices, or keep it in the browser"] }
+  ],
+
+  "screens": [
+    { "src": "desktop.png", "alt": "Cantonese Quest's Today page: today's session, a five-step practice list, word of the week and flashcard decks", "caption": "Today: a short list you can finish" }
+  ],
+
+  "facts": {
+    "worksOn": "Desktop and phone browsers",
+    "data": "In your browser, or synced",
+    "builtWith": "Plain HTML, CSS and JS",
+    "started": "Sep 2026"
+  }
+}
